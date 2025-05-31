@@ -17,8 +17,8 @@ struct ClientDashboardView: View {
                                     .foregroundColor(.secondary)
                                 
                                 Text(authViewModel.userName.isEmpty ? "Mover" : authViewModel.userName)
-                                    .font(.system(size: 28, weight: .semibold, design: .rounded))
-                                    .foregroundColor(.primary)
+                                    .font(MovefullyTheme.Typography.title1)
+                                    .foregroundColor(MovefullyTheme.Colors.textPrimary)
                             }
                             
                             Spacer()
@@ -253,5 +253,52 @@ struct GoalRow: View {
         .padding(.vertical, 12)
         .background(Color(.secondarySystemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+}
+
+struct DashboardCard: View {
+    let title: String
+    let subtitle: String
+    let icon: String
+    let gradientColors: [Color]
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Image(systemName: icon)
+                        .font(.system(size: 24, weight: .medium))
+                        .foregroundColor(.white)
+                    
+                    Spacer()
+                }
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .foregroundColor(.white)
+                    
+                    Text(subtitle)
+                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                        .foregroundColor(.white.opacity(0.8))
+                        .multilineTextAlignment(.leading)
+                }
+                
+                Spacer()
+            }
+            .padding(16)
+            .frame(height: 120)
+            .background(
+                LinearGradient(
+                    colors: gradientColors,
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+        }
+        .buttonStyle(PlainButtonStyle())
     }
 } 

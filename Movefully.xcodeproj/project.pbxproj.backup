@@ -20,21 +20,9 @@
 		81A1B3012B8F239000D2C4A1 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 81A1B3002B8F239000D2C4A1 /* FirebaseAuth */; };
 		81A1B3032B8F239000D2C4A1 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 81A1B3022B8F239000D2C4A1 /* FirebaseFirestore */; };
 		81A1B3052B8F239000D2C4A1 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 81A1B3042B8F239000D2C4A1 /* FirebaseStorage */; };
-		8213FC8FA50E4B2CF9C5EA67 /* ClientManagementViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9E975CC7EF1B6EF7AE2E873 /* ClientManagementViewModel.swift */; };
-		92D215A44A2B63C3C8121421 /* ExerciseLibraryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31C7DF84D2C71F4A2907639C /* ExerciseLibraryViewModel.swift */; };
-		9A80A7E6777B6213AA55E9E5 /* MessagesViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62ECB63FEBBF37A30E7086E5 /* MessagesViewModel.swift */; };
-		B5C47E92B23DA5F7B7E2A78C /* MovefullyTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B9F6A32024867A9616E293B /* MovefullyTheme.swift */; };
-		CC3276C432616AFF5F8DEF31 /* PlansManagementView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3A81A39150F39364C0EE3F7 /* PlansManagementView.swift */; };
-		CF3D777AAE870FEE4541B736 /* ClientManagementView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C96304BDBD62F017E8DC15C2 /* ClientManagementView.swift */; };
-		D7F8E1234567890ABCDEF123 /* TrainerProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9A2B3456789CDEF01234567 /* TrainerProfileView.swift */; };
-		E5261402FB692CDA53F08F18 /* ExerciseLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4671FD9F5C8257711070DD7 /* ExerciseLibraryView.swift */; };
-		EA540785B4C5633CF9E929C3 /* WorkoutPlansViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A717E38EC71BC86B7CB8ACAB /* WorkoutPlansViewModel.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		31C7DF84D2C71F4A2907639C /* ExerciseLibraryViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ExerciseLibraryViewModel.swift; sourceTree = "<group>"; };
-		3B9F6A32024867A9616E293B /* MovefullyTheme.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MovefullyTheme.swift; sourceTree = "<group>"; };
-		62ECB63FEBBF37A30E7086E5 /* MessagesViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MessagesViewModel.swift; sourceTree = "<group>"; };
 		81A1B2E12B8F234500D2C4A1 /* Movefully.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Movefully.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		81A1B2E42B8F234500D2C4A1 /* MovefullyApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovefullyApp.swift; sourceTree = "<group>"; };
 		81A1B2E62B8F234500D2C4A1 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -47,12 +35,6 @@
 		81A1B2FB2B8F237900D2C4A1 /* ClientDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClientDashboardView.swift; sourceTree = "<group>"; };
 		81A1B2FD2B8F238100D2C4A1 /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		81A1B3072B8F23A800D2C4A1 /* Movefully.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Movefully.entitlements; sourceTree = "<group>"; };
-		A717E38EC71BC86B7CB8ACAB /* WorkoutPlansViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkoutPlansViewModel.swift; sourceTree = "<group>"; };
-		C3A81A39150F39364C0EE3F7 /* PlansManagementView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PlansManagementView.swift; sourceTree = "<group>"; };
-		C4671FD9F5C8257711070DD7 /* ExerciseLibraryView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ExerciseLibraryView.swift; sourceTree = "<group>"; };
-		C96304BDBD62F017E8DC15C2 /* ClientManagementView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClientManagementView.swift; sourceTree = "<group>"; };
-		D9E975CC7EF1B6EF7AE2E873 /* ClientManagementViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClientManagementViewModel.swift; sourceTree = "<group>"; };
-		F9A2B3456789CDEF01234567 /* TrainerProfileView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TrainerProfileView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -96,7 +78,6 @@
 				81A1B2E82B8F234700D2C4A1 /* Assets.xcassets */,
 				81A1B2FD2B8F238100D2C4A1 /* GoogleService-Info.plist */,
 				81A1B2EA2B8F234700D2C4A1 /* Preview Content */,
-				FC4495464FA674EEEAC64505 /* Theme */,
 			);
 			path = Movefully;
 			sourceTree = "<group>";
@@ -113,10 +94,6 @@
 			isa = PBXGroup;
 			children = (
 				81A1B2F32B8F235A00D2C4A1 /* AuthenticationViewModel.swift */,
-				62ECB63FEBBF37A30E7086E5 /* MessagesViewModel.swift */,
-				A717E38EC71BC86B7CB8ACAB /* WorkoutPlansViewModel.swift */,
-				D9E975CC7EF1B6EF7AE2E873 /* ClientManagementViewModel.swift */,
-				31C7DF84D2C71F4A2907639C /* ExerciseLibraryViewModel.swift */,
 			);
 			path = ViewModels;
 			sourceTree = "<group>";
@@ -128,20 +105,8 @@
 				81A1B2F72B8F236A00D2C4A1 /* RoleSelectionView.swift */,
 				81A1B2F92B8F237100D2C4A1 /* TrainerDashboardView.swift */,
 				81A1B2FB2B8F237900D2C4A1 /* ClientDashboardView.swift */,
-				C3A81A39150F39364C0EE3F7 /* PlansManagementView.swift */,
-				C96304BDBD62F017E8DC15C2 /* ClientManagementView.swift */,
-				C4671FD9F5C8257711070DD7 /* ExerciseLibraryView.swift */,
-				F9A2B3456789CDEF01234567 /* TrainerProfileView.swift */,
 			);
 			path = Views;
-			sourceTree = "<group>";
-		};
-		FC4495464FA674EEEAC64505 /* Theme */ = {
-			isa = PBXGroup;
-			children = (
-				3B9F6A32024867A9616E293B /* MovefullyTheme.swift */,
-			);
-			path = Theme;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -235,15 +200,6 @@
 				81A1B2FA2B8F237100D2C4A1 /* TrainerDashboardView.swift in Sources */,
 				81A1B2F82B8F236A00D2C4A1 /* RoleSelectionView.swift in Sources */,
 				81A1B2E52B8F234500D2C4A1 /* MovefullyApp.swift in Sources */,
-				CC3276C432616AFF5F8DEF31 /* PlansManagementView.swift in Sources */,
-				CF3D777AAE870FEE4541B736 /* ClientManagementView.swift in Sources */,
-				E5261402FB692CDA53F08F18 /* ExerciseLibraryView.swift in Sources */,
-				9A80A7E6777B6213AA55E9E5 /* MessagesViewModel.swift in Sources */,
-				EA540785B4C5633CF9E929C3 /* WorkoutPlansViewModel.swift in Sources */,
-				8213FC8FA50E4B2CF9C5EA67 /* ClientManagementViewModel.swift in Sources */,
-				92D215A44A2B63C3C8121421 /* ExerciseLibraryViewModel.swift in Sources */,
-				B5C47E92B23DA5F7B7E2A78C /* MovefullyTheme.swift in Sources */,
-				D7F8E1234567890ABCDEF123 /* TrainerProfileView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -302,7 +258,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
@@ -359,7 +315,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
@@ -378,7 +334,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"Movefully/Preview Content\"";
-				DEVELOPMENT_TEAM = Y7M2354XJ8;
+				DEVELOPMENT_TEAM = "";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -386,7 +342,7 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
-				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -411,7 +367,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"Movefully/Preview Content\"";
-				DEVELOPMENT_TEAM = Y7M2354XJ8;
+				DEVELOPMENT_TEAM = "";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -419,7 +375,7 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
-				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -488,4 +444,4 @@
 /* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 81A1B2D92B8F234500D2C4A1 /* Project object */;
-}
+} 

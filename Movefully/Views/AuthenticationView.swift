@@ -33,28 +33,133 @@ struct AuthenticationView: View {
                     
                     // Authentication options
                     VStack(spacing: 24) {
-                        // Apple Sign-In (Primary)
-                        VStack(spacing: 16) {
-                            SignInWithAppleButton(
-                                onRequest: { request in
-                                    // This is handled by the AuthenticationViewModel
-                                },
-                                onCompletion: { result in
-                                    // This is handled by the AuthenticationViewModel
-                                }
-                            )
-                            .signInWithAppleButtonStyle(.black)
-                            .frame(height: 52)
-                            .clipShape(RoundedRectangle(cornerRadius: 16))
-                            .onTapGesture {
-                                authViewModel.signInWithApple()
+                        // Title
+                        VStack(spacing: 8) {
+                            Text("Welcome to")
+                                .font(.system(size: 28, weight: .light, design: .rounded))
+                                .foregroundColor(.secondary)
+                            
+                            Text("Movefully")
+                                .font(.system(size: 36, weight: .bold, design: .rounded))
+                                .foregroundColor(.primary)
+                        }
+                        
+                        // Simulator warning banner
+                        #if targetEnvironment(simulator)
+                        VStack(spacing: 8) {
+                            HStack {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .foregroundColor(.orange)
+                                Text("Running on Simulator")
+                                    .font(.caption.weight(.medium))
+                                    .foregroundColor(.orange)
                             }
                             
-                            Text("Continue with Apple for the fastest sign-in")
-                                .font(.system(size: 13, weight: .medium, design: .rounded))
+                            Text("Apple Sign-In has limited support on simulator. Email/password is recommended for testing.")
+                                .font(.caption2)
                                 .foregroundColor(.secondary)
                                 .multilineTextAlignment(.center)
                         }
+                        .padding(12)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.orange.opacity(0.1))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.orange.opacity(0.3), lineWidth: 1)
+                                )
+                        )
+                        #endif
+                        
+                        // Apple Sign-In (Primary)
+                        if AuthenticationViewModel.isSignInWithAppleAvailable {
+                            VStack(spacing: 16) {
+                                Button(action: {
+                                    authViewModel.signInWithApple()
+                                }) {
+                                    HStack {
+                                        if authViewModel.isLoading {
+                                            ProgressView()
+                                                .scaleEffect(0.8)
+                                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                        } else {
+                                            Image(systemName: "applelogo")
+                                                .font(.title2)
+                                            Text("Continue with Apple")
+                                                .font(.headline)
+                                                .fontWeight(.semibold)
+                                        }
+                                    }
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 16)
+                                    .background(Color.black)
+                                    .cornerRadius(12)
+                                }
+                                .disabled(authViewModel.isLoading)
+                                
+                                // Alternative Authentication Options
+                                Text("OR")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                    .padding(.vertical, 8)
+                            }
+                        } else {
+                            // Message for when Sign in with Apple is not available
+                            VStack(spacing: 16) {
+                                HStack {
+                                    Image(systemName: "info.circle")
+                                        .foregroundColor(.blue)
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("Sign in with Apple")
+                                            .font(.headline)
+                                        Text("Requires a paid Apple Developer Program membership")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    Spacer()
+                                }
+                                .padding()
+                                .background(Color(.systemGray6))
+                                .cornerRadius(12)
+                                
+                                Text("Continue with alternative method")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        
+                        #if targetEnvironment(simulator)
+                        // Test Account Button (Simulator only)
+                        Button(action: {
+                            authViewModel.signInWithTestAccount()
+                        }) {
+                            HStack {
+                                if authViewModel.isLoading {
+                                    ProgressView()
+                                        .scaleEffect(0.8)
+                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                } else {
+                                    Image(systemName: "flask")
+                                        .font(.system(size: 16, weight: .medium))
+                                    Text("Quick Test Account")
+                                        .font(.system(size: 14, weight: .medium, design: .rounded))
+                                }
+                            }
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 44)
+                            .foregroundColor(.white)
+                            .background(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [Color.orange, Color.red]),
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: 22))
+                        }
+                        .disabled(authViewModel.isLoading)
+                        #endif
                         
                         // Divider
                         HStack {
