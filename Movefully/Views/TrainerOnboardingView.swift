@@ -27,72 +27,40 @@ struct TrainerOnboardingView: View {
                 MovefullyCard {
                     VStack(spacing: MovefullyTheme.Layout.paddingL) {
                         // Full Name Field
-                        VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingS) {
-                            HStack {
-                                Text("Full Name")
-                                    .font(MovefullyTheme.Typography.bodyMedium)
-                                    .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                        MovefullyFormField(title: "Full Name", isRequired: true) {
+                            VStack(spacing: MovefullyTheme.Layout.paddingXS) {
+                                MovefullyTextField(
+                                    placeholder: "Enter your full name",
+                                    text: $viewModel.fullName,
+                                    maxCharacters: viewModel.maxNameLength
+                                )
                                 
-                                Spacer()
-                                
-                                Text("\(viewModel.nameCharacterCount)/\(viewModel.maxNameLength)")
-                                    .font(MovefullyTheme.Typography.caption)
-                                    .foregroundColor(MovefullyTheme.Colors.textSecondary)
-                            }
-                            
-                            TextField("Enter your full name", text: $viewModel.fullName)
-                                .movefullyTextFieldStyle()
-                                .onChange(of: viewModel.fullName) { newValue in
-                                    if newValue.count > viewModel.maxNameLength {
-                                        viewModel.fullName = String(newValue.prefix(viewModel.maxNameLength))
-                                    }
+                                MovefullyCharacterCount(
+                                    currentCount: viewModel.nameCharacterCount,
+                                    maxCount: viewModel.maxNameLength
+                                )
                                 }
                         }
                         
                         // Coaching Bio Field
-                        VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingS) {
-                            HStack {
-                                Text("Coaching Philosophy")
-                                    .font(MovefullyTheme.Typography.bodyMedium)
-                                    .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                        MovefullyFormField(
+                            title: "Professional Bio",
+                            subtitle: "Tell potential clients about your approach to wellness coaching",
+                            isRequired: true
+                        ) {
+                            VStack(spacing: MovefullyTheme.Layout.paddingXS) {
+                                MovefullyTextEditor(
+                                    placeholder: "Share your coaching philosophy, experience, and what makes your approach unique...",
+                                    text: $viewModel.coachingBio,
+                                    minLines: 4,
+                                    maxLines: 8,
+                                    maxCharacters: viewModel.maxBioLength
+                                )
                                 
-                                Spacer()
-                                
-                                Text("\(viewModel.bioCharacterCount)/\(viewModel.maxBioLength)")
-                                    .font(MovefullyTheme.Typography.caption)
-                                    .foregroundColor(MovefullyTheme.Colors.textSecondary)
-                            }
-                            
-                            Text("Share a bit about your coaching philosophy and experience. What makes your approach special?")
-                                .font(MovefullyTheme.Typography.callout)
-                                .foregroundColor(MovefullyTheme.Colors.textSecondary)
-                            
-                            ZStack(alignment: .topLeading) {
-                                RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM)
-                                    .fill(MovefullyTheme.Colors.cardBackground)
-                                    .frame(minHeight: 120)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM)
-                                            .stroke(MovefullyTheme.Colors.divider, lineWidth: 1)
-                                    )
-                                
-                                if viewModel.coachingBio.isEmpty {
-                                    Text("I believe in empowering my clients through mindful movement and sustainable wellness practices...")
-                                        .font(MovefullyTheme.Typography.body)
-                                        .foregroundColor(MovefullyTheme.Colors.textSecondary.opacity(0.6))
-                                        .padding(MovefullyTheme.Layout.paddingM)
-                                }
-                                
-                                TextEditor(text: $viewModel.coachingBio)
-                                    .font(MovefullyTheme.Typography.body)
-                                    .foregroundColor(MovefullyTheme.Colors.textPrimary)
-                                    .padding(MovefullyTheme.Layout.paddingM)
-                                    .background(Color.clear)
-                                    .onChange(of: viewModel.coachingBio) { newValue in
-                                        if newValue.count > viewModel.maxBioLength {
-                                            viewModel.coachingBio = String(newValue.prefix(viewModel.maxBioLength))
-                                        }
-                                    }
+                                MovefullyCharacterCount(
+                                    currentCount: viewModel.bioCharacterCount,
+                                    maxCount: viewModel.maxBioLength
+                                )
                             }
                         }
                         

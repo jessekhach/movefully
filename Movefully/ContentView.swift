@@ -3,9 +3,10 @@ import FirebaseAuth
 
 struct ContentView: View {
     @StateObject private var authViewModel = AuthenticationViewModel()
+    @StateObject private var clientViewModel = ClientViewModel()
     
     var body: some View {
-        Group {
+        VStack {
             if authViewModel.isAuthenticated {
                 if authViewModel.userRole == nil {
                     RoleSelectionView()
@@ -14,7 +15,7 @@ struct ContentView: View {
                     TrainerDashboardView()
                         .environmentObject(authViewModel)
                 } else {
-                    ClientDashboardView()
+                    ClientMainView()
                         .environmentObject(authViewModel)
                 }
             } else {

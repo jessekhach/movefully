@@ -160,7 +160,7 @@ struct MovefullyButtonStyle: ButtonStyle {
     }
 }
 
-// MARK: - Custom Text Field Style
+// MARK: - Custom Text Field Style (DEPRECATED - Use MovefullyTextField component instead)
 struct MovefullyTextFieldStyle: TextFieldStyle {
     func _body(configuration: TextField<Self._Label>) -> some View {
         configuration
@@ -177,7 +177,7 @@ struct MovefullyTextFieldStyle: TextFieldStyle {
     }
 }
 
-// MARK: - Search Field Style  
+// MARK: - Search Field Style (DEPRECATED - Use MovefullySearchField component instead)
 struct MovefullySearchFieldStyle: TextFieldStyle {
     func _body(configuration: TextField<Self._Label>) -> some View {
         configuration
@@ -193,23 +193,6 @@ struct MovefullySearchFieldStyle: TextFieldStyle {
                     .stroke(MovefullyTheme.Colors.primaryTeal.opacity(0.2), lineWidth: 1)
             )
             .shadow(color: MovefullyTheme.Effects.cardShadow, radius: 6, x: 0, y: 3)
-    }
-}
-
-// MARK: - Custom Card Style
-struct MovefullyCard<Content: View>: View {
-    let content: Content
-    
-    init(@ViewBuilder content: () -> Content) {
-        self.content = content()
-    }
-    
-    var body: some View {
-        content
-            .padding(MovefullyTheme.Layout.paddingL)
-            .background(MovefullyTheme.Colors.cardBackground)
-            .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusL))
-            .shadow(color: MovefullyTheme.Effects.cardShadow, radius: 8, x: 0, y: 4)
     }
 }
 
@@ -232,10 +215,12 @@ extension View {
         self.buttonStyle(MovefullyButtonStyle(type: type))
     }
     
+    // DEPRECATED - Use MovefullyTextField component instead
     func movefullyTextFieldStyle() -> some View {
         self.textFieldStyle(MovefullyTextFieldStyle())
     }
     
+    // DEPRECATED - Use MovefullySearchField component instead
     func movefullySearchFieldStyle() -> some View {
         self.textFieldStyle(MovefullySearchFieldStyle())
     }

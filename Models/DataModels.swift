@@ -461,366 +461,39 @@ struct Exercise: Identifiable, Codable {
     var difficulty: DifficultyLevel?
     var createdByTrainerId: String? // If trainers can add their own
     
-    // Comprehensive exercise library shared by both trainers and clients
+    // Sample exercises for testing
     static let sampleExercises = [
-        // STRENGTH EXERCISES
         Exercise(
-            id: "1",
-            title: "Push-ups",
-            description: "Classic upper body exercise for building chest, shoulder, and tricep strength",
-            mediaUrl: nil,
-            category: .strength,
-            duration: 15,
-            difficulty: .beginner,
-            createdByTrainerId: nil
-        ),
-        Exercise(
-            id: "2",
-            title: "Squats",
-            description: "Fundamental lower body movement for leg and glute strength",
-            mediaUrl: nil,
-            category: .strength,
-            duration: 20,
-            difficulty: .beginner,
-            createdByTrainerId: nil
-        ),
-        Exercise(
-            id: "3",
-            title: "Plank",
-            description: "Core strengthening exercise for stability and endurance",
-            mediaUrl: nil,
-            category: .strength,
-            duration: 10,
-            difficulty: .beginner,
-            createdByTrainerId: nil
-        ),
-        Exercise(
-            id: "4",
-            title: "Lunges",
-            description: "Single-leg strengthening exercise for legs and core stability",
-            mediaUrl: nil,
-            category: .strength,
-            duration: 15,
-            difficulty: .beginner,
-            createdByTrainerId: nil
-        ),
-        Exercise(
-            id: "5",
-            title: "Dead Bug",
-            description: "Core stability exercise that strengthens deep abdominal muscles",
-            mediaUrl: nil,
-            category: .strength,
-            duration: 12,
-            difficulty: .beginner,
-            createdByTrainerId: nil
-        ),
-        Exercise(
-            id: "6",
-            title: "Glute Bridges",
-            description: "Hip strengthening exercise targeting glutes and hamstrings",
-            mediaUrl: nil,
-            category: .strength,
-            duration: 15,
-            difficulty: .beginner,
-            createdByTrainerId: nil
-        ),
-        Exercise(
-            id: "7",
-            title: "Wall Push-ups",
-            description: "Modified push-up for beginners or those with limited mobility",
-            mediaUrl: nil,
-            category: .strength,
-            duration: 10,
-            difficulty: .beginner,
-            createdByTrainerId: nil
-        ),
-        Exercise(
-            id: "8",
-            title: "Bird Dog",
-            description: "Core stability exercise that improves balance and coordination",
-            mediaUrl: nil,
-            category: .strength,
-            duration: 10,
-            difficulty: .intermediate,
-            createdByTrainerId: nil
-        ),
-        Exercise(
-            id: "9",
-            title: "Side Plank",
-            description: "Lateral core strengthening exercise for obliques",
-            mediaUrl: nil,
-            category: .strength,
-            duration: 8,
-            difficulty: .intermediate,
-            createdByTrainerId: nil
-        ),
-        Exercise(
-            id: "10",
-            title: "Single-Leg Deadlift",
-            description: "Balance and posterior chain strengthening exercise",
-            mediaUrl: nil,
-            category: .strength,
-            duration: 12,
-            difficulty: .intermediate,
-            createdByTrainerId: nil
-        ),
-        
-        // CARDIO EXERCISES
-        Exercise(
-            id: "11",
-            title: "Jumping Jacks",
-            description: "Full body cardio exercise to elevate heart rate",
-            mediaUrl: nil,
-            category: .cardio,
-            duration: 5,
-            difficulty: .beginner,
-            createdByTrainerId: nil
-        ),
-        Exercise(
-            id: "12",
-            title: "Mountain Climbers",
-            description: "Dynamic cardio exercise combining core and cardio work",
-            mediaUrl: nil,
-            category: .cardio,
-            duration: 8,
-            difficulty: .intermediate,
-            createdByTrainerId: nil
-        ),
-        Exercise(
-            id: "13",
-            title: "Marching in Place",
-            description: "Low-impact cardio movement to warm up or maintain fitness",
-            mediaUrl: nil,
-            category: .cardio,
-            duration: 5,
-            difficulty: .beginner,
-            createdByTrainerId: nil
-        ),
-        Exercise(
-            id: "14",
-            title: "Step-ups",
-            description: "Functional cardio exercise using stairs or platform",
-            mediaUrl: nil,
-            category: .cardio,
-            duration: 10,
-            difficulty: .beginner,
-            createdByTrainerId: nil
-        ),
-        Exercise(
-            id: "15",
-            title: "Butt Kicks",
-            description: "Dynamic cardio movement for warming up and heart rate elevation",
-            mediaUrl: nil,
-            category: .cardio,
-            duration: 5,
-            difficulty: .beginner,
-            createdByTrainerId: nil
-        ),
-        Exercise(
-            id: "16",
-            title: "Burpees",
-            description: "High-intensity full-body exercise combining strength and cardio",
-            mediaUrl: nil,
-            category: .cardio,
-            duration: 8,
-            difficulty: .advanced,
-            createdByTrainerId: nil
-        ),
-        Exercise(
-            id: "17",
-            title: "High Knees",
-            description: "Cardio exercise to improve coordination and elevate heart rate",
-            mediaUrl: nil,
-            category: .cardio,
-            duration: 5,
-            difficulty: .beginner,
-            createdByTrainerId: nil
-        ),
-        Exercise(
-            id: "18",
-            title: "Jump Squats",
-            description: "Plyometric exercise combining strength and cardio",
-            mediaUrl: nil,
-            category: .cardio,
-            duration: 8,
-            difficulty: .intermediate,
-            createdByTrainerId: nil
-        ),
-        
-        // FLEXIBILITY EXERCISES
-        Exercise(
-            id: "19",
-            title: "Child's Pose",
-            description: "Gentle yoga stretch for relaxation and flexibility",
-            mediaUrl: nil,
-            category: .flexibility,
-            duration: 5,
-            difficulty: .beginner,
-            createdByTrainerId: nil
-        ),
-        Exercise(
-            id: "20",
-            title: "Cat-Cow Stretch",
-            description: "Spinal mobility exercise that helps warm up your back",
-            mediaUrl: nil,
-            category: .flexibility,
-            duration: 5,
-            difficulty: .beginner,
-            createdByTrainerId: nil
-        ),
-        Exercise(
-            id: "21",
-            title: "Downward Dog",
-            description: "Yoga pose that stretches hamstrings, calves, and shoulders",
-            mediaUrl: nil,
-            category: .flexibility,
-            duration: 8,
-            difficulty: .beginner,
-            createdByTrainerId: nil
-        ),
-        Exercise(
-            id: "22",
-            title: "Hip Circles",
-            description: "Dynamic mobility exercise for hip joint health",
-            mediaUrl: nil,
-            category: .flexibility,
-            duration: 5,
-            difficulty: .beginner,
-            createdByTrainerId: nil
-        ),
-        Exercise(
-            id: "23",
-            title: "Shoulder Rolls",
-            description: "Gentle mobility exercise for shoulder and neck tension",
-            mediaUrl: nil,
-            category: .flexibility,
-            duration: 3,
-            difficulty: .beginner,
-            createdByTrainerId: nil
-        ),
-        Exercise(
-            id: "24",
-            title: "Seated Spinal Twist",
-            description: "Gentle spinal rotation to improve mobility and reduce tension",
-            mediaUrl: nil,
-            category: .flexibility,
-            duration: 8,
-            difficulty: .beginner,
-            createdByTrainerId: nil
-        ),
-        Exercise(
-            id: "25",
-            title: "Pigeon Pose",
-            description: "Deep hip flexor stretch for improved mobility",
-            mediaUrl: nil,
+            id: "ex1",
+            title: "Morning Stretch Routine",
+            description: "Gentle stretches to start your day with intention and grace.",
             category: .flexibility,
             duration: 10,
-            difficulty: .intermediate,
-            createdByTrainerId: nil
+            difficulty: .beginner
         ),
         Exercise(
-            id: "26",
-            title: "Cobra Stretch",
-            description: "Backbend that opens the chest and strengthens the spine",
-            mediaUrl: nil,
-            category: .flexibility,
-            duration: 5,
-            difficulty: .beginner,
-            createdByTrainerId: nil
-        ),
-        
-        // BALANCE EXERCISES
-        Exercise(
-            id: "27",
-            title: "Tree Pose",
-            description: "Balance exercise to improve stability and focus",
-            mediaUrl: nil,
-            category: .balance,
-            duration: 10,
-            difficulty: .intermediate,
-            createdByTrainerId: nil
-        ),
-        Exercise(
-            id: "28",
-            title: "Single-Leg Stand",
-            description: "Simple balance exercise for proprioception and stability",
-            mediaUrl: nil,
-            category: .balance,
-            duration: 5,
-            difficulty: .beginner,
-            createdByTrainerId: nil
-        ),
-        Exercise(
-            id: "29",
-            title: "Heel-to-Toe Walk",
-            description: "Balance and coordination exercise along a straight line",
-            mediaUrl: nil,
-            category: .balance,
-            duration: 5,
-            difficulty: .beginner,
-            createdByTrainerId: nil
-        ),
-        Exercise(
-            id: "30",
-            title: "Warrior III",
-            description: "Challenging yoga balance pose that strengthens legs and core",
-            mediaUrl: nil,
-            category: .balance,
-            duration: 8,
-            difficulty: .advanced,
-            createdByTrainerId: nil
-        ),
-        
-        // MINDFULNESS EXERCISES
-        Exercise(
-            id: "31",
-            title: "Deep Breathing",
-            description: "Mindfulness exercise for stress relief and mental clarity",
-            mediaUrl: nil,
-            category: .mindfulness,
-            duration: 5,
-            difficulty: .beginner,
-            createdByTrainerId: nil
-        ),
-        Exercise(
-            id: "32",
-            title: "Body Scan Meditation",
-            description: "Mindful awareness practice to connect with your body",
-            mediaUrl: nil,
-            category: .mindfulness,
-            duration: 10,
-            difficulty: .beginner,
-            createdByTrainerId: nil
-        ),
-        Exercise(
-            id: "33",
+            id: "ex2",
             title: "Mindful Walking",
-            description: "Moving meditation focusing on each step and breath",
-            mediaUrl: nil,
-            category: .mindfulness,
-            duration: 15,
-            difficulty: .beginner,
-            createdByTrainerId: nil
+            description: "Focus on breath and movement in a peaceful, meditative way.",
+            category: .cardio,
+            duration: 20,
+            difficulty: .beginner
         ),
         Exercise(
-            id: "34",
-            title: "Gratitude Practice",
-            description: "Mindfulness exercise focusing on appreciation and positivity",
-            mediaUrl: nil,
-            category: .mindfulness,
-            duration: 5,
-            difficulty: .beginner,
-            createdByTrainerId: nil
+            id: "ex3",
+            title: "Core Strengthening Flow",
+            description: "Build strength from your center with flowing, connected movements.",
+            category: .strength,
+            duration: 15,
+            difficulty: .intermediate
         ),
         Exercise(
-            id: "35",
-            title: "Progressive Muscle Relaxation",
-            description: "Systematic tension and relaxation of muscle groups",
-            mediaUrl: nil,
-            category: .mindfulness,
-            duration: 15,
-            difficulty: .beginner,
-            createdByTrainerId: nil
+            id: "ex4",
+            title: "Evening Wind Down",
+            description: "Gentle movements to release tension and prepare for rest.",
+            category: .flexibility,
+            duration: 12,
+            difficulty: .beginner
         )
     ]
 }

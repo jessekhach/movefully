@@ -7,6 +7,23 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		271E191A2DEC9A5E00995368 /* DataModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 271E19182DEC9A5E00995368 /* DataModels.swift */; };
+		273B79172DEB9C1100F755A6 /* ClientViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 273B79152DEB9C1100F755A6 /* ClientViewModel.swift */; };
+		273B79182DEB9C1100F755A6 /* TrainerOnboardingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 273B79162DEB9C1100F755A6 /* TrainerOnboardingViewModel.swift */; };
+		273B79192DEB9C1100F755A6 /* ClientDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 273B79142DEB9C1100F755A6 /* ClientDetailViewModel.swift */; };
+		273B79252DEB9C2700F755A6 /* ExerciseRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 273B79212DEB9C2700F755A6 /* ExerciseRowView.swift */; };
+		273B79262DEB9C2700F755A6 /* TrainerOnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 273B79232DEB9C2700F755A6 /* TrainerOnboardingView.swift */; };
+		273B79272DEB9C2700F755A6 /* ClientResourcesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 273B791D2DEB9C2700F755A6 /* ClientResourcesView.swift */; };
+		273B79282DEB9C2700F755A6 /* ClientTodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 273B79202DEB9C2700F755A6 /* ClientTodayView.swift */; };
+		273B79292DEB9C2700F755A6 /* WorkoutPlansView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 273B79242DEB9C2700F755A6 /* WorkoutPlansView.swift */; };
+		273B792A2DEB9C2700F755A6 /* ClientMessagesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 273B791C2DEB9C2700F755A6 /* ClientMessagesView.swift */; };
+		273B792B2DEB9C2700F755A6 /* ClientRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 273B791E2DEB9C2700F755A6 /* ClientRowView.swift */; };
+		273B792C2DEB9C2700F755A6 /* ClientMainView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 273B791B2DEB9C2700F755A6 /* ClientMainView.swift */; };
+		273B792D2DEB9C2700F755A6 /* ClientScheduleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 273B791F2DEB9C2700F755A6 /* ClientScheduleView.swift */; };
+		273B792E2DEB9C2700F755A6 /* TrainerMessagesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 273B79222DEB9C2700F755A6 /* TrainerMessagesView.swift */; };
+		273B792F2DEB9C2700F755A6 /* ClientDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 273B791A2DEB9C2700F755A6 /* ClientDetailView.swift */; };
+		277995032DEB94BC002C32C6 /* MovefullyComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 277995012DEB94BB002C32C6 /* MovefullyComponents.swift */; };
+		277995042DEB94BC002C32C6 /* MovefullyLayouts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 277995022DEB94BB002C32C6 /* MovefullyLayouts.swift */; };
 		81A1B2E52B8F234500D2C4A1 /* MovefullyApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81A1B2E42B8F234500D2C4A1 /* MovefullyApp.swift */; };
 		81A1B2E72B8F234500D2C4A1 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81A1B2E62B8F234500D2C4A1 /* ContentView.swift */; };
 		81A1B2E92B8F234700D2C4A1 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 81A1B2E82B8F234700D2C4A1 /* Assets.xcassets */; };
@@ -32,6 +49,23 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		271E19182DEC9A5E00995368 /* DataModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataModels.swift; sourceTree = "<group>"; };
+		273B79142DEB9C1100F755A6 /* ClientDetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClientDetailViewModel.swift; sourceTree = "<group>"; };
+		273B79152DEB9C1100F755A6 /* ClientViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClientViewModel.swift; sourceTree = "<group>"; };
+		273B79162DEB9C1100F755A6 /* TrainerOnboardingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainerOnboardingViewModel.swift; sourceTree = "<group>"; };
+		273B791A2DEB9C2700F755A6 /* ClientDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClientDetailView.swift; sourceTree = "<group>"; };
+		273B791B2DEB9C2700F755A6 /* ClientMainView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClientMainView.swift; sourceTree = "<group>"; };
+		273B791C2DEB9C2700F755A6 /* ClientMessagesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClientMessagesView.swift; sourceTree = "<group>"; };
+		273B791D2DEB9C2700F755A6 /* ClientResourcesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClientResourcesView.swift; sourceTree = "<group>"; };
+		273B791E2DEB9C2700F755A6 /* ClientRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClientRowView.swift; sourceTree = "<group>"; };
+		273B791F2DEB9C2700F755A6 /* ClientScheduleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClientScheduleView.swift; sourceTree = "<group>"; };
+		273B79202DEB9C2700F755A6 /* ClientTodayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClientTodayView.swift; sourceTree = "<group>"; };
+		273B79212DEB9C2700F755A6 /* ExerciseRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseRowView.swift; sourceTree = "<group>"; };
+		273B79222DEB9C2700F755A6 /* TrainerMessagesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainerMessagesView.swift; sourceTree = "<group>"; };
+		273B79232DEB9C2700F755A6 /* TrainerOnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainerOnboardingView.swift; sourceTree = "<group>"; };
+		273B79242DEB9C2700F755A6 /* WorkoutPlansView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutPlansView.swift; sourceTree = "<group>"; };
+		277995012DEB94BB002C32C6 /* MovefullyComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovefullyComponents.swift; sourceTree = "<group>"; };
+		277995022DEB94BB002C32C6 /* MovefullyLayouts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovefullyLayouts.swift; sourceTree = "<group>"; };
 		31C7DF84D2C71F4A2907639C /* ExerciseLibraryViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ExerciseLibraryViewModel.swift; sourceTree = "<group>"; };
 		3B9F6A32024867A9616E293B /* MovefullyTheme.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MovefullyTheme.swift; sourceTree = "<group>"; };
 		62ECB63FEBBF37A30E7086E5 /* MessagesViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MessagesViewModel.swift; sourceTree = "<group>"; };
@@ -69,9 +103,18 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		271E19192DEC9A5E00995368 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				271E19182DEC9A5E00995368 /* DataModels.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
 		81A1B2D82B8F234500D2C4A1 = {
 			isa = PBXGroup;
 			children = (
+				271E19192DEC9A5E00995368 /* Models */,
 				81A1B2E32B8F234500D2C4A1 /* Movefully */,
 				81A1B2E22B8F234500D2C4A1 /* Products */,
 			);
@@ -112,6 +155,9 @@
 		81A1B2F22B8F235000D2C4A1 /* ViewModels */ = {
 			isa = PBXGroup;
 			children = (
+				273B79142DEB9C1100F755A6 /* ClientDetailViewModel.swift */,
+				273B79152DEB9C1100F755A6 /* ClientViewModel.swift */,
+				273B79162DEB9C1100F755A6 /* TrainerOnboardingViewModel.swift */,
 				81A1B2F32B8F235A00D2C4A1 /* AuthenticationViewModel.swift */,
 				62ECB63FEBBF37A30E7086E5 /* MessagesViewModel.swift */,
 				A717E38EC71BC86B7CB8ACAB /* WorkoutPlansViewModel.swift */,
@@ -124,6 +170,17 @@
 		81A1B3062B8F239700D2C4A1 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				273B791A2DEB9C2700F755A6 /* ClientDetailView.swift */,
+				273B791B2DEB9C2700F755A6 /* ClientMainView.swift */,
+				273B791C2DEB9C2700F755A6 /* ClientMessagesView.swift */,
+				273B791D2DEB9C2700F755A6 /* ClientResourcesView.swift */,
+				273B791E2DEB9C2700F755A6 /* ClientRowView.swift */,
+				273B791F2DEB9C2700F755A6 /* ClientScheduleView.swift */,
+				273B79202DEB9C2700F755A6 /* ClientTodayView.swift */,
+				273B79212DEB9C2700F755A6 /* ExerciseRowView.swift */,
+				273B79222DEB9C2700F755A6 /* TrainerMessagesView.swift */,
+				273B79232DEB9C2700F755A6 /* TrainerOnboardingView.swift */,
+				273B79242DEB9C2700F755A6 /* WorkoutPlansView.swift */,
 				81A1B2F52B8F236200D2C4A1 /* AuthenticationView.swift */,
 				81A1B2F72B8F236A00D2C4A1 /* RoleSelectionView.swift */,
 				81A1B2F92B8F237100D2C4A1 /* TrainerDashboardView.swift */,
@@ -139,6 +196,8 @@
 		FC4495464FA674EEEAC64505 /* Theme */ = {
 			isa = PBXGroup;
 			children = (
+				277995012DEB94BB002C32C6 /* MovefullyComponents.swift */,
+				277995022DEB94BB002C32C6 /* MovefullyLayouts.swift */,
 				3B9F6A32024867A9616E293B /* MovefullyTheme.swift */,
 			);
 			path = Theme;
@@ -151,6 +210,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 81A1B2EF2B8F234700D2C4A1 /* Build configuration list for PBXNativeTarget "Movefully" */;
 			buildPhases = (
+				271E19172DEC993E00995368 /* ShellScript */,
 				81A1B2DD2B8F234500D2C4A1 /* Sources */,
 				81A1B2DE2B8F234500D2C4A1 /* Frameworks */,
 				81A1B2DF2B8F234500D2C4A1 /* Resources */,
@@ -223,6 +283,26 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		271E19172DEC993E00995368 /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 8;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+			shellPath = /bin/sh;
+			shellScript = "#!/bin/bash\n\n# Auto-add new Swift files to compilation\necho \"🔍 Scanning for new Swift files...\"\n\n# Find all Swift files in the Movefully directory\nfind \"$SRCROOT/Movefully\" -name \"*.swift\" -type f | while read -r file; do\n    filename=$(basename \"$file\")\n    \n    # Check if file is already in the project\n    if ! grep -q \"$filename\" \"$PROJECT_FILE_PATH/project.pbxproj\"; then\n        echo \"⚠️  Found untracked Swift file: $file\"\n        echo \"   Please add this file to the Xcode project manually\"\n    fi\ndone\n\necho \"✅ Swift file scan complete\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		81A1B2DD2B8F234500D2C4A1 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -231,12 +311,29 @@
 				81A1B2E72B8F234500D2C4A1 /* ContentView.swift in Sources */,
 				81A1B2F42B8F235A00D2C4A1 /* AuthenticationViewModel.swift in Sources */,
 				81A1B2F62B8F236200D2C4A1 /* AuthenticationView.swift in Sources */,
+				277995032DEB94BC002C32C6 /* MovefullyComponents.swift in Sources */,
+				277995042DEB94BC002C32C6 /* MovefullyLayouts.swift in Sources */,
 				81A1B2FC2B8F237900D2C4A1 /* ClientDashboardView.swift in Sources */,
 				81A1B2FA2B8F237100D2C4A1 /* TrainerDashboardView.swift in Sources */,
+				273B79172DEB9C1100F755A6 /* ClientViewModel.swift in Sources */,
+				273B79182DEB9C1100F755A6 /* TrainerOnboardingViewModel.swift in Sources */,
+				273B79192DEB9C1100F755A6 /* ClientDetailViewModel.swift in Sources */,
 				81A1B2F82B8F236A00D2C4A1 /* RoleSelectionView.swift in Sources */,
 				81A1B2E52B8F234500D2C4A1 /* MovefullyApp.swift in Sources */,
 				CC3276C432616AFF5F8DEF31 /* PlansManagementView.swift in Sources */,
 				CF3D777AAE870FEE4541B736 /* ClientManagementView.swift in Sources */,
+				273B79252DEB9C2700F755A6 /* ExerciseRowView.swift in Sources */,
+				273B79262DEB9C2700F755A6 /* TrainerOnboardingView.swift in Sources */,
+				273B79272DEB9C2700F755A6 /* ClientResourcesView.swift in Sources */,
+				273B79282DEB9C2700F755A6 /* ClientTodayView.swift in Sources */,
+				273B79292DEB9C2700F755A6 /* WorkoutPlansView.swift in Sources */,
+				273B792A2DEB9C2700F755A6 /* ClientMessagesView.swift in Sources */,
+				273B792B2DEB9C2700F755A6 /* ClientRowView.swift in Sources */,
+				273B792C2DEB9C2700F755A6 /* ClientMainView.swift in Sources */,
+				273B792D2DEB9C2700F755A6 /* ClientScheduleView.swift in Sources */,
+				273B792E2DEB9C2700F755A6 /* TrainerMessagesView.swift in Sources */,
+				271E191A2DEC9A5E00995368 /* DataModels.swift in Sources */,
+				273B792F2DEB9C2700F755A6 /* ClientDetailView.swift in Sources */,
 				E5261402FB692CDA53F08F18 /* ExerciseLibraryView.swift in Sources */,
 				9A80A7E6777B6213AA55E9E5 /* MessagesViewModel.swift in Sources */,
 				EA540785B4C5633CF9E929C3 /* WorkoutPlansViewModel.swift in Sources */,

@@ -87,7 +87,7 @@ struct MessagesManagementView: View {
     
     var filteredConversations: [Conversation] {
         if searchText.isEmpty {
-            return viewModel.conversations.sorted { $0.lastMessageDate > $1.lastMessageDate }
+            return viewModel.conversations.sorted { $0.lastMessageTime > $1.lastMessageTime }
         } else {
             return viewModel.conversations.filter { conversation in
                 conversation.clientName.localizedCaseInsensitiveContains(searchText) ||
@@ -97,420 +97,72 @@ struct MessagesManagementView: View {
     }
     
     var body: some View {
-        NavigationView {
+        MovefullyNavigationPageLayout {
             VStack(spacing: 0) {
-                // Header
-                VStack(spacing: MovefullyTheme.Layout.paddingL) {
-                    HStack(spacing: MovefullyTheme.Layout.paddingL) {
-                        VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingS) {
-                            Text("Conversations")
-                                .font(MovefullyTheme.Typography.title1)
-                                .foregroundColor(MovefullyTheme.Colors.textPrimary)
-                            
-                            Text("Stay connected with your wellness community")
-                                .font(MovefullyTheme.Typography.callout)
-                                .foregroundColor(MovefullyTheme.Colors.textSecondary)
-                        }
-                        
-                        Spacer()
-                        
-                        Button(action: {
-                            showingNewMessage = true
-                        }) {
-                            Image(systemName: "square.and.pencil")
-                                .font(.system(size: 24, weight: .medium))
-                                .foregroundColor(MovefullyTheme.Colors.primaryTeal)
-                                .background(
-                                    Circle()
-                                        .fill(MovefullyTheme.Colors.primaryTeal.opacity(0.15))
-                                        .frame(width: 44, height: 44)
-                                )
-                        }
-                    }
-                    
-                    // Search Bar
-                    VStack(spacing: 0) {
-                        TextField("Search conversations...", text: $searchText)
-                            .movefullySearchFieldStyle()
-                            .overlay(
-                                HStack {
-                                    Image(systemName: "magnifyingglass")
-                                        .font(.system(size: 16, weight: .medium))
-                                        .foregroundColor(MovefullyTheme.Colors.textSecondary)
-                                        .padding(.leading, MovefullyTheme.Layout.paddingL)
-                                    
-                                    Spacer()
-                                }, 
-                                alignment: .leading
+                // Header Section
+                MovefullyContentSection {
+                    MovefullyPageSection {
+                        MovefullyPageHeader(
+                            title: "Conversations",
+                            subtitle: "Stay connected with your wellness community",
+                            actionButton: MovefullyPageHeader.ActionButton(
+                                title: "New",
+                                icon: "square.and.pencil",
+                                action: {
+                                    showingNewMessage = true
+                                }
                             )
-                            .padding(.horizontal, MovefullyTheme.Layout.paddingXL)
-                            .padding(.vertical, MovefullyTheme.Layout.paddingL)
+                        )
+                        
+                        MovefullySearchField(
+                            placeholder: "Search conversations...",
+                            text: $searchText
+                        )
                     }
-                    .background(MovefullyTheme.Colors.cardBackground)
                 }
-                .padding(.horizontal, 24)
-                .padding(.top, 24)
-                .padding(.bottom, 8)
-                .background(.white)
                 
                 // Conversations List
-                ScrollView {
-                    LazyVStack(spacing: MovefullyTheme.Layout.paddingM) {
-                        ForEach(filteredConversations) { conversation in
-                            ConversationRowView(conversation: conversation) {
-                                selectedConversation = conversation
-                            }
-                        }
-                    }
-                    .padding(.horizontal, MovefullyTheme.Layout.paddingXL)
-                    .padding(.vertical, MovefullyTheme.Layout.paddingL)
-                }
-                .background(MovefullyTheme.Colors.backgroundPrimary)
-            }
-            .movefullyBackground()
-            .sheet(isPresented: $showingNewMessage) {
-                NewMessageView()
-            }
-            .sheet(item: $selectedConversation) { conversation in
-                ConversationDetailView(conversation: conversation)
-            }
-        }
-        .navigationViewStyle(StackNavigationViewStyle())
-    }
-}
-
-struct ConversationRowView: View {
-    let conversation: Conversation
-    let onTap: () -> Void
-    
-    var body: some View {
-        Button(action: onTap) {
-            HStack(spacing: 16) {
-                // Profile Picture
-                ZStack {
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [MovefullyTheme.lavender.opacity(0.6), MovefullyTheme.lavender.opacity(0.4)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: 48, height: 48)
-                    
-                    Text(String(conversation.clientName.prefix(1)))
-                        .font(.system(size: 18, weight: .semibold, design: .rounded))
-                        .foregroundColor(.white)
-                }
-                
-                // Conversation Details
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack {
-                        Text(conversation.clientName)
-                            .font(.system(size: 16, weight: .semibold, design: .rounded))
-                            .foregroundColor(MovefullyTheme.Colors.textPrimary)
-                        
-                        Spacer()
-                        
-                        Text(formatDate(conversation.lastMessageDate))
-                            .font(.system(size: 12, weight: .medium, design: .rounded))
-                            .foregroundColor(MovefullyTheme.Colors.textSecondary)
-                    }
-                    
-                    HStack {
-                        Text(conversation.lastMessage)
-                            .font(.system(size: 14, weight: .medium, design: .rounded))
-                            .foregroundColor(MovefullyTheme.Colors.textSecondary)
-                            .lineLimit(2)
-                        
-                        Spacer()
-                        
-                        if conversation.unreadCount > 0 {
-                            ZStack {
-                                Circle()
-                                    .fill(MovefullyTheme.Colors.primaryTeal)
-                                    .frame(width: 20, height: 20)
-                                
-                                Text("\(conversation.unreadCount)")
-                                    .font(.system(size: 11, weight: .bold, design: .rounded))
-                                    .foregroundColor(.white)
-                            }
-                        }
-                    }
-                }
-            }
-            .padding(16)
-            .background(.white)
-            .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.smallCornerRadius))
-            .shadow(color: Color.black.opacity(0.04), radius: 6, x: 0, y: 2)
-        }
-        .buttonStyle(PlainButtonStyle())
-    }
-    
-    private func formatDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        let calendar = Calendar.current
-        
-        if calendar.isDateInToday(date) {
-            formatter.dateFormat = "HH:mm"
-        } else if calendar.isDateInYesterday(date) {
-            return "Yesterday"
-        } else {
-            formatter.dateFormat = "MM/dd"
-        }
-        
-        return formatter.string(from: date)
-    }
-}
-
-struct NewMessageView: View {
-    @Environment(\.dismiss) private var dismiss
-    @State private var selectedClient = ""
-    @State private var messageText = ""
-    
-    var body: some View {
-        NavigationView {
-            VStack(spacing: 24) {
-                // Header
-                Text("New Message")
-                    .font(.system(size: 24, weight: .bold, design: .rounded))
-                    .foregroundColor(MovefullyTheme.Colors.textPrimary)
-                    .padding(.top, 20)
-                
-                // Form
-                VStack(spacing: 20) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("To")
-                            .font(.system(size: 16, weight: .semibold, design: .rounded))
-                            .foregroundColor(MovefullyTheme.Colors.textPrimary)
-                        
-                        TextField("Select client...", text: $selectedClient)
-                            .textFieldStyle(MovefullyTextFieldStyle())
-                    }
-                    
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Message")
-                            .font(.system(size: 16, weight: .semibold, design: .rounded))
-                            .foregroundColor(MovefullyTheme.Colors.textPrimary)
-                        
-                        TextEditor(text: $messageText)
-                            .frame(height: 120)
-                            .padding(16)
-                            .background(.white)
-                            .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.smallCornerRadius))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: MovefullyTheme.smallCornerRadius)
-                                    .stroke(MovefullyTheme.Colors.primaryTeal.opacity(0.2), lineWidth: 1)
-                            )
-                    }
-                }
-                .padding(.horizontal, 24)
-                
-                Spacer()
-                
-                // Send Button
-                Button(action: {
-                    // TODO: Send message
-                    dismiss()
-                }) {
-                    Text("Send Message")
-                        .font(.system(size: 18, weight: .semibold, design: .rounded))
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(
-                            LinearGradient(
-                                colors: [MovefullyTheme.Colors.primaryTeal, MovefullyTheme.Colors.primaryTeal.opacity(0.8)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.cornerRadius))
-                        .shadow(color: MovefullyTheme.Colors.primaryTeal.opacity(0.3), radius: 8, x: 0, y: 4)
-                }
-                .padding(.horizontal, 24)
-                .disabled(selectedClient.isEmpty || messageText.isEmpty)
-            }
-            .background(MovefullyTheme.Colors.backgroundSecondary)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                    .foregroundColor(MovefullyTheme.Colors.textSecondary)
-                }
-            }
-        }
-    }
-}
-
-struct ConversationDetailView: View {
-    let conversation: Conversation
-    @Environment(\.dismiss) private var dismiss
-    @State private var newMessageText = ""
-    
-    var body: some View {
-        NavigationView {
-            VStack(spacing: 0) {
-                // Messages List
-                ScrollView {
-                    LazyVStack(spacing: 12) {
-                        ForEach(conversation.messages) { message in
-                            MessageBubbleView(message: message)
-                        }
-                    }
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 16)
-                }
-                
-                // Message Input
-                HStack(spacing: 12) {
-                    TextField("Type a message...", text: $newMessageText)
-                        .textFieldStyle(MovefullyTextFieldStyle())
-                        .padding(12)
-                        .background(.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 20))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 20)
-                                .stroke(MovefullyTheme.Colors.primaryTeal.opacity(0.2), lineWidth: 1)
-                        )
-                    
-                    Button(action: {
-                        // TODO: Send message
-                        newMessageText = ""
-                    }) {
-                        Image(systemName: "arrow.up.circle.fill")
-                            .font(.system(size: 32))
-                            .foregroundColor(MovefullyTheme.Colors.primaryTeal)
-                    }
-                    .disabled(newMessageText.isEmpty)
-                }
-                .padding(.horizontal, 24)
-                .padding(.vertical, 16)
-                .background(.white)
-            }
-            .background(MovefullyTheme.Colors.backgroundSecondary)
-            .navigationTitle(conversation.clientName)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        dismiss()
-                    }
-                    .foregroundColor(MovefullyTheme.Colors.primaryTeal)
-                }
-            }
-        }
-    }
-}
-
-struct MessageBubbleView: View {
-    let message: Message
-    
-    var body: some View {
-        HStack {
-            if message.isFromTrainer {
-                Spacer()
-            }
-            
-            VStack(alignment: message.isFromTrainer ? .trailing : .leading, spacing: 4) {
-                Text(message.content)
-                    .font(.system(size: 16, weight: .medium, design: .rounded))
-                    .foregroundColor(message.isFromTrainer ? .white : MovefullyTheme.Colors.textPrimary)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .background(
-                        message.isFromTrainer
-                            ? MovefullyTheme.Colors.primaryTeal
-                            : Color.white
+                if filteredConversations.isEmpty {
+                    MovefullyEmptyState(
+                        icon: searchText.isEmpty ? "message.circle" : "magnifyingglass",
+                        title: searchText.isEmpty ? "Start a conversation" : "No conversations found",
+                        description: searchText.isEmpty ? 
+                            "Connect with your clients through meaningful conversations to support their wellness journey." : 
+                            "Try adjusting your search terms to find the conversation you're looking for.",
+                        actionButton: searchText.isEmpty ? 
+                            MovefullyEmptyState.ActionButton(
+                                title: "Send First Message",
+                                action: { showingNewMessage = true }
+                            ) : nil
                     )
-                    .clipShape(
-                        RoundedRectangle(cornerRadius: 18)
-                    )
-                    .shadow(color: Color.black.opacity(0.04), radius: 4, x: 0, y: 2)
-                
-                Text(formatTime(message.timestamp))
-                    .font(.system(size: 11, weight: .medium, design: .rounded))
-                    .foregroundColor(MovefullyTheme.Colors.textSecondary)
-                    .padding(.horizontal, 4)
-            }
-            
-            if !message.isFromTrainer {
-                Spacer()
+                } else {
+                    ScrollView {
+                        MovefullyListLayout(
+                            items: filteredConversations,
+                            itemView: { conversation in
+                                Button(action: {
+                                    selectedConversation = conversation
+                                }) {
+                                    ConversationRowView(conversation: conversation)
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                            }
+                        )
+                    }
+                    .background(MovefullyTheme.Colors.backgroundPrimary)
+                }
             }
         }
-    }
-    
-    private func formatTime(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm"
-        return formatter.string(from: date)
-    }
-}
-
-// MARK: - Compact Category Pill
-struct CompactCategoryPill: View {
-    let title: String
-    let isSelected: Bool
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            Text(title)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundColor(isSelected ? .white : MovefullyTheme.Colors.primaryTeal)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(isSelected ? MovefullyTheme.Colors.primaryTeal : MovefullyTheme.Colors.primaryTeal.opacity(0.1))
-                .clipShape(RoundedRectangle(cornerRadius: 6))
+        .sheet(isPresented: $showingNewMessage) {
+            NewMessageView()
         }
-        .buttonStyle(PlainButtonStyle())
+        .sheet(item: $selectedConversation) { conversation in
+            ConversationDetailView(conversation: conversation)
+        }
     }
 }
 
 // MARK: - Exercise Supporting Views
-struct ExerciseCategoryPill: View {
-    let title: String
-    let count: Int
-    let isSelected: Bool
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 8) {
-                Text(title)
-                    .font(.system(size: 15, weight: .semibold, design: .rounded))
-                    .foregroundColor(isSelected ? .white : MovefullyTheme.Colors.primaryTeal)
-                
-                if count > 0 {
-                    Text("\(count)")
-                        .font(.system(size: 12, weight: .bold, design: .rounded))
-                        .foregroundColor(isSelected ? MovefullyTheme.Colors.primaryTeal.opacity(0.8) : .white)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 2)
-                        .background(isSelected ? .white : MovefullyTheme.Colors.primaryTeal)
-                        .clipShape(Capsule())
-                }
-            }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 12)
-            .background(
-                isSelected ? MovefullyTheme.Colors.primaryTeal : MovefullyTheme.Colors.primaryTeal.opacity(0.1)
-            )
-            .clipShape(Capsule())
-            .shadow(
-                color: isSelected ? MovefullyTheme.Colors.primaryTeal.opacity(0.3) : Color.clear,
-                radius: 6,
-                x: 0,
-                y: 3
-            )
-            .scaleEffect(isSelected ? 1.05 : 1.0)
-            .animation(.easeInOut(duration: 0.2), value: isSelected)
-        }
-    }
-}
-
 struct EquipmentFilterPill: View {
     let title: String
     let count: Int
@@ -520,90 +172,28 @@ struct EquipmentFilterPill: View {
     let action: () -> Void
     
     var body: some View {
-        Button(action: action) {
-            HStack(spacing: 8) {
-                Image(systemName: icon)
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(isSelected ? .white : color)
-                
-                Text(title)
-                    .font(.system(size: 15, weight: .semibold, design: .rounded))
-                    .foregroundColor(isSelected ? .white : color)
-                
-                if count > 0 {
-                    Text("\(count)")
-                        .font(.system(size: 12, weight: .bold, design: .rounded))
-                        .foregroundColor(isSelected ? color.opacity(0.8) : .white)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 2)
-                        .background(isSelected ? .white : color)
-                        .clipShape(Capsule())
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-            .background(
-                isSelected ? color : color.opacity(0.1)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.smallCornerRadius))
-            .shadow(
-                color: isSelected ? color.opacity(0.3) : Color.clear,
-                radius: 4,
-                x: 0,
-                y: 2
-            )
-            .scaleEffect(isSelected ? 1.02 : 1.0)
-            .animation(.easeInOut(duration: 0.2), value: isSelected)
-        }
+        MovefullyPill(
+            title: count > 0 ? "\(title) (\(count))" : title,
+            isSelected: isSelected,
+            style: .filter,
+            action: action
+        )
     }
 }
 
 struct DifficultyFilterPill: View {
-    let difficulty: ExerciseDifficulty
+    let difficulty: DifficultyLevel
     let count: Int
     let isSelected: Bool
     let action: () -> Void
     
     var body: some View {
-        Button(action: action) {
-            HStack(spacing: 8) {
-                Text(difficulty.rawValue)
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
-                    .foregroundColor(isSelected ? .white : difficultyColor)
-                
-                if count > 0 {
-                    Text("\(count)")
-                        .font(.system(size: 12, weight: .bold, design: .rounded))
-                        .foregroundColor(isSelected ? difficultyColor.opacity(0.8) : .white)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 2)
-                        .background(isSelected ? .white : difficultyColor)
-                        .clipShape(Capsule())
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
-            .background(
-                isSelected ? difficultyColor : difficultyColor.opacity(0.15)
-            )
-            .clipShape(Capsule())
-            .shadow(
-                color: isSelected ? difficultyColor.opacity(0.3) : Color.clear,
-                radius: 4,
-                x: 0,
-                y: 2
-            )
-            .scaleEffect(isSelected ? 1.05 : 1.0)
-            .animation(.easeInOut(duration: 0.2), value: isSelected)
-        }
-    }
-    
-    private var difficultyColor: Color {
-        switch difficulty {
-        case .beginner: return MovefullyTheme.softGreen
-        case .intermediate: return MovefullyTheme.warmOrange
-        case .advanced: return MovefullyTheme.gentleBlue
-        }
+        MovefullyPill(
+            title: count > 0 ? "\(difficulty.rawValue) (\(count))" : difficulty.rawValue,
+            isSelected: isSelected,
+            style: .filter,
+            action: action
+        )
     }
 }
 
@@ -614,33 +204,31 @@ struct ExerciseStatView: View {
     let color: Color
     
     var body: some View {
-        VStack(spacing: 8) {
-            HStack(spacing: 6) {
+        VStack(spacing: MovefullyTheme.Layout.paddingS) {
+            HStack(spacing: MovefullyTheme.Layout.paddingXS) {
                 Image(systemName: icon)
-                    .font(.system(size: 16, weight: .medium))
+                    .font(MovefullyTheme.Typography.buttonSmall)
                     .foregroundColor(color)
                 
                 Text("\(count)")
-                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                    .font(MovefullyTheme.Typography.title3)
                     .foregroundColor(color)
             }
             
             Text(title)
-                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .font(MovefullyTheme.Typography.caption)
                 .foregroundColor(MovefullyTheme.Colors.textSecondary)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(.horizontal, MovefullyTheme.Layout.paddingM)
+        .padding(.vertical, MovefullyTheme.Layout.paddingS)
         .background(color.opacity(0.08))
-        .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.smallCornerRadius))
+        .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
         .overlay(
-            RoundedRectangle(cornerRadius: MovefullyTheme.smallCornerRadius)
+            RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM)
                 .stroke(color.opacity(0.2), lineWidth: 1)
         )
     }
 }
-
-// MARK: - Exercise Data Models
 
 #Preview {
     TrainerDashboardView()
@@ -650,22 +238,22 @@ struct ExerciseStatView: View {
 // MARK: - Trainer Profile Placeholder
 struct TrainerProfilePlaceholder: View {
     var body: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: MovefullyTheme.Layout.paddingL) {
             Image(systemName: "person.circle.fill")
-                .font(.system(size: 80))
+                .font(MovefullyTheme.Typography.largeTitle)
                 .foregroundColor(MovefullyTheme.Colors.primaryTeal)
             
-            VStack(spacing: 8) {
+            VStack(spacing: MovefullyTheme.Layout.paddingS) {
                 Text("Trainer Profile - TESTING")
-                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .font(MovefullyTheme.Typography.title2)
                     .foregroundColor(MovefullyTheme.Colors.textPrimary)
                 
                 Text("Your professional wellness profile")
-                    .font(.system(size: 16, weight: .medium, design: .rounded))
+                    .font(MovefullyTheme.Typography.body)
                     .foregroundColor(MovefullyTheme.Colors.textSecondary)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(MovefullyTheme.Colors.backgroundSecondary)
+        .movefullyBackground()
     }
 } 

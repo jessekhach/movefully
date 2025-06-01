@@ -446,31 +446,18 @@ struct ProfileEditField: View {
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingS) {
-            Text(title)
-                .font(MovefullyTheme.Typography.bodyMedium)
-                .foregroundColor(MovefullyTheme.Colors.textPrimary)
-            
+        MovefullyFormField(title: title) {
             if isMultiline {
-                TextField(title, text: $text, axis: .vertical)
-                    .font(MovefullyTheme.Typography.body)
-                    .padding(MovefullyTheme.Layout.paddingM)
-                    .background(MovefullyTheme.Colors.cardBackground)
-                    .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM)
-                            .stroke(MovefullyTheme.Colors.divider, lineWidth: 1)
-                    )
-                    .lineLimit(4...8)
+                MovefullyTextEditor(
+                    placeholder: title,
+                    text: $text,
+                    minLines: 4,
+                    maxLines: 8
+                )
             } else {
-                TextField(title, text: $text)
-                    .font(MovefullyTheme.Typography.body)
-                    .padding(MovefullyTheme.Layout.paddingM)
-                    .background(MovefullyTheme.Colors.cardBackground)
-                    .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM)
-                            .stroke(MovefullyTheme.Colors.divider, lineWidth: 1)
+                MovefullyTextField(
+                    placeholder: title,
+                    text: $text
                     )
             }
         }
@@ -506,28 +493,50 @@ struct SettingsView: View {
                     VStack(spacing: MovefullyTheme.Layout.paddingL) {
                         SettingsSection(title: "Notifications", icon: "bell") {
                             VStack(spacing: MovefullyTheme.Layout.paddingM) {
-                                SettingsToggle(title: "Push Notifications", subtitle: "Get notified about client activity and messages", isOn: $notificationsEnabled)
-                                SettingsToggle(title: "Email Updates", subtitle: "Receive weekly summaries and updates", isOn: $emailUpdates)
+                                MovefullyToggleField(
+                                    title: "Push Notifications",
+                                    subtitle: "Get notified about client activity and messages",
+                                    isOn: $notificationsEnabled
+                                )
+                                MovefullyToggleField(
+                                    title: "Email Updates",
+                                    subtitle: "Receive weekly summaries and updates",
+                                    isOn: $emailUpdates
+                                )
                             }
                         }
                         
                         SettingsSection(title: "Appearance", icon: "paintbrush") {
                             VStack(spacing: MovefullyTheme.Layout.paddingM) {
-                                SettingsToggle(title: "Dark Mode", subtitle: "Use dark theme for the app interface", isOn: $darkModeEnabled)
+                                MovefullyToggleField(
+                                    title: "Dark Mode",
+                                    subtitle: "Use dark theme for the app interface",
+                                    isOn: $darkModeEnabled
+                                )
                             }
                         }
                         
                         SettingsSection(title: "Security", icon: "lock.shield") {
                             VStack(spacing: MovefullyTheme.Layout.paddingM) {
-                                SettingsToggle(title: "Biometric Authentication", subtitle: "Use Touch ID or Face ID to unlock", isOn: $biometricAuth)
+                                MovefullyToggleField(
+                                    title: "Biometric Authentication",
+                                    subtitle: "Use Touch ID or Face ID to unlock",
+                                    isOn: $biometricAuth
+                                )
                                 
-                                SettingsActionRow(title: "Change Password", icon: "key", action: {
+                                MovefullyActionRow(
+                                    title: "Change Password",
+                                    icon: "key"
+                                ) {
                                     // Handle password change
-                                })
+                                }
                                 
-                                SettingsActionRow(title: "Two-Factor Authentication", icon: "shield.checkered", action: {
+                                MovefullyActionRow(
+                                    title: "Two-Factor Authentication",
+                                    icon: "shield.checkered"
+                                ) {
                                     // Handle 2FA setup
-                                })
+                                }
                             }
                         }
                         

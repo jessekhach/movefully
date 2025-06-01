@@ -87,11 +87,11 @@ struct ExerciseRowView: View {
     private func difficultyColor(for difficulty: DifficultyLevel) -> Color {
         switch difficulty {
         case .beginner:
-            return MovefullyTheme.Colors.success
+            return MovefullyTheme.Colors.softGreen
         case .intermediate:
             return MovefullyTheme.Colors.primaryTeal
         case .advanced:
-            return MovefullyTheme.Colors.secondaryPeach
+            return MovefullyTheme.Colors.warmOrange
         }
     }
 }

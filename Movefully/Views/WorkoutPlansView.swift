@@ -67,7 +67,7 @@ struct WorkoutPlansView: View {
                             Spacer(minLength: 200)
                         }
                         .frame(maxWidth: .infinity)
-                    } else if viewModel.plans.isEmpty {
+                    } else if viewModel.workoutPlans.isEmpty {
                         // Empty State
                         VStack(spacing: MovefullyTheme.Layout.paddingXL) {
                             Spacer(minLength: 100)
@@ -102,7 +102,7 @@ struct WorkoutPlansView: View {
                     } else {
                         // Plans List
                         LazyVStack(spacing: MovefullyTheme.Layout.paddingM) {
-                            ForEach(viewModel.plans) { plan in
+                            ForEach(viewModel.workoutPlans) { plan in
                                 WorkoutPlanRowView(plan: plan) {
                                     selectedPlan = plan
                                     showingPlanDetail = true
@@ -115,9 +115,6 @@ struct WorkoutPlansView: View {
                 }
             }
             .movefullyBackground()
-            .refreshable {
-                viewModel.refreshPlans()
-            }
         }
         .sheet(isPresented: $showingCreatePlan) {
             CreatePlanSheet()
@@ -139,7 +136,7 @@ struct WorkoutPlansView: View {
             }
         }
         .onAppear {
-            viewModel.loadPlans()
+            // Load plans is not needed as they're loaded in init
         }
     }
 }
@@ -255,7 +252,7 @@ struct DifficultyBadge: View {
         HStack(spacing: MovefullyTheme.Layout.paddingXS) {
             ForEach(1...3, id: \.self) { index in
                 Image(systemName: "star.fill")
-                    .font(.system(size: 10))
+                    .font(MovefullyTheme.Typography.footnote)
                     .foregroundColor(index <= difficulty.starRating ? 
                                    MovefullyTheme.Colors.secondaryPeach : 
                                    MovefullyTheme.Colors.inactive)
@@ -279,119 +276,138 @@ struct PlanDetailView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: MovefullyTheme.Layout.paddingL) {
-                    // Header
-                    VStack(spacing: MovefullyTheme.Layout.paddingM) {
-                        HStack {
-                            Button("Close") {
-                                dismiss()
-                            }
-                            .foregroundColor(MovefullyTheme.Colors.primaryTeal)
-                            
-                            Spacer()
-                            
-                            Text("Plan Details")
-                                .font(MovefullyTheme.Typography.bodyMedium)
-                                .foregroundColor(MovefullyTheme.Colors.textPrimary)
-                            
-                            Spacer()
-                            
-                            Button("Edit") {
-                                onEdit()
-                            }
-                            .foregroundColor(MovefullyTheme.Colors.primaryTeal)
-                        }
-                        .padding(.horizontal, MovefullyTheme.Layout.paddingL)
-                        .padding(.top, MovefullyTheme.Layout.paddingM)
-                    }
-                    
-                    // Plan Info
-                    VStack(spacing: MovefullyTheme.Layout.paddingL) {
-                        VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingM) {
-                            Text(plan.name)
-                                .font(MovefullyTheme.Typography.title2)
-                                .foregroundColor(MovefullyTheme.Colors.textPrimary)
-                            
-                            Text(plan.description)
-                                .font(MovefullyTheme.Typography.body)
-                                .foregroundColor(MovefullyTheme.Colors.textSecondary)
-                                .lineLimit(nil)
-                        }
-                        
-                        // Stats Grid
-                        LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: MovefullyTheme.Layout.paddingM) {
-                            PlanDetailStatView(title: "Duration", value: "\(plan.duration) weeks", icon: "calendar")
-                            PlanDetailStatView(title: "Sessions/Week", value: "\(plan.exercisesPerWeek)", icon: "repeat")
-                            PlanDetailStatView(title: "Session Length", value: "\(plan.sessionDuration) min", icon: "clock")
-                            PlanDetailStatView(title: "Assigned Clients", value: "\(plan.assignedClients)", icon: "person.2")
-                        }
-                        
-                        // Difficulty
-                        HStack {
-                            Text("Difficulty:")
-                                .font(MovefullyTheme.Typography.bodyMedium)
-                                .foregroundColor(MovefullyTheme.Colors.textPrimary)
-                            
-                            Spacer()
-                            
-                            DifficultyBadge(difficulty: plan.difficulty)
-                        }
-                        
-                        // Tags
-                        if !plan.tags.isEmpty {
-                            VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingS) {
-                                Text("Tags:")
-                                    .font(MovefullyTheme.Typography.bodyMedium)
-                                    .foregroundColor(MovefullyTheme.Colors.textPrimary)
-                                
-                                FlowLayout(spacing: MovefullyTheme.Layout.paddingS) {
-                                    ForEach(plan.tags, id: \.self) { tag in
-                                        Text(tag)
-                                            .font(MovefullyTheme.Typography.caption)
-                                            .foregroundColor(MovefullyTheme.Colors.primaryTeal)
-                                            .padding(.horizontal, MovefullyTheme.Layout.paddingM)
-                                            .padding(.vertical, MovefullyTheme.Layout.paddingS)
-                                            .background(MovefullyTheme.Colors.primaryTeal.opacity(0.15))
-                                            .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
-                                    }
-                                }
-                            }
-                        }
-                        
-                        // Exercises
-                        if !plan.exercises.isEmpty {
-                            VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingM) {
-                                Text("Exercises:")
-                                    .font(MovefullyTheme.Typography.bodyMedium)
-                                    .foregroundColor(MovefullyTheme.Colors.textPrimary)
-                                
-                                VStack(spacing: MovefullyTheme.Layout.paddingS) {
-                                    ForEach(Array(plan.exercises.enumerated()), id: \.offset) { index, exercise in
-                                        HStack {
-                                            Text("\(index + 1).")
-                                                .font(MovefullyTheme.Typography.callout)
-                                                .foregroundColor(MovefullyTheme.Colors.primaryTeal)
-                                                .frame(width: 30, alignment: .leading)
-                                            
-                                            Text(exercise)
-                                                .font(MovefullyTheme.Typography.callout)
-                                                .foregroundColor(MovefullyTheme.Colors.textPrimary)
-                                            
-                                            Spacer()
-                                        }
-                                        .padding(.vertical, MovefullyTheme.Layout.paddingXS)
-                                    }
-                                }
-                                .padding(MovefullyTheme.Layout.paddingM)
-                                .background(MovefullyTheme.Colors.cardBackground)
-                                .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
-                            }
-                        }
-                    }
-                    .padding(.horizontal, MovefullyTheme.Layout.paddingL)
+                    planHeader
+                    planInfo
                 }
             }
             .movefullyBackground()
             .navigationBarHidden(true)
+        }
+    }
+    
+    private var planHeader: some View {
+        VStack(spacing: MovefullyTheme.Layout.paddingM) {
+            HStack {
+                Button("Close") {
+                    dismiss()
+                }
+                .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+                
+                Spacer()
+                
+                Text("Plan Details")
+                    .font(MovefullyTheme.Typography.bodyMedium)
+                    .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                
+                Spacer()
+                
+                Button("Edit") {
+                    onEdit()
+                }
+                .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+            }
+            .padding(.horizontal, MovefullyTheme.Layout.paddingL)
+            .padding(.top, MovefullyTheme.Layout.paddingM)
+        }
+    }
+    
+    private var planInfo: some View {
+        VStack(spacing: MovefullyTheme.Layout.paddingL) {
+            planBasicInfo
+            planStatsGrid
+            planDifficulty
+            planTags
+            planExercises
+        }
+        .padding(.horizontal, MovefullyTheme.Layout.paddingL)
+    }
+    
+    private var planBasicInfo: some View {
+        VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingM) {
+            Text(plan.name)
+                .font(MovefullyTheme.Typography.title2)
+                .foregroundColor(MovefullyTheme.Colors.textPrimary)
+            
+            Text(plan.description)
+                .font(MovefullyTheme.Typography.body)
+                .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                .lineLimit(nil)
+        }
+    }
+    
+    private var planStatsGrid: some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: MovefullyTheme.Layout.paddingM) {
+            PlanDetailStatView(title: "Duration", value: "\(plan.duration) weeks", icon: "calendar")
+            PlanDetailStatView(title: "Sessions/Week", value: "\(plan.exercisesPerWeek)", icon: "repeat")
+            PlanDetailStatView(title: "Session Length", value: "\(plan.sessionDuration) min", icon: "clock")
+            PlanDetailStatView(title: "Assigned Clients", value: "\(plan.assignedClients)", icon: "person.2")
+        }
+    }
+    
+    private var planDifficulty: some View {
+        HStack {
+            Text("Difficulty:")
+                .font(MovefullyTheme.Typography.bodyMedium)
+                .foregroundColor(MovefullyTheme.Colors.textPrimary)
+            
+            Spacer()
+            
+            DifficultyBadge(difficulty: plan.difficulty)
+        }
+    }
+    
+    @ViewBuilder
+    private var planTags: some View {
+        if !plan.tags.isEmpty {
+            VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingS) {
+                Text("Tags:")
+                    .font(MovefullyTheme.Typography.bodyMedium)
+                    .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                
+                FlowLayout(spacing: MovefullyTheme.Layout.paddingS) {
+                    ForEach(plan.tags, id: \.self) { tag in
+                        Text(tag)
+                            .font(MovefullyTheme.Typography.caption)
+                            .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+                            .padding(.horizontal, MovefullyTheme.Layout.paddingM)
+                            .padding(.vertical, MovefullyTheme.Layout.paddingS)
+                            .background(MovefullyTheme.Colors.primaryTeal.opacity(0.15))
+                            .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
+                    }
+                }
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private var planExercises: some View {
+        if !plan.exercises.isEmpty {
+            VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingM) {
+                Text("Exercises:")
+                    .font(MovefullyTheme.Typography.bodyMedium)
+                    .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                
+                VStack(spacing: MovefullyTheme.Layout.paddingS) {
+                    ForEach(Array(plan.exercises.enumerated()), id: \.offset) { index, exercise in
+                        HStack {
+                            Text("\(index + 1).")
+                                .font(MovefullyTheme.Typography.callout)
+                                .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+                                .frame(width: 30, alignment: .leading)
+                            
+                            Text(exercise)
+                                .font(MovefullyTheme.Typography.bodyMedium)
+                                .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                            
+                            Spacer()
+                        }
+                        .padding(.vertical, MovefullyTheme.Layout.paddingXS)
+                    }
+                }
+                .padding(MovefullyTheme.Layout.paddingM)
+                .background(MovefullyTheme.Colors.cardBackground)
+                .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
+            }
         }
     }
 }
@@ -445,12 +461,12 @@ struct CreatePlanSheet: View {
     
     // Mock exercise data - in real app this would come from ExerciseLibraryViewModel
     private let availableExercises = [
-        Exercise(id: "1", name: "Push-ups", description: "Classic upper body exercise", category: .strength, difficulty: .beginner, equipment: ["None"], muscleGroups: ["Chest", "Arms"], instructions: []),
-        Exercise(id: "2", name: "Squats", description: "Fundamental lower body movement", category: .strength, difficulty: .beginner, equipment: ["None"], muscleGroups: ["Legs", "Glutes"], instructions: []),
-        Exercise(id: "3", name: "Plank", description: "Core strengthening exercise", category: .strength, difficulty: .beginner, equipment: ["None"], muscleGroups: ["Core"], instructions: []),
-        Exercise(id: "4", name: "Jumping Jacks", description: "Full body cardio movement", category: .cardio, difficulty: .beginner, equipment: ["None"], muscleGroups: ["Full Body"], instructions: []),
-        Exercise(id: "5", name: "Mountain Climbers", description: "Dynamic cardio and core exercise", category: .cardio, difficulty: .intermediate, equipment: ["None"], muscleGroups: ["Core", "Legs"], instructions: []),
-        Exercise(id: "6", name: "Downward Dog", description: "Yoga pose for flexibility", category: .flexibility, difficulty: .beginner, equipment: ["None"], muscleGroups: ["Full Body"], instructions: [])
+        Exercise(id: "1", title: "Push-ups", description: "Classic upper body exercise", category: .strength, duration: 15, difficulty: .beginner),
+        Exercise(id: "2", title: "Squats", description: "Fundamental lower body movement", category: .strength, duration: 20, difficulty: .beginner),
+        Exercise(id: "3", title: "Plank", description: "Core strengthening exercise", category: .strength, duration: 10, difficulty: .beginner),
+        Exercise(id: "4", title: "Jumping Jacks", description: "Full body cardio movement", category: .cardio, duration: 15, difficulty: .beginner),
+        Exercise(id: "5", title: "Mountain Climbers", description: "Dynamic cardio and core exercise", category: .cardio, duration: 12, difficulty: .intermediate),
+        Exercise(id: "6", title: "Downward Dog", description: "Yoga pose for flexibility", category: .flexibility, duration: 8, difficulty: .beginner)
     ]
     
     var body: some View {
@@ -595,22 +611,27 @@ struct PlanBasicsStep: View {
             // Form Fields
             VStack(spacing: MovefullyTheme.Layout.paddingL) {
                 // Plan Name
-                PlanFormField(title: "Plan Name", isRequired: true) {
-                    TextField("e.g. Beginner Strength Foundation", text: $planName)
-                        .movefullyTextFieldStyle()
+                MovefullyFormField(title: "Plan Name") {
+                    MovefullyTextField(
+                        placeholder: "Plan name",
+                        text: $planName
+                    )
                 }
                 
                 // Description
-                PlanFormField(title: "Description", isRequired: true) {
-                    TextField("Brief description of the plan goals and approach...", text: $planDescription, axis: .vertical)
-                        .movefullyTextFieldStyle()
-                        .lineLimit(3...6)
+                MovefullyFormField(title: "Description") {
+                    MovefullyTextEditor(
+                        placeholder: "Description",
+                        text: $planDescription,
+                        minLines: 3,
+                        maxLines: 6
+                    )
                 }
                 
                 // Settings Grid
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: MovefullyTheme.Layout.paddingM) {
                     // Difficulty
-                    PlanFormField(title: "Difficulty") {
+                    MovefullyFormField(title: "Difficulty") {
                         Menu {
                             ForEach(WorkoutDifficulty.allCases, id: \.self) { difficulty in
                                 Button(difficulty.rawValue) {
@@ -637,7 +658,7 @@ struct PlanBasicsStep: View {
                     }
                     
                     // Duration
-                    PlanFormField(title: "Duration (weeks)") {
+                    MovefullyFormField(title: "Duration (weeks)") {
                         Menu {
                             ForEach(1...12, id: \.self) { week in
                                 Button("\(week) week\(week == 1 ? "" : "s")") {
@@ -664,7 +685,7 @@ struct PlanBasicsStep: View {
                     }
                     
                     // Sessions per week
-                    PlanFormField(title: "Sessions/Week") {
+                    MovefullyFormField(title: "Sessions/Week") {
                         Menu {
                             ForEach(1...7, id: \.self) { sessions in
                                 Button("\(sessions) session\(sessions == 1 ? "" : "s")") {
@@ -691,7 +712,7 @@ struct PlanBasicsStep: View {
                     }
                     
                     // Session Duration
-                    PlanFormField(title: "Session Length") {
+                    MovefullyFormField(title: "Session Length") {
                         Menu {
                             ForEach([15, 30, 45, 60, 75, 90], id: \.self) { minutes in
                                 Button("\(minutes) minutes") {
@@ -831,27 +852,38 @@ struct ClientGuidanceStep: View {
             
             // Form Fields
             VStack(spacing: MovefullyTheme.Layout.paddingL) {
-                PlanFormField(title: "Client Notes", subtitle: "What should clients know before starting?") {
-                    TextField("e.g. This plan focuses on building fundamental movement patterns. Listen to your body and progress at your own pace.", text: $clientNotes, axis: .vertical)
-                        .movefullyTextFieldStyle()
-                        .lineLimit(3...6)
+                MovefullyFormField(title: "Client Notes", subtitle: "What should clients know before starting?") {
+                    MovefullyTextEditor(
+                        placeholder: "e.g. This plan focuses on building fundamental movement patterns. Listen to your body and progress at your own pace.",
+                        text: $clientNotes,
+                        minLines: 3,
+                        maxLines: 6
+                    )
                 }
                 
-                PlanFormField(title: "Coaching Tips", subtitle: "Helpful guidance from you as their coach") {
-                    TextField("e.g. Focus on form over speed. Remember to breathe deeply throughout each movement.", text: $coachingTips, axis: .vertical)
-                        .movefullyTextFieldStyle()
-                        .lineLimit(3...6)
+                MovefullyFormField(title: "Coaching Tips", subtitle: "Helpful guidance from you as their coach") {
+                    MovefullyTextEditor(
+                        placeholder: "e.g. Focus on form over speed. Remember to breathe deeply throughout each movement.",
+                        text: $coachingTips,
+                        minLines: 3,
+                        maxLines: 6
+                    )
                 }
                 
-                PlanFormField(title: "Prerequisites", subtitle: "Any requirements or prior experience needed") {
-                    TextField("e.g. No prior experience required. Basic mobility recommended.", text: $prerequisites, axis: .vertical)
-                        .movefullyTextFieldStyle()
-                        .lineLimit(2...4)
+                MovefullyFormField(title: "Prerequisites", subtitle: "Any requirements or prior experience needed") {
+                    MovefullyTextEditor(
+                        placeholder: "e.g. No prior experience required. Basic mobility recommended.",
+                        text: $prerequisites,
+                        minLines: 2,
+                        maxLines: 4
+                    )
                 }
                 
-                PlanFormField(title: "Tags", subtitle: "Keywords to help organize and find this plan") {
-                    TextField("e.g. beginner, strength, bodyweight, foundation", text: $tags)
-                        .movefullyTextFieldStyle()
+                MovefullyFormField(title: "Tags", subtitle: "Keywords to help organize and find this plan") {
+                    MovefullyTextField(
+                        placeholder: "e.g. beginner, strength, bodyweight, foundation",
+                        text: $tags
+                    )
                 }
             }
         }
@@ -875,25 +907,7 @@ struct PlanFormField<Content: View>: View {
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingS) {
-            HStack {
-                Text(title)
-                    .font(MovefullyTheme.Typography.bodyMedium)
-                    .foregroundColor(MovefullyTheme.Colors.textPrimary)
-                
-                if isRequired {
-                    Text("*")
-                        .font(MovefullyTheme.Typography.bodyMedium)
-                        .foregroundColor(MovefullyTheme.Colors.warmOrange)
-                }
-            }
-            
-            if let subtitle = subtitle {
-                Text(subtitle)
-                    .font(MovefullyTheme.Typography.caption)
-                    .foregroundColor(MovefullyTheme.Colors.textSecondary)
-            }
-            
+        MovefullyFormField(title: title, subtitle: subtitle, isRequired: isRequired) {
             content
         }
     }
@@ -905,15 +919,12 @@ struct ExerciseCategoryPill: View {
     let action: () -> Void
     
     var body: some View {
-        Button(action: action) {
-            Text(title)
-                .font(MovefullyTheme.Typography.caption)
-                .foregroundColor(isSelected ? .white : MovefullyTheme.Colors.primaryTeal)
-                .padding(.horizontal, MovefullyTheme.Layout.paddingM)
-                .padding(.vertical, MovefullyTheme.Layout.paddingS)
-                .background(isSelected ? MovefullyTheme.Colors.primaryTeal : MovefullyTheme.Colors.primaryTeal.opacity(0.15))
-                .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusL))
-        }
+        MovefullyPill(
+            title: title,
+            isSelected: isSelected,
+            style: .tag,
+            action: action
+        )
     }
 }
 
@@ -921,6 +932,21 @@ struct ExerciseSelectionRow: View {
     let exercise: Exercise
     let isSelected: Bool
     let onToggle: () -> Void
+    
+    private var difficultyColor: Color {
+        guard let difficulty = exercise.difficulty else { return MovefullyTheme.Colors.primaryTeal }
+        
+        switch difficulty.color {
+        case "success":
+            return MovefullyTheme.Colors.success
+        case "primaryTeal":
+            return MovefullyTheme.Colors.primaryTeal
+        case "secondaryPeach":
+            return MovefullyTheme.Colors.secondaryPeach
+        default:
+            return MovefullyTheme.Colors.primaryTeal
+        }
+    }
     
     var body: some View {
         Button(action: onToggle) {
@@ -945,26 +971,30 @@ struct ExerciseSelectionRow: View {
                 // Exercise info
                 VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingXS) {
                     HStack {
-                        Text(exercise.name)
+                        Text(exercise.title)
                             .font(MovefullyTheme.Typography.bodyMedium)
                             .foregroundColor(MovefullyTheme.Colors.textPrimary)
                         
                         Spacer()
                         
-                        Text(exercise.difficulty.rawValue)
-                            .font(MovefullyTheme.Typography.caption)
-                            .foregroundColor(exercise.difficultyColor)
-                            .padding(.horizontal, MovefullyTheme.Layout.paddingS)
-                            .padding(.vertical, MovefullyTheme.Layout.paddingXS)
-                            .background(exercise.difficultyColor.opacity(0.15))
-                            .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusS))
+                        if let difficulty = exercise.difficulty {
+                            Text(difficulty.rawValue)
+                                .font(MovefullyTheme.Typography.caption)
+                                .foregroundColor(difficultyColor)
+                                .padding(.horizontal, MovefullyTheme.Layout.paddingS)
+                                .padding(.vertical, MovefullyTheme.Layout.paddingXS)
+                                .background(difficultyColor.opacity(0.15))
+                                .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusS))
+                        }
                     }
                     
-                    Text(exercise.description)
-                        .font(MovefullyTheme.Typography.callout)
-                        .foregroundColor(MovefullyTheme.Colors.textSecondary)
-                        .lineLimit(2)
-                        .multilineTextAlignment(.leading)
+                    if let description = exercise.description {
+                        Text(description)
+                            .font(MovefullyTheme.Typography.callout)
+                            .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.leading)
+                    }
                 }
                 
                 Spacer()
@@ -1017,38 +1047,21 @@ struct EditPlanSheet: View {
                     // Form Fields (same as create)
                     VStack(spacing: MovefullyTheme.Layout.paddingL) {
                         // Plan Name
-                        VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingS) {
-                            Text("Plan Name")
-                                .font(MovefullyTheme.Typography.bodyMedium)
-                                .foregroundColor(MovefullyTheme.Colors.textPrimary)
-                            
-                            TextField("Plan name", text: $planName)
-                                .font(MovefullyTheme.Typography.body)
-                                .padding(MovefullyTheme.Layout.paddingM)
-                                .background(MovefullyTheme.Colors.cardBackground)
-                                .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM)
-                                        .stroke(MovefullyTheme.Colors.divider, lineWidth: 1)
+                        MovefullyFormField(title: "Plan Name") {
+                            MovefullyTextField(
+                                placeholder: "Plan name",
+                                text: $planName
                                 )
                         }
                         
                         // Description
-                        VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingS) {
-                            Text("Description")
-                                .font(MovefullyTheme.Typography.bodyMedium)
-                                .foregroundColor(MovefullyTheme.Colors.textPrimary)
-                            
-                            TextField("Description", text: $planDescription, axis: .vertical)
-                                .font(MovefullyTheme.Typography.body)
-                                .padding(MovefullyTheme.Layout.paddingM)
-                                .background(MovefullyTheme.Colors.cardBackground)
-                                .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM)
-                                        .stroke(MovefullyTheme.Colors.divider, lineWidth: 1)
-                                )
-                                .lineLimit(3...6)
+                        MovefullyFormField(title: "Description") {
+                            MovefullyTextEditor(
+                                placeholder: "Description",
+                                text: $planDescription,
+                                minLines: 3,
+                                maxLines: 6
+                            )
                         }
                     }
                     

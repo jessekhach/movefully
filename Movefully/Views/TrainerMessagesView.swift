@@ -32,7 +32,7 @@ struct TrainerMessagesView: View {
                             }) {
                                 HStack(spacing: MovefullyTheme.Layout.paddingS) {
                                     Image(systemName: "plus.circle.fill")
-                                        .font(.system(size: 16, weight: .medium))
+                                        .font(MovefullyTheme.Typography.buttonSmall)
                                         .foregroundColor(.white)
                                     Text("New")
                                         .font(MovefullyTheme.Typography.buttonSmall)
@@ -82,7 +82,7 @@ struct TrainerMessagesView: View {
                             Spacer(minLength: 150)
                             
                             Image(systemName: "message.circle")
-                                .font(.system(size: 80, weight: .light))
+                                .font(MovefullyTheme.Typography.largeTitle)
                                 .foregroundColor(MovefullyTheme.Colors.primaryTeal.opacity(0.6))
                             
                             VStack(spacing: MovefullyTheme.Layout.paddingM) {
@@ -201,8 +201,8 @@ struct ConversationRowView: View {
                         Text("\(conversation.unreadCount)")
                             .font(MovefullyTheme.Typography.caption)
                             .foregroundColor(.white)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
+                            .padding(.horizontal, MovefullyTheme.Layout.paddingS)
+                            .padding(.vertical, MovefullyTheme.Layout.paddingXS)
                             .background(MovefullyTheme.Colors.primaryTeal)
                             .clipShape(Capsule())
                     }
@@ -213,16 +213,16 @@ struct ConversationRowView: View {
         .padding(.vertical, MovefullyTheme.Layout.paddingS)
         .background(MovefullyTheme.Colors.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
-        .shadow(color: MovefullyTheme.Colors.shadow, radius: 2, x: 0, y: 1)
+        .shadow(color: MovefullyTheme.Effects.cardShadow, radius: 2, x: 0, y: 1)
     }
     
     private func formatMessageTime(_ date: Date) -> String {
         let formatter = DateFormatter()
         let calendar = Calendar.current
         
-        if calendar.isToday(date) {
+        if calendar.isDate(date, inSameDayAs: Date()) {
             formatter.timeStyle = .short
-        } else if calendar.isYesterday(date) {
+        } else if calendar.isDate(date, inSameDayAs: Date().addingTimeInterval(-86400)) {
             return "Yesterday"
         } else {
             formatter.dateStyle = .short
@@ -248,6 +248,7 @@ struct NewMessageView: View {
                     Button("Cancel") {
                         dismiss()
                     }
+                    .font(MovefullyTheme.Typography.bodyMedium)
                     .foregroundColor(MovefullyTheme.Colors.textSecondary)
                     
                     Spacer()
@@ -261,6 +262,7 @@ struct NewMessageView: View {
                     Button("Send") {
                         sendMessage()
                     }
+                    .font(MovefullyTheme.Typography.bodyMedium)
                     .foregroundColor(canSend ? MovefullyTheme.Colors.primaryTeal : MovefullyTheme.Colors.inactive)
                     .disabled(!canSend || isLoading)
                 }
@@ -349,17 +351,19 @@ struct ClientSelectionChip: View {
                     )
                 
                 Text(client.name)
-                    .font(MovefullyTheme.Typography.body)
+                    .font(MovefullyTheme.Typography.callout)
                     .foregroundColor(isSelected ? .white : MovefullyTheme.Colors.textPrimary)
             }
-            .padding(.horizontal, MovefullyTheme.Layout.paddingM)
-            .padding(.vertical, MovefullyTheme.Layout.paddingS)
+            .padding(.horizontal, MovefullyTheme.Layout.paddingL)
+            .padding(.vertical, MovefullyTheme.Layout.paddingM)
             .background(isSelected ? MovefullyTheme.Colors.primaryTeal : MovefullyTheme.Colors.cardBackground)
-            .clipShape(Capsule())
+            .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusL))
             .overlay(
-                Capsule()
+                RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusL)
                     .stroke(MovefullyTheme.Colors.primaryTeal, lineWidth: isSelected ? 0 : 1)
             )
+            .shadow(color: isSelected ? MovefullyTheme.Colors.primaryTeal.opacity(0.3) : MovefullyTheme.Effects.cardShadow, 
+                   radius: isSelected ? 6 : 3, x: 0, y: isSelected ? 3 : 2)
         }
     }
 }
@@ -380,6 +384,7 @@ struct ConversationDetailView: View {
                     Button("Back") {
                         dismiss()
                     }
+                    .font(MovefullyTheme.Typography.bodyMedium)
                     .foregroundColor(MovefullyTheme.Colors.primaryTeal)
                     
                     Spacer()
@@ -400,6 +405,7 @@ struct ConversationDetailView: View {
                         // Menu actions
                     }) {
                         Image(systemName: "ellipsis")
+                            .font(MovefullyTheme.Typography.bodyMedium)
                             .foregroundColor(MovefullyTheme.Colors.primaryTeal)
                     }
                 }
@@ -421,26 +427,26 @@ struct ConversationDetailView: View {
                 
                 // Message Input
                 HStack(spacing: MovefullyTheme.Layout.paddingM) {
-                    TextField("Type a message...", text: $newMessage, axis: .vertical)
-                        .font(MovefullyTheme.Typography.body)
-                        .padding(.horizontal, MovefullyTheme.Layout.paddingM)
-                        .padding(.vertical, MovefullyTheme.Layout.paddingS)
-                        .background(MovefullyTheme.Colors.cardBackground)
-                        .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusL))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusL)
-                                .stroke(MovefullyTheme.Colors.divider, lineWidth: 1)
-                        )
-                        .lineLimit(1...4)
+                    MovefullyTextEditor(
+                        placeholder: "Type a message...",
+                        text: $newMessage,
+                        minLines: 1,
+                        maxLines: 4
+                    )
                     
                     Button(action: sendMessage) {
                         Image(systemName: "paperplane.fill")
-                            .font(.system(size: 16, weight: .medium))
+                            .font(MovefullyTheme.Typography.buttonMedium)
                             .foregroundColor(.white)
-                            .padding(12)
-                            .background(newMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 
-                                       MovefullyTheme.Colors.inactive : MovefullyTheme.Colors.primaryTeal)
-                            .clipShape(Circle())
+                            .frame(width: 44, height: 44)
+                            .background(
+                                Circle()
+                                    .fill(
+                                        newMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 
+                                        MovefullyTheme.Colors.inactive : 
+                                        MovefullyTheme.Colors.primaryTeal
+                                    )
+                            )
                     }
                     .disabled(newMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
@@ -535,7 +541,16 @@ struct MessageBubbleView: View {
     
     private func formatMessageTime(_ date: Date) -> String {
         let formatter = DateFormatter()
-        formatter.timeStyle = .short
+        let calendar = Calendar.current
+        
+        if calendar.isDate(date, inSameDayAs: Date()) {
+            formatter.timeStyle = .short
+        } else if calendar.isDate(date, inSameDayAs: Date().addingTimeInterval(-86400)) {
+            return "Yesterday"
+        } else {
+            formatter.dateStyle = .short
+        }
+        
         return formatter.string(from: date)
     }
 } 

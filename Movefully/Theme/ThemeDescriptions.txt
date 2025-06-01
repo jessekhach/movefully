@@ -1,0 +1,62 @@
+🎨 Movefully UI Theme for Cursor
+
+iOS target = iOS 16+
+
+🖼️ Overall Feel
+Soft, clean, and inviting
+Feels more like a wellness app than a gym tracker
+Prioritizes comfort, calm, and clarity over performance or “intensity”
+🎨 Color Palette
+Use a pastel-inspired, wellness-focused palette with soft contrast and positive tones.
+
+Primary Brand Color
+
+Soft Aqua / Teal (e.g., #56C2C6 or similar)
+Used for primary actions (e.g., Invite button, highlights)
+Accent Colors
+
+Warm Orange for alerts or "Needs Attention" (e.g., #F4A261)
+Soft Green for “Active” (e.g., #70C18C)
+Gentle Blue for “New” or info states (e.g., #6FB1FC)
+Lavender or Orchid for “Pending Invite” (e.g., #C69AE3)
+Medium Gray for muted/paused states (#B0B0B0)
+Backgrounds & Neutrals
+
+App background: #FAFAFA (off-white, not pure white)
+Cards: White with soft shadows or borders
+Text:
+Headings: #333333
+Body: #4F4F4F
+Secondary/muted: #9E9E9E
+🧱 Component Design
+Rounded Corners (all components, 12–16pt radius)
+Shadows should be soft and subtle (avoid harsh elevation)
+Cards float slightly off the background for hierarchy
+Buttons use solid fill or pill style, never full-width edge to edge
+📝 Typography
+Use a modern, calming typeface — ideally native to iOS for performance but styled softly.
+
+Recommended Fonts:
+
+SF Pro Rounded or SF Pro Display (built-in for iOS)
+Rounded edge feel is preferred
+Font Weights:
+Bold for names, section headers
+Regular for body text
+Light or Medium for helper text or captions
+Text Sizes:
+
+Title: 22–24 pt
+Section headers: 17–19 pt
+Body: 15–17 pt
+Captions / metadata: 13–14 pt
+🔄 Interactions
+Use soft animations for transitions (fade, slide-up)
+Taps should give subtle haptic feedback where appropriate
+Form inputs should be large, clean, and spaced — never cramped
+🧘‍♀️ Overall Inspiration
+Think:
+
+Apple Fitness' onboarding screens
+Headspace’s visual gentleness
+The calm, focused structure of apps like Whoop or Balance

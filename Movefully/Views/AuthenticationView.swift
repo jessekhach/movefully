@@ -189,25 +189,22 @@ struct AuthenticationView: View {
                             }) {
                                 HStack {
                                     Image(systemName: "envelope")
-                                        .font(.system(size: 16, weight: .medium))
+                                        .font(MovefullyTheme.Typography.buttonMedium)
                                     Text("Continue with Email")
-                                        .font(.system(size: 16, weight: .medium, design: .rounded))
+                                        .font(MovefullyTheme.Typography.buttonMedium)
                                 }
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 52)
-                                .background(Color(.secondarySystemBackground))
-                                .foregroundColor(.primary)
-                                .clipShape(RoundedRectangle(cornerRadius: 16))
                             }
+                            .movefullyButtonStyle(.secondary)
                         }
                         
                         // Error message
                         if !authViewModel.errorMessage.isEmpty {
-                            Text(authViewModel.errorMessage)
-                                .foregroundColor(.red)
-                                .font(.system(size: 14, weight: .medium, design: .rounded))
-                                .multilineTextAlignment(.center)
-                                .padding(.horizontal)
+                            MovefullyAlertBanner(
+                                title: "Error",
+                                message: authViewModel.errorMessage,
+                                type: .error,
+                                actionButton: nil
+                            )
                         }
                         
                         Spacer(minLength: 40)
@@ -220,9 +217,8 @@ struct AuthenticationView: View {
         .background(
             LinearGradient(
                 colors: [
-                    Color(.systemBackground),
-                    Color(.systemPink).opacity(0.05),
-                    Color(.systemPurple).opacity(0.05)
+                    MovefullyTheme.Colors.backgroundPrimary,
+                    MovefullyTheme.Colors.backgroundSecondary
                 ],
                 startPoint: .top,
                 endPoint: .bottom
@@ -237,29 +233,31 @@ struct AuthenticationView: View {
         VStack(spacing: 16) {
             VStack(spacing: 16) {
                 if isSignUp {
-                    CustomTextField(
+                    MovefullyTextField(
                         placeholder: "Your name",
                         text: $name,
-                        icon: "person"
+                        icon: "person",
+                        autocapitalization: .words
                     )
                 }
                 
-                CustomTextField(
+                MovefullyTextField(
                     placeholder: "Email",
                     text: $email,
-                    icon: "envelope"
+                    icon: "envelope",
+                    keyboardType: .emailAddress,
+                    autocapitalization: .never,
+                    disableAutocorrection: true
                 )
-                .keyboardType(.emailAddress)
-                .autocapitalization(.none)
                 
-                CustomSecureField(
+                MovefullySecureField(
                     placeholder: "Password",
                     text: $password,
                     icon: "lock"
                 )
                 
                 if isSignUp {
-                    CustomSecureField(
+                    MovefullySecureField(
                         placeholder: "Confirm password",
                         text: $confirmPassword,
                         icon: "lock"
@@ -275,45 +273,21 @@ struct AuthenticationView: View {
                     authViewModel.signIn(email: email, password: password)
                 }
             }) {
-                HStack {
-                    if authViewModel.isLoading {
-                        ProgressView()
-                            .scaleEffect(0.8)
-                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                    } else {
                         Text(isSignUp ? "Create Account" : "Sign In")
-                            .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    }
-                }
-                .frame(maxWidth: .infinity)
-                .frame(height: 52)
-                .background(
-                    LinearGradient(
-                        colors: [Color(.systemPink).opacity(0.8), Color(.systemPurple).opacity(0.6)],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
-                .foregroundColor(.white)
-                .clipShape(RoundedRectangle(cornerRadius: 16))
             }
-            .disabled(authViewModel.isLoading)
+            .movefullyButtonStyle(.primary)
+            .disabled(email.isEmpty || password.isEmpty || (isSignUp && (confirmPassword.isEmpty || name.isEmpty)))
             
-            // Toggle between sign in/sign up
+            // Toggle between sign in and sign up
             Button(action: {
                 withAnimation(.easeInOut(duration: 0.3)) {
                     isSignUp.toggle()
                     clearFields()
                 }
             }) {
-                HStack(spacing: 4) {
-                    Text(isSignUp ? "Already have an account?" : "Don't have an account?")
-                        .foregroundColor(.secondary)
-                    Text(isSignUp ? "Sign In" : "Sign Up")
-                        .foregroundColor(Color(.systemPink))
-                        .fontWeight(.semibold)
-                }
-                .font(.system(size: 14, weight: .medium, design: .rounded))
+                Text(isSignUp ? "Already have an account? Sign In" : "Don't have an account? Sign Up")
+                    .font(MovefullyTheme.Typography.callout)
+                    .foregroundColor(MovefullyTheme.Colors.primaryTeal)
             }
             .padding(.top, 8)
             
@@ -326,11 +300,11 @@ struct AuthenticationView: View {
             }) {
                 HStack(spacing: 4) {
                     Image(systemName: "arrow.left")
-                        .font(.system(size: 12, weight: .medium))
+                        .font(MovefullyTheme.Typography.caption)
                     Text("Back to Apple Sign-In")
-                        .font(.system(size: 14, weight: .medium, design: .rounded))
+                        .font(MovefullyTheme.Typography.callout)
                 }
-                .foregroundColor(.secondary)
+                .foregroundColor(MovefullyTheme.Colors.textSecondary)
             }
             .padding(.top, 4)
         }
@@ -365,18 +339,11 @@ struct CustomTextField: View {
     let icon: String
     
     var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .foregroundColor(.secondary)
-                .frame(width: 20)
-            
-            TextField(placeholder, text: $text)
-                .font(.system(size: 16, design: .rounded))
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 16)
-        .background(Color(.secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        MovefullyTextField(
+            placeholder: placeholder,
+            text: $text,
+            icon: icon
+        )
     }
 }
 
@@ -386,18 +353,11 @@ struct CustomSecureField: View {
     let icon: String
     
     var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .foregroundColor(.secondary)
-                .frame(width: 20)
-            
-            SecureField(placeholder, text: $text)
-                .font(.system(size: 16, design: .rounded))
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 16)
-        .background(Color(.secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        MovefullySecureField(
+            placeholder: placeholder,
+            text: $text,
+            icon: icon
+        )
     }
 }
 

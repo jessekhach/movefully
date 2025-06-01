@@ -3,6 +3,30 @@ import SwiftUI
 import FirebaseAuth
 import FirebaseFirestore
 
+// MARK: - Filter and Sort Enums
+enum ClientFilter: String, CaseIterable {
+    case all = "All"
+    case active = "Active"
+    case needsAttention = "Needs Attention"
+    case new = "New"
+    case paused = "Paused"
+    
+    var title: String {
+        return self.rawValue
+    }
+}
+
+enum ClientSort: String, CaseIterable {
+    case lastActivity = "Last Activity"
+    case joinedDate = "Joined Date"
+    case status = "Status"
+    case name = "Name"
+    
+    var title: String {
+        return self.rawValue
+    }
+}
+
 // MARK: - Sort Options
 enum ClientSortOption {
     case name
@@ -11,14 +35,28 @@ enum ClientSortOption {
     case needsAttention
 }
 
+// MARK: - Client Management View Model
 class ClientManagementViewModel: ObservableObject {
     @Published var clients: [Client] = []
     @Published var filteredClients: [Client] = []
-    @Published var isLoading: Bool = false
+    @Published var invitedClients: [ClientInvitation] = []
+    @Published var selectedFilter: ClientFilter = .all
+    @Published var searchText: String = "" {
+        didSet {
+            filterClients()
+        }
+    }
+    @Published var selectedSort: ClientSort = .lastActivity {
+        didSet {
+            sortClients()
+        }
+    }
+    @Published var isLoading = false
+    @Published var errorMessage = ""
+    @Published var successMessage = ""
+    @Published var showingInviteSheet = false
     @Published var showInviteClientSheet: Bool = false
     @Published var newClientEmail: String = ""
-    @Published var errorMessage: String = ""
-    @Published var successMessage: String = ""
     
     private let db = Firestore.firestore()
     private var currentFilter: ClientStatus? = nil
@@ -31,143 +69,138 @@ class ClientManagementViewModel: ObservableObject {
     
     init() {
         loadSampleData()
-        filteredClients = clients
+        filterClients()
     }
     
     private func loadSampleData() {
+        // Use sample data from DataModels
         clients = [
             Client(
                 id: "1",
                 name: "Sarah Johnson",
                 email: "sarah.johnson@example.com",
+                trainerId: "trainer1",
                 status: .active,
-                joinedDate: Date().addingTimeInterval(-7776000), // 3 months ago
-                lastActivity: Date().addingTimeInterval(-172800), // 2 days ago
-                profileImageURL: nil,
-                workoutPlan: "Foundation Builder",
-                notes: "Prefers morning workouts, recovering from knee injury",
-                phone: "+1-555-0123",
-                goal: "Weight loss & toning",
-                injuries: "Previous knee injury",
-                height: "5'7\"",
+                joinedDate: Calendar.current.date(byAdding: .day, value: -30, to: Date()),
+                height: "5'6\"",
                 weight: "145 lbs",
-                workoutTimes: "Early morning",
-                coachingStyle: .supportive
+                goal: "Improve overall flexibility and build core strength",
+                injuries: "Previous knee injury (2019) - cleared by PT",
+                preferredCoachingStyle: .hybrid,
+                lastWorkoutDate: Calendar.current.date(byAdding: .day, value: -2, to: Date()),
+                lastActivityDate: Calendar.current.date(byAdding: .day, value: -1, to: Date()),
+                currentPlanId: "plan1",
+                totalWorkoutsCompleted: 24
             ),
             Client(
                 id: "2",
                 name: "Marcus Chen",
                 email: "marcus.chen@example.com",
+                trainerId: "trainer1",
                 status: .needsAttention,
-                joinedDate: Date().addingTimeInterval(-3628800), // 6 weeks ago
-                lastActivity: Date().addingTimeInterval(-691200), // 8 days ago
-                profileImageURL: nil,
-                workoutPlan: "Strength Builder",
-                notes: "Hasn't checked in for over a week, needs motivation",
-                phone: "+1-555-0124",
-                goal: "Strength building",
-                injuries: "Lower back sensitivity",
+                joinedDate: Calendar.current.date(byAdding: .day, value: -45, to: Date()),
                 height: "5'10\"",
                 weight: "180 lbs",
-                workoutTimes: "Evening",
-                coachingStyle: .motivational
+                goal: "Train for upcoming marathon while maintaining strength",
+                preferredCoachingStyle: .asynchronous,
+                lastWorkoutDate: Calendar.current.date(byAdding: .day, value: -8, to: Date()),
+                lastActivityDate: Calendar.current.date(byAdding: .day, value: -8, to: Date()),
+                currentPlanId: "plan2",
+                totalWorkoutsCompleted: 18
             ),
             Client(
                 id: "3",
                 name: "Emma Rodriguez",
                 email: "emma.rodriguez@example.com",
+                trainerId: "trainer1",
                 status: .new,
-                joinedDate: Date().addingTimeInterval(-604800), // 1 week ago
-                lastActivity: Date().addingTimeInterval(-86400), // 1 day ago
-                profileImageURL: nil,
-                workoutPlan: "Flexibility Focus",
-                notes: "New client, very motivated and consistent",
-                phone: "+1-555-0125",
-                goal: "Flexibility & balance",
-                injuries: "None",
+                joinedDate: Calendar.current.date(byAdding: .day, value: -3, to: Date()),
                 height: "5'4\"",
-                weight: "125 lbs",
-                workoutTimes: "Afternoon",
-                coachingStyle: .gentle
+                weight: "130 lbs",
+                goal: "Get back into fitness after having a baby",
+                injuries: "Diastasis recti - working with pelvic floor PT",
+                preferredCoachingStyle: .synchronous,
+                lastActivityDate: Calendar.current.date(byAdding: .day, value: -1, to: Date()),
+                totalWorkoutsCompleted: 2
             ),
             Client(
                 id: "4",
                 name: "David Kim",
                 email: "david.kim@example.com",
+                trainerId: "trainer1",
                 status: .paused,
-                joinedDate: Date().addingTimeInterval(-5184000), // 2 months ago
-                lastActivity: Date().addingTimeInterval(-1209600), // 14 days ago
-                profileImageURL: nil,
-                workoutPlan: "Athletic Performance",
-                notes: "Taking a break due to work schedule",
-                phone: "+1-555-0126",
-                goal: "Athletic performance",
-                injuries: "Shoulder impingement",
-                height: "6'0\"",
-                weight: "200 lbs",
-                workoutTimes: "Morning",
-                coachingStyle: .challenging
+                joinedDate: Calendar.current.date(byAdding: .day, value: -60, to: Date()),
+                height: "5'8\"",
+                weight: "165 lbs",
+                goal: "Build functional strength for outdoor activities",
+                preferredCoachingStyle: .hybrid,
+                lastWorkoutDate: Calendar.current.date(byAdding: .day, value: -15, to: Date()),
+                lastActivityDate: Calendar.current.date(byAdding: .day, value: -15, to: Date()),
+                currentPlanId: "plan3",
+                totalWorkoutsCompleted: 35
             ),
             Client(
                 id: "5",
                 name: "Alex Thompson",
                 email: "alex.thompson@example.com",
-                status: .pendingInvite,
-                joinedDate: Date(),
-                lastActivity: Date(),
-                profileImageURL: nil,
-                workoutPlan: nil,
-                notes: "Invitation sent, waiting for acceptance",
-                phone: nil,
-                goal: "General fitness",
-                injuries: "None",
-                height: "5'8\"",
-                weight: "160 lbs",
-                workoutTimes: "Flexible",
-                coachingStyle: .hybrid
+                trainerId: "trainer1",
+                status: .pending,
+                joinedDate: nil,
+                goal: "General wellness and stress relief through movement",
+                preferredCoachingStyle: .hybrid,
+                totalWorkoutsCompleted: 0
             )
         ]
-        filteredClients = clients
     }
     
-    func searchClients(with searchText: String) {
-        if searchText.isEmpty {
-            filteredClients = clients
-        } else {
-            filteredClients = clients.filter { client in
+    func filterClients() {
+        var filtered = clients
+        
+        // Apply search filter
+        if !searchText.isEmpty {
+            filtered = filtered.filter { client in
                 client.name.localizedCaseInsensitiveContains(searchText) ||
                 client.email.localizedCaseInsensitiveContains(searchText) ||
-                client.goal.localizedCaseInsensitiveContains(searchText)
+                (client.goals?.localizedCaseInsensitiveContains(searchText) ?? false)
             }
         }
-    }
-    
-    func filterClients(by status: ClientStatus?) {
-        if let status = status {
-            filteredClients = clients.filter { $0.status == status }
-        } else {
-            filteredClients = clients
-        }
-    }
-    
-    func sortClients(by sortType: ClientSortType) {
-        switch sortType {
-        case .name:
-            filteredClients.sort { $0.name < $1.name }
-        case .lastActivity:
-            filteredClients.sort { ($0.lastActivity ?? Date.distantPast) > ($1.lastActivity ?? Date.distantPast) }
-        case .joinedDate:
-            filteredClients.sort { $0.joinedDate > $1.joinedDate }
+        
+        // Apply status filter
+        switch selectedFilter {
+        case .all:
+            break
+        case .active:
+            filtered = filtered.filter { $0.status == .active }
         case .needsAttention:
-            filteredClients.sort { first, second in
+            filtered = filtered.filter { $0.status == .needsAttention }
+        case .new:
+            filtered = filtered.filter { $0.status == .new }
+        case .paused:
+            filtered = filtered.filter { $0.status == .paused }
+        }
+        
+        filteredClients = filtered
+        sortClients()
+    }
+    
+    func sortClients() {
+        switch selectedSort {
+        case .lastActivity:
+            filteredClients.sort(by: { ($0.lastActivityDate ?? Date.distantPast) > ($1.lastActivityDate ?? Date.distantPast) })
+        case .joinedDate:
+            filteredClients.sort(by: { ($0.joinedDate ?? Date.distantPast) > ($1.joinedDate ?? Date.distantPast) })
+        case .status:
+            filteredClients.sort(by: { first, second in
                 if first.status == .needsAttention && second.status != .needsAttention {
                     return true
-                } else if first.status != .needsAttention && second.status == .needsAttention {
-                    return false
-                } else {
-                    return (first.lastActivity ?? Date.distantPast) < (second.lastActivity ?? Date.distantPast)
                 }
-            }
+                if first.status != .needsAttention && second.status == .needsAttention {
+                    return false
+                }
+                return first.name < second.name
+            })
+        case .name:
+            filteredClients.sort { $0.name < $1.name }
         }
     }
     
@@ -251,19 +284,19 @@ class ClientManagementViewModel: ObservableObject {
                 id: UUID().uuidString,
                 name: invitation.clientName ?? invitation.clientEmail,
                 email: invitation.clientEmail,
-                status: .pendingInvite,
+                trainerId: "trainer1", // This should come from the current trainer
+                status: .pending,
                 joinedDate: Date(),
-                lastActivity: Date(),
-                profileImageURL: nil,
-                workoutPlan: nil,
-                notes: "",
-                phone: nil,
-                goal: invitation.goal ?? "General fitness",
-                injuries: invitation.injuries ?? "None",
+                profileImageUrl: nil,
                 height: "N/A",
                 weight: "N/A",
-                workoutTimes: "Flexible",
-                coachingStyle: invitation.preferredCoachingStyle
+                goal: invitation.goal ?? "General fitness",
+                injuries: invitation.injuries ?? "None",
+                preferredCoachingStyle: invitation.preferredCoachingStyle ?? .hybrid,
+                lastWorkoutDate: nil,
+                lastActivityDate: Date(),
+                currentPlanId: nil,
+                totalWorkoutsCompleted: 0
             )
             
             self.clients.append(newClient)
@@ -316,111 +349,10 @@ class ClientManagementViewModel: ObservableObject {
     }
 }
 
-// MARK: - Data Models
-struct Client: Identifiable, Hashable {
-    let id: String
-    let name: String
-    let email: String
-    let status: ClientStatus
-    let joinedDate: Date
-    let lastActivity: Date?
-    let profileImageURL: String?
-    let workoutPlan: String?
-    let notes: String
-    let phone: String?
-    let goal: String
-    let injuries: String
-    let height: String
-    let weight: String
-    let workoutTimes: String
-    let coachingStyle: CoachingStyle
-    
-    // Additional computed properties for UI
-    var goals: [String] {
-        goal.components(separatedBy: " & ").map { $0.trimmingCharacters(in: .whitespaces) }
-    }
-    
-    var workoutsCompleted: Int {
-        // Simulate completed workouts based on how long they've been a client
-        let daysSinceJoined = Calendar.current.dateComponents([.day], from: joinedDate, to: Date()).day ?? 0
-        return max(0, daysSinceJoined / 3) // Roughly 2-3 workouts per week
-    }
-    
-    var currentStreak: Int {
-        // Simulate current streak based on status and last activity
-        switch status {
-        case .active:
-            if let lastActivity = lastActivity {
-                let daysSinceActivity = Calendar.current.dateComponents([.day], from: lastActivity, to: Date()).day ?? 0
-                return max(0, 7 - daysSinceActivity)
-            }
-            return 0
-        case .new:
-            return 3
-        case .needsAttention, .paused:
-            return 0
-        case .pendingInvite:
-            return 0
-        case .inactive:
-            return 0
-        case .trial:
-            return 1
-        }
-    }
-}
-
-enum ClientStatus: String, CaseIterable {
-    case active = "Active"
-    case new = "New"
-    case paused = "Paused"
-    case pendingInvite = "Pending Invite"
-    case needsAttention = "Needs Attention"
-    case inactive = "Inactive"
-    case trial = "Trial"
-}
-
+// MARK: - Client Sort Type
 enum ClientSortType: String, CaseIterable {
     case name = "Name"
     case lastActivity = "Recent Activity"
     case joinedDate = "Newest"
     case needsAttention = "Needs Attention"
-}
-
-enum CoachingStyle: String, CaseIterable {
-    case supportive = "Supportive"
-    case motivational = "Motivational"
-    case challenging = "Challenging"
-    case gentle = "Gentle"
-    case hybrid = "Hybrid"
-    
-    var description: String {
-        switch self {
-        case .supportive: return "Encouraging and patient approach"
-        case .motivational: return "High-energy and inspiring"
-        case .challenging: return "Push limits and set high goals"
-        case .gentle: return "Calm and understanding method"
-        case .hybrid: return "Balanced mix of all styles"
-        }
-    }
-}
-
-struct ClientInvitation {
-    let id: String
-    let trainerId: String
-    let trainerName: String
-    let clientEmail: String
-    let clientName: String?
-    let goal: String?
-    let injuries: String?
-    let preferredCoachingStyle: CoachingStyle
-    let status: InvitationStatus
-    let createdAt: Date
-    let expiresAt: Date
-}
-
-enum InvitationStatus: String {
-    case pending = "Pending"
-    case accepted = "Accepted"
-    case expired = "Expired"
-    case declined = "Declined"
 } 

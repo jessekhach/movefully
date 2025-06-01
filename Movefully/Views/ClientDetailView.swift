@@ -120,13 +120,11 @@ struct ClientDetailView: View {
                             .font(MovefullyTheme.Typography.title3)
                             .foregroundColor(MovefullyTheme.Colors.textPrimary)
                         
-                        if let email = client.email {
-                            Text(email)
-                                .font(MovefullyTheme.Typography.body)
-                                .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                        if !client.email.isEmpty {
+                            ProfileInfoRow(title: "Email", value: client.email, icon: "envelope")
                         }
                         
-                        StatusBadge(status: client.status)
+                        ClientStatusBadge(status: client.status)
                     }
                     
                     Spacer()
@@ -227,8 +225,8 @@ struct ClientDetailView: View {
             
             MovefullyCard {
                 VStack(spacing: MovefullyTheme.Layout.paddingM) {
-                    if let goal = client.goal {
-                        ProfileInfoRow(title: "Goal", value: goal, icon: "target")
+                    if let goals = client.goals {
+                        ProfileInfoRow(title: "Goal", value: goals, icon: "target")
                     }
                     
                     if let height = client.height, let weight = client.weight {
@@ -266,10 +264,11 @@ struct ClientDetailView: View {
                                     .font(MovefullyTheme.Typography.bodyMedium)
                                     .foregroundColor(MovefullyTheme.Colors.textPrimary)
                                 
-                                if let description = currentPlan.description {
-                                    Text(description)
-                                        .font(MovefullyTheme.Typography.callout)
+                                if !currentPlan.description.isEmpty {
+                                    Text(currentPlan.description)
+                                        .font(MovefullyTheme.Typography.caption)
                                         .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                                        .lineLimit(2)
                                 }
                             }
                             
@@ -285,7 +284,7 @@ struct ClientDetailView: View {
                         HStack {
                             Label("\(currentPlan.duration) weeks", systemImage: "calendar")
                             Spacer()
-                            Label("\(currentPlan.exerciseIds.count) exercises", systemImage: "list.bullet")
+                            Label("\(currentPlan.exercises.count) exercises", systemImage: "list.bullet")
                         }
                         .font(MovefullyTheme.Typography.caption)
                         .foregroundColor(MovefullyTheme.Colors.textSecondary)

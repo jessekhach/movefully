@@ -1,304 +1,347 @@
 import SwiftUI
 
+// MARK: - Client Dashboard View
 struct ClientDashboardView: View {
-    @EnvironmentObject var authViewModel: AuthenticationViewModel
-    @State private var showingSignOutAlert = false
+    @ObservedObject var viewModel: ClientViewModel
     
     var body: some View {
         NavigationView {
             ScrollView {
-                VStack(spacing: 24) {
-                    // Welcome header
-                    VStack(spacing: 12) {
+                VStack(spacing: MovefullyTheme.Layout.paddingXL) {
+                    // Welcome message
+                    welcomeSection
+                    
+                    // Weekly progress
+                    weeklyProgressSection
+                    
+                    // Monthly overview
+                    monthlyOverviewSection
+                    
+                    // Recent activity
+                    recentActivitySection
+                    
+                    Spacer(minLength: MovefullyTheme.Layout.paddingXXL)
+                }
+                .padding(.horizontal, MovefullyTheme.Layout.paddingXL)
+            }
+            .background(MovefullyTheme.Colors.backgroundPrimary)
+            .navigationTitle("Progress")
+            .navigationBarTitleDisplayMode(.large)
+        }
+    }
+    
+    // MARK: - Welcome Section
+    private var welcomeSection: some View {
+        MovefullyCard {
+            VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingM) {
+                HStack {
+                    VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingS) {
+                        Text("Your Progress")
+                            .font(MovefullyTheme.Typography.title2)
+                            .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                        
+                        Text("Keep up the great momentum!")
+                            .font(MovefullyTheme.Typography.body)
+                            .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                    }
+                    
+                    Spacer()
+                    
+                    Image(systemName: "chart.line.uptrend.xyaxis")
+                        .font(MovefullyTheme.Typography.title1)
+                        .foregroundColor(MovefullyTheme.Colors.primaryTeal.opacity(0.7))
+                }
+                
+                // Quick completion rate
+                HStack {
+                    Text("Overall completion rate:")
+                        .font(MovefullyTheme.Typography.callout)
+                        .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                    
+                    Spacer()
+                    
+                    Text("\(Int(viewModel.progressPercentage * 100))%")
+                        .font(MovefullyTheme.Typography.title3)
+                        .foregroundColor(MovefullyTheme.Colors.softGreen)
+                }
+            }
+        }
+    }
+    
+    // MARK: - Weekly Progress Section
+    private var weeklyProgressSection: some View {
+        VStack(spacing: MovefullyTheme.Layout.paddingL) {
+            HStack {
+                Text("This Week")
+                    .font(MovefullyTheme.Typography.title3)
+                    .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                Spacer()
+            }
+            
+            VStack(spacing: MovefullyTheme.Layout.paddingM) {
+                // Workouts completed vs assigned
+                MovefullyCard {
+                    VStack(spacing: MovefullyTheme.Layout.paddingL) {
                         HStack {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Hello beautiful!")
-                                    .font(.system(size: 16, weight: .medium, design: .rounded))
-                                    .foregroundColor(.secondary)
-                                
-                                Text(authViewModel.userName.isEmpty ? "Mover" : authViewModel.userName)
-                                    .font(MovefullyTheme.Typography.title1)
+                            VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingS) {
+                                Text("Workouts Completed")
+                                    .font(MovefullyTheme.Typography.bodyMedium)
                                     .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                                
+                                Text("\(viewModel.completedAssignments) of \(viewModel.totalAssignments)")
+                                    .font(MovefullyTheme.Typography.title1)
+                                    .foregroundColor(MovefullyTheme.Colors.gentleBlue)
                             }
                             
                             Spacer()
                             
-                            Button(action: {
-                                showingSignOutAlert = true
-                            }) {
-                                Image(systemName: "person.circle")
-                                    .font(.system(size: 32))
-                                    .foregroundColor(Color(.systemPink))
-                            }
-                        }
-                        
-                        Text("Ready to move mindfully today?")
-                            .font(.system(size: 16, weight: .medium, design: .rounded))
-                            .foregroundColor(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 10)
-                    
-                    // Today's focus card
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Today's Focus")
-                            .font(.system(size: 20, weight: .semibold, design: .rounded))
-                            .foregroundColor(.primary)
-                            .padding(.horizontal, 20)
-                        
-                        VStack(spacing: 16) {
-                            HStack {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Text("Morning Movement")
-                                        .font(.system(size: 18, weight: .semibold, design: .rounded))
-                                        .foregroundColor(.white)
-                                    
-                                    Text("Gentle stretches to awaken your body")
-                                        .font(.system(size: 14, weight: .medium, design: .rounded))
-                                        .foregroundColor(.white.opacity(0.9))
-                                    
-                                    HStack(spacing: 4) {
-                                        Image(systemName: "clock")
-                                            .font(.system(size: 12))
-                                        Text("15 min")
-                                            .font(.system(size: 12, weight: .medium, design: .rounded))
-                                    }
-                                    .foregroundColor(.white.opacity(0.8))
-                                }
-                                
-                                Spacer()
-                                
-                                Button(action: {
-                                    // Start workout
-                                }) {
-                                    Image(systemName: "play.circle.fill")
-                                        .font(.system(size: 40))
-                                        .foregroundColor(.white)
-                                }
-                            }
-                            .padding(20)
-                            .background(
-                                LinearGradient(
-                                    colors: [Color(.systemPink).opacity(0.8), Color(.systemPurple).opacity(0.8)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .clipShape(RoundedRectangle(cornerRadius: 16))
-                        }
-                        .padding(.horizontal, 20)
-                    }
-                    
-                    // Quick actions
-                    LazyVGrid(columns: [
-                        GridItem(.flexible()),
-                        GridItem(.flexible())
-                    ], spacing: 16) {
-                        DashboardCard(
-                            title: "My Workouts",
-                            subtitle: "Your personalized plans",
-                            icon: "heart.circle",
-                            gradientColors: [Color(.systemPink).opacity(0.7), Color(.systemRed).opacity(0.7)]
-                        ) {
-                            // Navigate to workouts
-                        }
-                        
-                        DashboardCard(
-                            title: "Progress",
-                            subtitle: "Track your journey",
-                            icon: "chart.line.uptrend.xyaxis.circle",
-                            gradientColors: [Color(.systemGreen).opacity(0.7), Color(.systemMint).opacity(0.7)]
-                        ) {
-                            // Navigate to progress
-                        }
-                        
-                        DashboardCard(
-                            title: "Mindfulness",
-                            subtitle: "Breathing & meditation",
-                            icon: "leaf.circle",
-                            gradientColors: [Color(.systemTeal).opacity(0.7), Color(.systemCyan).opacity(0.7)]
-                        ) {
-                            // Navigate to mindfulness
-                        }
-                        
-                        DashboardCard(
-                            title: "Messages",
-                            subtitle: "Chat with your trainer",
-                            icon: "message.circle",
-                            gradientColors: [Color(.systemIndigo).opacity(0.7), Color(.systemPurple).opacity(0.7)]
-                        ) {
-                            // Navigate to messages
-                        }
-                    }
-                    .padding(.horizontal, 20)
-                    
-                    // Weekly goals
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("This Week's Goals")
-                            .font(.system(size: 20, weight: .semibold, design: .rounded))
-                            .foregroundColor(.primary)
-                            .padding(.horizontal, 20)
-                        
-                        VStack(spacing: 12) {
-                            GoalRow(
-                                icon: "checkmark.circle.fill",
-                                iconColor: .green,
-                                title: "Complete 3 workouts",
-                                progress: 2,
-                                total: 3
-                            )
-                            
-                            GoalRow(
-                                icon: "timer.circle",
-                                iconColor: .orange,
-                                title: "15 minutes of mindfulness",
-                                progress: 1,
-                                total: 5
-                            )
-                            
-                            GoalRow(
-                                icon: "drop.circle",
-                                iconColor: .blue,
-                                title: "Stay hydrated daily",
-                                progress: 4,
-                                total: 7
+                            CircularProgressView(
+                                progress: viewModel.progressPercentage,
+                                color: MovefullyTheme.Colors.gentleBlue
                             )
                         }
-                        .padding(.horizontal, 20)
+                        
+                        ProgressView(value: Double(viewModel.completedAssignments), total: Double(viewModel.totalAssignments))
                     }
-                    
-                    Spacer(minLength: 100)
-                }
-                .padding(.vertical, 20)
-            }
-            .background(
-                LinearGradient(
-                    colors: [
-                        Color(.systemBackground),
-                        Color(.systemPink).opacity(0.03)
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-            )
-            .navigationBarHidden(true)
-        }
-        .alert("Sign Out", isPresented: $showingSignOutAlert) {
-            Button("Cancel", role: .cancel) { }
-            Button("Sign Out", role: .destructive) {
-                authViewModel.signOut()
-            }
-        } message: {
-            Text("Are you sure you want to sign out?")
-        }
-    }
-}
-
-struct GoalRow: View {
-    let icon: String
-    let iconColor: Color
-    let title: String
-    let progress: Int
-    let total: Int
-    
-    var progressPercent: Double {
-        guard total > 0 else { return 0 }
-        return Double(progress) / Double(total)
-    }
-    
-    var body: some View {
-        VStack(spacing: 8) {
-            HStack(spacing: 12) {
-                Image(systemName: icon)
-                    .font(.system(size: 20, weight: .medium))
-                    .foregroundColor(iconColor)
-                    .frame(width: 32)
-                
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .font(.system(size: 14, weight: .semibold, design: .rounded))
-                        .foregroundColor(.primary)
-                    
-                    Text("\(progress) of \(total) completed")
-                        .font(.system(size: 12, weight: .medium, design: .rounded))
-                        .foregroundColor(.secondary)
                 }
                 
+                // Weekly stats grid
+                HStack(spacing: MovefullyTheme.Layout.paddingM) {
+                    // Completion percentage
+                    MovefullyCard {
+                        VStack(spacing: MovefullyTheme.Layout.paddingS) {
+                            Image(systemName: "target")
+                                .font(MovefullyTheme.Typography.title2)
+                                .foregroundColor(MovefullyTheme.Colors.softGreen)
+                            
+                            Text("\(Int(viewModel.progressPercentage * 100))%")
+                                .font(MovefullyTheme.Typography.title2)
+                                .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                            
+                            Text("On Track")
+                                .font(MovefullyTheme.Typography.caption)
+                                .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                                .textCase(.uppercase)
+                                .tracking(1.1)
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    
+                    // Consistency
+                    MovefullyCard {
+                        VStack(spacing: MovefullyTheme.Layout.paddingS) {
+                            Image(systemName: "flame.fill")
+                                .font(MovefullyTheme.Typography.title2)
+                                .foregroundColor(MovefullyTheme.Colors.warmOrange)
+                            
+                            Text("\(viewModel.currentStreak)")
+                                .font(MovefullyTheme.Typography.title2)
+                                .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                            
+                            Text("Days Active")
+                                .font(MovefullyTheme.Typography.caption)
+                                .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                                .textCase(.uppercase)
+                                .tracking(1.1)
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                }
+            }
+        }
+    }
+    
+    // MARK: - Monthly Overview Section
+    private var monthlyOverviewSection: some View {
+        VStack(spacing: MovefullyTheme.Layout.paddingL) {
+            HStack {
+                Text("This Month")
+                    .font(MovefullyTheme.Typography.title3)
+                    .foregroundColor(MovefullyTheme.Colors.textPrimary)
                 Spacer()
-                
-                Text("\(Int(progressPercent * 100))%")
-                    .font(.system(size: 12, weight: .semibold, design: .rounded))
-                    .foregroundColor(iconColor)
             }
             
-            // Progress bar
-            GeometryReader { geometry in
-                ZStack(alignment: .leading) {
-                    Rectangle()
-                        .fill(Color(.tertiarySystemBackground))
-                        .frame(height: 4)
-                        .clipShape(Capsule())
+            VStack(spacing: MovefullyTheme.Layout.paddingM) {
+                // Monthly completion card
+                MovefullyCard {
+                    VStack(spacing: MovefullyTheme.Layout.paddingL) {
+                        HStack {
+                            VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingS) {
+                                Text("Monthly Progress")
+                                    .font(MovefullyTheme.Typography.bodyMedium)
+                                    .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                                
+                                Text("\(viewModel.completedAssignments) of \(viewModel.totalAssignments)")
+                                    .font(MovefullyTheme.Typography.title1)
+                                    .foregroundColor(MovefullyTheme.Colors.gentleBlue)
+                            }
+                            
+                            Spacer()
+                            
+                            CircularProgressView(
+                                progress: viewModel.progressPercentage,
+                                color: MovefullyTheme.Colors.gentleBlue
+                            )
+                        }
+                        
+                        ProgressView(value: Double(viewModel.completedAssignments), total: Double(viewModel.totalAssignments))
+                            .tint(MovefullyTheme.Colors.gentleBlue)
+                            .scaleEffect(y: 2)
+                    }
+                }
+                
+                // Monthly stats
+                HStack(spacing: MovefullyTheme.Layout.paddingM) {
+                    // Total workouts
+                    MovefullyCard {
+                        VStack(spacing: MovefullyTheme.Layout.paddingS) {
+                            Image(systemName: "calendar.badge.checkmark")
+                                .font(MovefullyTheme.Typography.title2)
+                                .foregroundColor(MovefullyTheme.Colors.gentleBlue)
+                            
+                            Text("\(viewModel.currentClient.totalWorkoutsCompleted) this month")
+                                .font(MovefullyTheme.Typography.callout)
+                                .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
                     
-                    Rectangle()
-                        .fill(iconColor)
-                        .frame(width: geometry.size.width * progressPercent, height: 4)
-                        .clipShape(Capsule())
-                        .animation(.easeInOut(duration: 0.5), value: progressPercent)
+                    // Average per week
+                    MovefullyCard {
+                        VStack(spacing: MovefullyTheme.Layout.paddingS) {
+                            Image(systemName: "chart.bar.fill")
+                                .font(MovefullyTheme.Typography.title2)
+                                .foregroundColor(MovefullyTheme.Colors.lavender)
+                            
+                            Text("\(viewModel.completedAssignments)")
+                                .font(MovefullyTheme.Typography.title2)
+                                .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                            
+                            Text("Per Week")
+                                .font(MovefullyTheme.Typography.caption)
+                                .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                                .textCase(.uppercase)
+                                .tracking(1.1)
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
                 }
             }
-            .frame(height: 4)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(Color(.secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+    
+    // MARK: - Recent Activity Section
+    private var recentActivitySection: some View {
+        VStack(spacing: MovefullyTheme.Layout.paddingL) {
+            HStack {
+                Text("Recent Activity")
+                    .font(MovefullyTheme.Typography.title3)
+                    .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                Spacer()
+            }
+            
+            VStack(spacing: MovefullyTheme.Layout.paddingM) {
+                ForEach(WorkoutAssignment.sampleAssignments.prefix(3)) { assignment in
+                    RecentActivityCard(assignment: assignment)
+                }
+            }
+        }
     }
 }
 
-struct DashboardCard: View {
-    let title: String
-    let subtitle: String
-    let icon: String
-    let gradientColors: [Color]
-    let action: () -> Void
+// MARK: - Circular Progress View Component
+struct CircularProgressView: View {
+    let progress: Double
+    let color: Color
+    let lineWidth: CGFloat = 8
+    let size: CGFloat = 60
     
     var body: some View {
-        Button(action: action) {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Image(systemName: icon)
-                        .font(.system(size: 24, weight: .medium))
-                        .foregroundColor(.white)
+        ZStack {
+            Circle()
+                .stroke(color.opacity(0.2), lineWidth: lineWidth)
+                .frame(width: size, height: size)
+            
+            Circle()
+                .trim(from: 0, to: progress)
+                .stroke(
+                    AngularGradient(
+                        colors: [color, color.opacity(0.8)],
+                        center: .center,
+                        startAngle: .degrees(-90),
+                        endAngle: .degrees(270)
+                    ),
+                    style: StrokeStyle(lineWidth: lineWidth, lineCap: .round)
+                )
+                .frame(width: size, height: size)
+                .rotationEffect(.degrees(-90))
+                .animation(.easeInOut(duration: 1.0), value: progress)
+            
+            Text("\(Int(progress * 100))%")
+                .font(MovefullyTheme.Typography.caption)
+                .foregroundColor(color)
+                .fontWeight(.semibold)
+        }
+    }
+}
+
+// MARK: - Recent Activity Card Component
+struct RecentActivityCard: View {
+    let assignment: WorkoutAssignment
+    
+    var body: some View {
+        MovefullyCard {
+            HStack(spacing: MovefullyTheme.Layout.paddingM) {
+                // Status indicator
+                VStack {
+                    Image(systemName: assignment.status.icon)
+                        .font(MovefullyTheme.Typography.title3)
+                        .foregroundColor(assignment.status.color)
+                        .frame(width: 40, height: 40)
+                        .background(assignment.status.color.opacity(0.1))
+                        .clipShape(Circle())
                     
                     Spacer()
                 }
                 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(title)
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
-                        .foregroundColor(.white)
+                // Workout details
+                VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingS) {
+                    Text(assignment.title)
+                        .font(MovefullyTheme.Typography.bodyMedium)
+                        .foregroundColor(MovefullyTheme.Colors.textPrimary)
                     
-                    Text(subtitle)
-                        .font(.system(size: 12, weight: .medium, design: .rounded))
-                        .foregroundColor(.white.opacity(0.8))
-                        .multilineTextAlignment(.leading)
+                    Text(formatDate(assignment.date))
+                        .font(MovefullyTheme.Typography.callout)
+                        .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                    
+                    HStack {
+                        MovefullyStatusBadge(
+                            text: assignment.status.rawValue,
+                            color: assignment.status.color,
+                            showDot: false
+                        )
+                        
+                        Spacer()
+                        
+                        Text("\(assignment.estimatedDuration) min")
+                            .font(MovefullyTheme.Typography.caption)
+                            .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                    }
                 }
                 
                 Spacer()
             }
-            .padding(16)
-            .frame(height: 120)
-            .background(
-                LinearGradient(
-                    colors: gradientColors,
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
         }
-        .buttonStyle(PlainButtonStyle())
     }
+    
+    private func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter.string(from: date)
+    }
+}
+
+#Preview {
+    ClientDashboardView(viewModel: ClientViewModel())
 } 

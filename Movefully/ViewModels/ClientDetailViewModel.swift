@@ -54,7 +54,7 @@ class ClientDetailViewModel: ObservableObject {
         // For demo purposes, use sample data
         // In production, this would query Firestore
         if let planId = client.currentPlanId {
-            currentPlan = WorkoutPlan.samplePlans.first { $0.id == planId }
+            currentPlan = WorkoutPlan.samplePlans.first { $0.id.uuidString == planId }
         }
         
         /*

@@ -35,15 +35,13 @@ struct ClientRowView: View {
                     Spacer()
                     
                     // Status badge
-                    StatusBadge(status: client.status)
+                    ClientStatusBadge(status: client.status)
                 }
                 
-                if let email = client.email {
-                    Text(email)
-                        .font(MovefullyTheme.Typography.callout)
-                        .foregroundColor(MovefullyTheme.Colors.textSecondary)
-                        .lineLimit(1)
-                }
+                Text(client.email)
+                    .font(MovefullyTheme.Typography.callout)
+                    .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                    .lineLimit(1)
                 
                 // Last activity
                 HStack(spacing: MovefullyTheme.Layout.paddingXS) {
@@ -89,39 +87,45 @@ struct ClientRowView: View {
     }
 }
 
-// MARK: - Status Badge Component
-struct StatusBadge: View {
+// MARK: - Status Badge for Client
+struct ClientStatusBadge: View {
     let status: ClientStatus
     
     var body: some View {
-        HStack(spacing: 4) {
-            Image(systemName: status.icon)
-                .font(.system(size: 10, weight: .semibold))
-            Text(status.rawValue)
-                .font(MovefullyTheme.Typography.caption)
-                .fontWeight(.medium)
+        MovefullyStatusBadge(
+            text: statusText,
+            color: statusColor,
+            showDot: true
+        )
+    }
+    
+    private var statusText: String {
+        switch status {
+        case .active:
+            return "Active"
+        case .new:
+            return "New"
+        case .needsAttention:
+            return "Alert"
+        case .paused:
+            return "Paused"
+        case .pending:
+            return "Pending"
         }
-        .foregroundColor(statusColor)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(statusColor.opacity(0.15))
-        .clipShape(Capsule())
     }
     
     private var statusColor: Color {
-        switch status.color {
-        case "primaryTeal":
-            return MovefullyTheme.Colors.primaryTeal
-        case "success":
-            return MovefullyTheme.Colors.success
-        case "warning":
-            return MovefullyTheme.Colors.warning
-        case "textSecondary":
-            return MovefullyTheme.Colors.textSecondary
-        case "secondaryPeach":
-            return MovefullyTheme.Colors.secondaryPeach
-        default:
-            return MovefullyTheme.Colors.textSecondary
+        switch status {
+        case .active:
+            return MovefullyTheme.Colors.softGreen
+        case .new:
+            return MovefullyTheme.Colors.gentleBlue
+        case .needsAttention:
+            return MovefullyTheme.Colors.warmOrange
+        case .paused:
+            return MovefullyTheme.Colors.mediumGray
+        case .pending:
+            return MovefullyTheme.Colors.lavender
         }
     }
 } 
