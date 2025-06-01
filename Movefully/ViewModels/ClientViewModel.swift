@@ -138,6 +138,120 @@ struct ProgressData {
     )
 }
 
+// MARK: - Inspirational Quote Model
+struct InspirationalQuote: Identifiable {
+    let id = UUID()
+    let text: String
+    let author: String
+    let category: QuoteCategory
+    
+    enum QuoteCategory: String, CaseIterable {
+        case movement = "Movement"
+        case wellness = "Wellness"
+        case mindfulness = "Mindfulness"
+        case strength = "Strength"
+        case motivation = "Motivation"
+        
+        var icon: String {
+            switch self {
+            case .movement: return "figure.walk"
+            case .wellness: return "heart.fill"
+            case .mindfulness: return "brain.head.profile"
+            case .strength: return "dumbbell.fill"
+            case .motivation: return "flame.fill"
+            }
+        }
+        
+        var color: Color {
+            switch self {
+            case .movement: return MovefullyTheme.Colors.primaryTeal
+            case .wellness: return MovefullyTheme.Colors.softGreen
+            case .mindfulness: return MovefullyTheme.Colors.lavender
+            case .strength: return MovefullyTheme.Colors.warmOrange
+            case .motivation: return MovefullyTheme.Colors.gentleBlue
+            }
+        }
+    }
+    
+    static let sampleQuotes = [
+        InspirationalQuote(
+            text: "Movement is medicine for creating change in a person's physical, emotional, and mental states.",
+            author: "Carol Welch",
+            category: .movement
+        ),
+        InspirationalQuote(
+            text: "Take care of your body. It's the only place you have to live.",
+            author: "Jim Rohn",
+            category: .wellness
+        ),
+        InspirationalQuote(
+            text: "The groundwork for all happiness is good health.",
+            author: "Leigh Hunt",
+            category: .wellness
+        ),
+        InspirationalQuote(
+            text: "Mindfulness is about being fully awake in our lives. It is about perceiving the exquisite vividness of each moment.",
+            author: "Jon Kabat-Zinn",
+            category: .mindfulness
+        ),
+        InspirationalQuote(
+            text: "Strength doesn't come from what you can do. It comes from overcoming the things you once thought you couldn't.",
+            author: "Rikki Rogers",
+            category: .strength
+        ),
+        InspirationalQuote(
+            text: "Your body can do it. It's your mind you have to convince.",
+            author: "Unknown",
+            category: .motivation
+        ),
+        InspirationalQuote(
+            text: "Progress, not perfection, is the goal.",
+            author: "Unknown",
+            category: .motivation
+        ),
+        InspirationalQuote(
+            text: "Every small step forward is a victory worth celebrating.",
+            author: "Unknown",
+            category: .movement
+        ),
+        InspirationalQuote(
+            text: "Wellness is not a destination, but a journey of small, consistent choices.",
+            author: "Unknown",
+            category: .wellness
+        ),
+        InspirationalQuote(
+            text: "Be present in all things and thankful for all things.",
+            author: "Maya Angelou",
+            category: .mindfulness
+        ),
+        InspirationalQuote(
+            text: "You are stronger than you think and more capable than you imagine.",
+            author: "Unknown",
+            category: .strength
+        ),
+        InspirationalQuote(
+            text: "The only bad workout is the one that didn't happen.",
+            author: "Unknown",
+            category: .motivation
+        ),
+        InspirationalQuote(
+            text: "Listen to your body. It knows what it needs.",
+            author: "Unknown",
+            category: .movement
+        ),
+        InspirationalQuote(
+            text: "Wellness is the complete integration of body, mind, and spirit.",
+            author: "Greg Anderson",
+            category: .wellness
+        ),
+        InspirationalQuote(
+            text: "Peace comes from within. Do not seek it without.",
+            author: "Buddha",
+            category: .mindfulness
+        )
+    ]
+}
+
 // MARK: - Client View Model
 class ClientViewModel: ObservableObject {
     @Published var currentClient: Client = Client(
@@ -273,6 +387,18 @@ class ClientViewModel: ObservableObject {
             timestamp: Date()
         )
         messages.append(newMessage)
+    }
+    
+    // MARK: - Inspirational Quotes
+    var dailyInspirationalQuote: InspirationalQuote {
+        // Use current date to seed random number generator for consistent daily quotes
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let dayOfYear = calendar.ordinality(of: .day, in: .year, for: today) ?? 1
+        
+        // Use day of year to select quote consistently for the day
+        let quoteIndex = (dayOfYear - 1) % InspirationalQuote.sampleQuotes.count
+        return InspirationalQuote.sampleQuotes[quoteIndex]
     }
     
     // MARK: - Public Methods

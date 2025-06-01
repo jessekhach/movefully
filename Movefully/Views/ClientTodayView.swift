@@ -3,8 +3,10 @@ import SwiftUI
 // MARK: - Client Today View
 struct ClientTodayView: View {
     @ObservedObject var viewModel: ClientViewModel
+    @EnvironmentObject var authViewModel: AuthenticationViewModel
     @State private var showingWorkoutDetail = false
     @State private var showingCompletionDialog = false
+    @State private var showingProfile = false
     
     var body: some View {
         NavigationView {
@@ -26,15 +28,36 @@ struct ClientTodayView: View {
                     Spacer(minLength: MovefullyTheme.Layout.paddingXXL)
                 }
                 .padding(.horizontal, MovefullyTheme.Layout.paddingXL)
+                .padding(.top, MovefullyTheme.Layout.paddingM)
             }
             .background(MovefullyTheme.Colors.backgroundPrimary)
             .navigationTitle("Today")
             .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: { showingProfile = true }) {
+                        ZStack {
+                            Circle()
+                                .fill(MovefullyTheme.Colors.primaryTeal.opacity(0.1))
+                                .frame(width: 32, height: 32)
+                            
+                            Image(systemName: "person.crop.circle")
+                                .font(.system(size: 18, weight: .medium))
+                                .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+                        }
+                    }
+                    .accessibilityLabel("Profile")
+                }
+            }
         }
         .sheet(isPresented: $showingWorkoutDetail) {
             if let todayWorkout = viewModel.todayWorkout {
                 WorkoutDetailView(assignment: todayWorkout, viewModel: viewModel)
             }
+        }
+        .sheet(isPresented: $showingProfile) {
+            ClientProfileView(viewModel: viewModel)
+                .environmentObject(authViewModel)
         }
     }
     
@@ -199,43 +222,83 @@ struct ClientTodayView: View {
     private var quickStatsSection: some View {
         VStack(spacing: MovefullyTheme.Layout.paddingL) {
             HStack {
-                Text("This Week")
+                Text("Daily Inspiration")
                     .font(MovefullyTheme.Typography.title3)
                     .foregroundColor(MovefullyTheme.Colors.textPrimary)
                 Spacer()
             }
             
-            HStack(spacing: MovefullyTheme.Layout.paddingM) {
-                // Workouts completed
-                MovefullyCard {
-                    VStack(spacing: MovefullyTheme.Layout.paddingS) {
-                        Text("\(viewModel.completedAssignments)")
-                            .font(MovefullyTheme.Typography.title1)
-                            .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+            // Daily inspirational quote card
+            MovefullyCard {
+                VStack(spacing: MovefullyTheme.Layout.paddingL) {
+                    // Quote icon and category
+                    HStack {
+                        VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingS) {
+                            HStack(spacing: MovefullyTheme.Layout.paddingS) {
+                                Image(systemName: viewModel.dailyInspirationalQuote.category.icon)
+                                    .font(MovefullyTheme.Typography.title3)
+                                    .foregroundColor(viewModel.dailyInspirationalQuote.category.color)
+                                
+                                Text(viewModel.dailyInspirationalQuote.category.rawValue)
+                                    .font(MovefullyTheme.Typography.bodyMedium)
+                                    .foregroundColor(viewModel.dailyInspirationalQuote.category.color)
+                            }
+                            
+                            Text("Today's Inspiration")
+                                .font(MovefullyTheme.Typography.caption)
+                                .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                                .textCase(.uppercase)
+                                .tracking(1.2)
+                        }
                         
-                        Text("Completed")
-                            .font(MovefullyTheme.Typography.caption)
-                            .foregroundColor(MovefullyTheme.Colors.textSecondary)
-                            .textCase(.uppercase)
-                            .tracking(1.1)
+                        Spacer()
                     }
-                }
-                
-                // Completion percentage
-                MovefullyCard {
-                    VStack(spacing: MovefullyTheme.Layout.paddingS) {
-                        Text("\(Int(viewModel.progressPercentage * 100))%")
-                            .font(MovefullyTheme.Typography.title1)
-                            .foregroundColor(MovefullyTheme.Colors.softGreen)
+                    
+                    // Quote text
+                    VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingM) {
+                        Text("\"\(viewModel.dailyInspirationalQuote.text)\"")
+                            .font(MovefullyTheme.Typography.body)
+                            .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                            .italic()
+                            .lineLimit(nil)
+                            .multilineTextAlignment(.leading)
                         
-                        Text("On Track")
-                            .font(MovefullyTheme.Typography.caption)
-                            .foregroundColor(MovefullyTheme.Colors.textSecondary)
-                            .textCase(.uppercase)
-                            .tracking(1.1)
+                        HStack {
+                            Spacer()
+                            Text("— \(viewModel.dailyInspirationalQuote.author)")
+                                .font(MovefullyTheme.Typography.callout)
+                                .foregroundColor(viewModel.dailyInspirationalQuote.category.color)
+                                .fontWeight(.medium)
+                        }
                     }
+                    .padding(.horizontal, MovefullyTheme.Layout.paddingS)
                 }
+                .padding(.vertical, MovefullyTheme.Layout.paddingS)
             }
+            .background(
+                LinearGradient(
+                    colors: [
+                        viewModel.dailyInspirationalQuote.category.color.opacity(0.02),
+                        viewModel.dailyInspirationalQuote.category.color.opacity(0.05)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusL)
+                    .stroke(
+                        LinearGradient(
+                            colors: [
+                                viewModel.dailyInspirationalQuote.category.color.opacity(0.2),
+                                viewModel.dailyInspirationalQuote.category.color.opacity(0.1)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
+            )
         }
     }
     
@@ -450,84 +513,248 @@ struct WorkoutCompletionView: View {
     let assignment: WorkoutAssignment
     @ObservedObject var viewModel: ClientViewModel
     @Environment(\.dismiss) private var dismiss
-    @State private var rating = 3
+    @State private var feelingLevel = 3 // 1-5, corresponds to emoji faces
     @State private var notes = ""
+    @State private var animateSuccess = false
+    @State private var showConfetti = false
+    
+    // Feeling level data with emojis and descriptions
+    private let feelingLevels = [
+        (emoji: "😴", title: "Tired", description: "I felt quite tired", color: MovefullyTheme.Colors.mediumGray),
+        (emoji: "😐", title: "Okay", description: "I felt okay", color: MovefullyTheme.Colors.primaryTeal.opacity(0.6)),
+        (emoji: "🙂", title: "Good", description: "I felt good", color: MovefullyTheme.Colors.primaryTeal),
+        (emoji: "😊", title: "Great", description: "I felt great", color: MovefullyTheme.Colors.softGreen),
+        (emoji: "🤩", title: "Amazing", description: "I felt amazing", color: MovefullyTheme.Colors.warmOrange)
+    ]
     
     var body: some View {
         NavigationView {
-            VStack(spacing: MovefullyTheme.Layout.paddingXL) {
-                // Celebration header
-                VStack(spacing: MovefullyTheme.Layout.paddingL) {
-                    Image(systemName: "star.fill")
-                        .font(MovefullyTheme.Typography.largeTitle)
-                        .foregroundColor(MovefullyTheme.Colors.warmOrange)
-                    
-                    Text("Workout Complete!")
-                        .font(MovefullyTheme.Typography.title1)
-                        .foregroundColor(MovefullyTheme.Colors.textPrimary)
-                    
-                    Text("How did it feel?")
-                        .font(MovefullyTheme.Typography.body)
-                        .foregroundColor(MovefullyTheme.Colors.textSecondary)
-                }
-                .padding(.top, MovefullyTheme.Layout.paddingXXL)
+            ZStack {
+                // Gradient background
+                LinearGradient(
+                    colors: [
+                        feelingLevels[feelingLevel - 1].color.opacity(0.05),
+                        MovefullyTheme.Colors.backgroundPrimary,
+                        feelingLevels[feelingLevel - 1].color.opacity(0.02)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .ignoresSafeArea()
                 
-                // Rating selection
-                VStack(spacing: MovefullyTheme.Layout.paddingM) {
-                    HStack {
-                        Text("Energy Level")
-                            .font(MovefullyTheme.Typography.bodyMedium)
-                            .foregroundColor(MovefullyTheme.Colors.textPrimary)
-                        Spacer()
-                    }
-                    
-                    HStack(spacing: MovefullyTheme.Layout.paddingM) {
-                        ForEach(1...5, id: \.self) { level in
-                            Button(action: { rating = level }) {
-                                Image(systemName: level <= rating ? "star.fill" : "star")
-                                    .font(MovefullyTheme.Typography.title2)
-                                    .foregroundColor(level <= rating ? MovefullyTheme.Colors.warmOrange : MovefullyTheme.Colors.mediumGray)
+                ScrollView {
+                    VStack(spacing: MovefullyTheme.Layout.paddingXL) {
+                        // Celebration header with animation
+                        VStack(spacing: MovefullyTheme.Layout.paddingL) {
+                            // Success animation circle
+                            ZStack {
+                                Circle()
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [
+                                                MovefullyTheme.Colors.softGreen.opacity(0.2),
+                                                MovefullyTheme.Colors.softGreen.opacity(0.1)
+                                            ],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
+                                    .frame(width: animateSuccess ? 120 : 100, height: animateSuccess ? 120 : 100)
+                                    .scaleEffect(animateSuccess ? 1.0 : 0.8)
+                                    .animation(.spring(response: 0.6, dampingFraction: 0.7), value: animateSuccess)
+                                
+                                Image(systemName: "checkmark.circle.fill")
+                                    .font(.system(size: 60, weight: .medium))
+                                    .foregroundStyle(
+                                        LinearGradient(
+                                            colors: [MovefullyTheme.Colors.softGreen, MovefullyTheme.Colors.primaryTeal],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
+                                    .scaleEffect(animateSuccess ? 1.0 : 0.7)
+                                    .animation(.spring(response: 0.8, dampingFraction: 0.6).delay(0.2), value: animateSuccess)
+                            }
+                            
+                            VStack(spacing: MovefullyTheme.Layout.paddingM) {
+                                Text("Movement Complete! 🎉")
+                                    .font(MovefullyTheme.Typography.title1)
+                                    .fontWeight(.bold)
+                                    .foregroundStyle(
+                                        LinearGradient(
+                                            colors: [MovefullyTheme.Colors.textPrimary, MovefullyTheme.Colors.primaryTeal],
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
+                                    )
+                                    .multilineTextAlignment(.center)
+                                
+                                Text("You're building stronger habits with every session")
+                                    .font(MovefullyTheme.Typography.body)
+                                    .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                                    .multilineTextAlignment(.center)
+                                    .lineLimit(nil)
                             }
                         }
-                        Spacer()
+                        .padding(.top, MovefullyTheme.Layout.paddingXL)
+                        .onAppear {
+                            withAnimation {
+                                animateSuccess = true
+                            }
+                        }
+                        
+                        // Feeling selection with emojis
+                        MovefullyCard {
+                            VStack(spacing: MovefullyTheme.Layout.paddingL) {
+                                VStack(spacing: MovefullyTheme.Layout.paddingS) {
+                                    Text("How did you feel?")
+                                        .font(MovefullyTheme.Typography.title3)
+                                        .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                                    
+                                    Text("Your feedback helps personalize future sessions")
+                                        .font(MovefullyTheme.Typography.callout)
+                                        .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                                        .multilineTextAlignment(.center)
+                                }
+                                
+                                // Emoji feeling selector
+                                VStack(spacing: MovefullyTheme.Layout.paddingL) {
+                                    HStack(spacing: MovefullyTheme.Layout.paddingM) {
+                                        ForEach(1...5, id: \.self) { level in
+                                            VStack(spacing: MovefullyTheme.Layout.paddingS) {
+                                                Button(action: { 
+                                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                                                        feelingLevel = level 
+                                                    }
+                                                }) {
+                                                    ZStack {
+                                                        Circle()
+                                                            .fill(
+                                                                feelingLevel == level ? 
+                                                                feelingLevels[level - 1].color.opacity(0.15) : 
+                                                                MovefullyTheme.Colors.cardBackground
+                                                            )
+                                                            .frame(width: 60, height: 60)
+                                                            .overlay(
+                                                                Circle()
+                                                                    .stroke(
+                                                                        feelingLevel == level ? 
+                                                                        feelingLevels[level - 1].color : 
+                                                                        MovefullyTheme.Colors.divider,
+                                                                        lineWidth: feelingLevel == level ? 2 : 1
+                                                                    )
+                                                            )
+                                                        
+                                                        Text(feelingLevels[level - 1].emoji)
+                                                            .font(.system(size: 32))
+                                                            .scaleEffect(feelingLevel == level ? 1.2 : 1.0)
+                                                    }
+                                                }
+                                                .scaleEffect(feelingLevel == level ? 1.1 : 1.0)
+                                                .animation(.spring(response: 0.3, dampingFraction: 0.6), value: feelingLevel)
+                                                
+                                                Text(feelingLevels[level - 1].title)
+                                                    .font(MovefullyTheme.Typography.caption)
+                                                    .foregroundColor(
+                                                        feelingLevel == level ? 
+                                                        feelingLevels[level - 1].color : 
+                                                        MovefullyTheme.Colors.textSecondary
+                                                    )
+                                                    .fontWeight(feelingLevel == level ? .semibold : .regular)
+                                            }
+                                        }
+                                    }
+                                    
+                                    // Selected feeling description
+                                    Text(feelingLevels[feelingLevel - 1].description)
+                                        .font(MovefullyTheme.Typography.body)
+                                        .foregroundColor(feelingLevels[feelingLevel - 1].color)
+                                        .fontWeight(.medium)
+                                        .animation(.easeInOut(duration: 0.2), value: feelingLevel)
+                                }
+                            }
+                        }
+                        
+                        // Notes section
+                        MovefullyCard {
+                            VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingM) {
+                                VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingS) {
+                                    Text("Share your experience")
+                                        .font(MovefullyTheme.Typography.title3)
+                                        .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                                    
+                                    Text("Optional • Help your trainer understand your journey")
+                                        .font(MovefullyTheme.Typography.caption)
+                                        .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                                }
+                                
+                                TextField("How did the workout feel? Any highlights or challenges...", text: $notes, axis: .vertical)
+                                    .font(MovefullyTheme.Typography.body)
+                                    .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                                    .lineLimit(3...6)
+                                    .padding(MovefullyTheme.Layout.paddingM)
+                                    .background(MovefullyTheme.Colors.backgroundPrimary)
+                                    .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM)
+                                            .stroke(MovefullyTheme.Colors.divider.opacity(0.5), lineWidth: 1)
+                                    )
+                            }
+                        }
+                        
+                        // Action buttons
+                        VStack(spacing: MovefullyTheme.Layout.paddingM) {
+                            // Complete button
+                            Button("Complete Session") {
+                                viewModel.completeWorkout(assignment, rating: feelingLevel, notes: notes)
+                                dismiss()
+                            }
+                            .font(MovefullyTheme.Typography.buttonLarge)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, MovefullyTheme.Layout.paddingL)
+                            .background(
+                                LinearGradient(
+                                    colors: [
+                                        feelingLevels[feelingLevel - 1].color,
+                                        feelingLevels[feelingLevel - 1].color.opacity(0.8)
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusL))
+                            .shadow(
+                                color: feelingLevels[feelingLevel - 1].color.opacity(0.4), 
+                                radius: 12, 
+                                x: 0, 
+                                y: 6
+                            )
+                            .scaleEffect(0.98)
+                            .animation(.easeInOut(duration: 0.2), value: feelingLevel)
+                            
+                            // Skip button
+                            Button("Skip for now") {
+                                viewModel.completeWorkout(assignment, rating: 3, notes: "")
+                                dismiss()
+                            }
+                            .font(MovefullyTheme.Typography.body)
+                            .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                        }
+                        
+                        Spacer(minLength: MovefullyTheme.Layout.paddingXL)
                     }
+                    .padding(.horizontal, MovefullyTheme.Layout.paddingXL)
                 }
-                
-                // Notes
-                MovefullyFormField(title: "How did it feel?", subtitle: "Optional notes for your trainer") {
-                    MovefullyTextEditor(
-                        placeholder: "Share how the workout felt, any challenges, or victories...",
-                        text: $notes,
-                        minLines: 3,
-                        maxLines: 5,
-                        maxCharacters: 250
-                    )
-                }
-                
-                Spacer()
-                
-                // Complete button
-                Button("Complete Workout") {
-                    viewModel.completeWorkout(assignment, rating: rating, notes: notes)
-                    dismiss()
-                }
-                .font(MovefullyTheme.Typography.buttonMedium)
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, MovefullyTheme.Layout.paddingM)
-                .background(MovefullyTheme.Colors.softGreen)
-                .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
-                .shadow(color: MovefullyTheme.Colors.softGreen.opacity(0.3), radius: 6, x: 0, y: 3)
             }
-            .padding(.horizontal, MovefullyTheme.Layout.paddingXL)
-            .background(MovefullyTheme.Colors.backgroundPrimary)
-            .navigationTitle("Workout Complete")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Skip") {
                         dismiss()
                     }
+                    .font(MovefullyTheme.Typography.body)
                     .foregroundColor(MovefullyTheme.Colors.textSecondary)
                 }
             }

@@ -15,7 +15,7 @@ struct ClientMainView: View {
             ClientDashboardView(viewModel: viewModel)
                 .tabItem {
                     Image(systemName: "chart.bar.fill")
-                    Text("Dashboard")
+                    Text("Progress")
                 }
             
             ClientScheduleView(viewModel: viewModel)

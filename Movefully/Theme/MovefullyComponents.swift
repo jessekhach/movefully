@@ -1,5 +1,8 @@
 import SwiftUI
+import Foundation
+#if os(iOS)
 import UIKit
+#endif
 
 // MARK: - Standardized Movefully UI Components
 // This file contains all reusable UI components that ensure design consistency across the app
@@ -714,6 +717,54 @@ struct MovefullyCharacterCount: View {
             Text("\(currentCount)/\(maxCount)")
                 .font(MovefullyTheme.Typography.caption)
                 .foregroundColor(currentCount > maxCount ? MovefullyTheme.Colors.warmOrange : MovefullyTheme.Colors.textSecondary)
+        }
+    }
+}
+
+// MARK: - Navigation Header Component
+struct MovefullyNavigationHeader: View {
+    let title: String
+    let showTrailingButton: Bool
+    let trailingButtonIcon: String
+    let trailingButtonAction: () -> Void
+    
+    init(
+        title: String,
+        showTrailingButton: Bool = false,
+        trailingButtonIcon: String = "person.crop.circle",
+        trailingButtonAction: @escaping () -> Void = {}
+    ) {
+        self.title = title
+        self.showTrailingButton = showTrailingButton
+        self.trailingButtonIcon = trailingButtonIcon
+        self.trailingButtonAction = trailingButtonAction
+    }
+    
+    var body: some View {
+        ZStack {
+            // This creates the same spacing as a large navigation title
+            VStack {
+                if showTrailingButton {
+                    HStack {
+                        Spacer()
+                        Button(action: trailingButtonAction) {
+                            ZStack {
+                                Circle()
+                                    .fill(MovefullyTheme.Colors.primaryTeal.opacity(0.1))
+                                    .frame(width: 32, height: 32)
+                                
+                                Image(systemName: trailingButtonIcon)
+                                    .font(.system(size: 18, weight: .medium))
+                                    .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+                            }
+                        }
+                        .accessibilityLabel("Profile")
+                        .padding(.trailing, MovefullyTheme.Layout.paddingXL)
+                        .padding(.top, 8)
+                    }
+                }
+                Spacer()
+            }
         }
     }
 } 
