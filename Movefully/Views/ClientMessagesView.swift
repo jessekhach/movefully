@@ -5,13 +5,14 @@ struct ClientMessagesView: View {
     @ObservedObject var viewModel: ClientViewModel
     @State private var messageText = ""
     @State private var showingTrainerProfile = false
+    @State private var showingProfile = false
     @FocusState private var isMessageFieldFocused: Bool
     
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
-                // Trainer header
-                trainerHeaderSection
+                // Custom header with trainer info and profile button
+                customHeaderSection
                 
                 // Messages list
                 ScrollViewReader { proxy in
@@ -42,15 +43,19 @@ struct ClientMessagesView: View {
                 messageInputSection
             }
             .background(MovefullyTheme.Colors.backgroundPrimary)
-            .navigationBarHidden(true)
+            .navigationTitle("Messages")
+            .navigationBarTitleDisplayMode(.inline)
         }
         .sheet(isPresented: $showingTrainerProfile) {
             TrainerProfileView()
         }
+        .sheet(isPresented: $showingProfile) {
+            // ClientProfileView will be added when available
+        }
     }
     
-    // MARK: - Trainer Header Section
-    private var trainerHeaderSection: some View {
+    // MARK: - Custom Header Section
+    private var customHeaderSection: some View {
         Button(action: { showingTrainerProfile = true }) {
             HStack(spacing: MovefullyTheme.Layout.paddingM) {
                 // Trainer avatar

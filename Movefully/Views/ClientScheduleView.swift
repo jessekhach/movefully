@@ -6,14 +6,15 @@ struct ClientScheduleView: View {
     @State private var selectedWeekOffset = 0
     @State private var selectedDate: Date?
     @State private var showingWorkoutDetail = false
+    @State private var showingProfile = false
     
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
-                // Week selector
+                // Week selector (back to fixed header at top)
                 weekSelectorSection
                 
-                // Calendar view
+                // Main scrollable content
                 ScrollView {
                     VStack(spacing: MovefullyTheme.Layout.paddingXL) {
                         // Week calendar
@@ -28,18 +29,21 @@ struct ClientScheduleView: View {
                         
                         Spacer(minLength: MovefullyTheme.Layout.paddingXXL)
                     }
-                    .padding(.horizontal, MovefullyTheme.Layout.paddingXL)
+                    .padding(.horizontal, MovefullyTheme.Layout.paddingL)
                 }
                 .background(MovefullyTheme.Colors.backgroundPrimary)
             }
             .navigationTitle("Schedule")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationBarTitleDisplayMode(.inline)
         }
         .sheet(isPresented: $showingWorkoutDetail) {
             if let selectedDate = selectedDate,
                let assignment = getWorkoutAssignment(for: selectedDate) {
                 WorkoutDetailView(assignment: assignment, viewModel: viewModel)
             }
+        }
+        .sheet(isPresented: $showingProfile) {
+            // ClientProfileView will be added when available
         }
         .onAppear {
             // Set today as initially selected
@@ -70,7 +74,7 @@ struct ClientScheduleView: View {
                     .foregroundColor(MovefullyTheme.Colors.primaryTeal)
             }
         }
-        .padding(.horizontal, MovefullyTheme.Layout.paddingXL)
+        .padding(.horizontal, MovefullyTheme.Layout.paddingL)
         .padding(.vertical, MovefullyTheme.Layout.paddingM)
         .background(MovefullyTheme.Colors.cardBackground)
         .shadow(color: MovefullyTheme.Effects.cardShadow, radius: 2, x: 0, y: 1)

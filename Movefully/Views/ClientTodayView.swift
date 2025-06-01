@@ -9,46 +9,23 @@ struct ClientTodayView: View {
     @State private var showingProfile = false
     
     var body: some View {
-        NavigationView {
-            ScrollView {
-                VStack(spacing: MovefullyTheme.Layout.paddingXL) {
-                    // Header with greeting
-                    headerSection
-                    
-                    // Today's workout or rest day message
-                    if let todayWorkout = viewModel.todayWorkout {
-                        workoutSection(todayWorkout)
-                    } else {
-                        restDaySection
-                    }
-                    
-                    // Quick stats
-                    quickStatsSection
-                    
-                    Spacer(minLength: MovefullyTheme.Layout.paddingXXL)
-                }
-                .padding(.horizontal, MovefullyTheme.Layout.paddingXL)
-                .padding(.top, MovefullyTheme.Layout.paddingM)
+        MovefullyClientNavigation(
+            title: "Today",
+            showProfileButton: true,
+            profileAction: { showingProfile = true }
+        ) {
+            // Header with greeting
+            headerSection
+            
+            // Today's workout or rest day message
+            if let todayWorkout = viewModel.todayWorkout {
+                workoutSection(todayWorkout)
+            } else {
+                restDaySection
             }
-            .background(MovefullyTheme.Colors.backgroundPrimary)
-            .navigationTitle("Today")
-            .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: { showingProfile = true }) {
-                        ZStack {
-                            Circle()
-                                .fill(MovefullyTheme.Colors.primaryTeal.opacity(0.1))
-                                .frame(width: 32, height: 32)
-                            
-                            Image(systemName: "person.crop.circle")
-                                .font(.system(size: 18, weight: .medium))
-                                .foregroundColor(MovefullyTheme.Colors.primaryTeal)
-                        }
-                    }
-                    .accessibilityLabel("Profile")
-                }
-            }
+            
+            // Quick stats
+            quickStatsSection
         }
         .sheet(isPresented: $showingWorkoutDetail) {
             if let todayWorkout = viewModel.todayWorkout {

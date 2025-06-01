@@ -5,7 +5,72 @@ iOS target = iOS 16+
 🖼️ Overall Feel
 Soft, clean, and inviting
 Feels more like a wellness app than a gym tracker
-Prioritizes comfort, calm, and clarity over performance or “intensity”
+Prioritizes comfort, calm, and clarity over performance or "intensity"
+
+📱 STANDARDIZED NAVIGATION DESIGN SYSTEM
+
+⭐ Professional Large Title Navigation Pattern
+All main application views now use a consistent, professional navigation pattern featuring:
+
+• Large navigation titles that smoothly collapse when scrolling
+• Standardized toolbar buttons with consistent styling
+• Professional iOS-native scrolling behavior
+• Consistent background colors and spacing
+• Profile buttons positioned in top-right toolbar
+• Smooth transitions and animations
+
+🔧 Implementation Components:
+
+1. MovefullyStandardNavigation<Content>
+   - Base navigation wrapper with full customization
+   - Large titles (.navigationBarTitleDisplayMode(.large))
+   - Toolbar button support (leading/trailing)
+   - Profile button integration
+   - Consistent ScrollView + VStack layout
+
+2. MovefullyClientNavigation<Content> 
+   - Client-specific navigation wrapper
+   - Profile button enabled by default
+   - Optimized for client user flows
+   - Consistent with wellness-focused design
+
+3. MovefullyTrainerNavigation<Content>
+   - Trainer-specific navigation wrapper  
+   - Optimized for trainer workflows
+   - Professional coaching interface patterns
+
+🎯 Usage Patterns:
+
+CLIENT VIEWS - All use MovefullyClientNavigation:
+✅ ClientTodayView - "Today" with profile button
+✅ ClientDashboardView - "Progress" with profile button  
+✅ ClientScheduleView - "Schedule" with profile button
+✅ ClientResourcesView - "Exercise Library" with profile button
+✅ ClientMessagesView - "Messages" with profile button (custom header + toolbar)
+
+TRAINER VIEWS - Use MovefullyTrainerNavigation or existing systems:
+• TrainerDashboardView - Uses TabView structure (maintains existing)
+• ClientManagementView - Uses MovefullyNavigationPageLayout (maintains existing)
+• TrainerProfileView - Custom scrollable profile design (maintains existing)
+
+🎨 Visual Consistency Benefits:
+• Titles positioned identically across all views
+• Profile icons in same location (top-right toolbar)
+• Smooth scroll-to-collapse behavior everywhere
+• Professional iOS-native feel throughout app
+• Consistent spacing and background colors
+• Unified user experience patterns
+
+🚀 Implementation Results:
+✨ Professional, polished navigation experience
+✨ Consistent user muscle memory across all screens  
+✨ Native iOS behavior that users expect
+✨ Clean, maintainable code structure
+✨ Easy to extend with new toolbar buttons
+✨ Smooth, delightful animations throughout
+
+This creates the foundation for a truly professional, wellness-focused app experience that feels both calming and sophisticated.
+
 🎨 Color Palette
 Use a pastel-inspired, wellness-focused palette with soft contrast and positive tones.
 
@@ -16,9 +81,9 @@ Used for primary actions (e.g., Invite button, highlights)
 Accent Colors
 
 Warm Orange for alerts or "Needs Attention" (e.g., #F4A261)
-Soft Green for “Active” (e.g., #70C18C)
-Gentle Blue for “New” or info states (e.g., #6FB1FC)
-Lavender or Orchid for “Pending Invite” (e.g., #C69AE3)
+Soft Green for "Active" (e.g., #70C18C)
+Gentle Blue for "New" or info states (e.g., #6FB1FC)
+Lavender or Orchid for "Pending Invite" (e.g., #C69AE3)
 Medium Gray for muted/paused states (#B0B0B0)
 Backgrounds & Neutrals
 
@@ -58,5 +123,5 @@ Form inputs should be large, clean, and spaced — never cramped
 Think:
 
 Apple Fitness' onboarding screens
-Headspace’s visual gentleness
+Headspace's visual gentleness
 The calm, focused structure of apps like Whoop or Balance

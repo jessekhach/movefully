@@ -767,4 +767,176 @@ struct MovefullyNavigationHeader: View {
             }
         }
     }
+}
+
+// MARK: - Standard Navigation System
+
+/// Standard navigation wrapper that provides consistent professional navigation across all main views
+/// Features:
+/// - Large navigation titles that collapse on scroll
+/// - Standardized toolbar button styling
+/// - Consistent background and padding
+/// - Professional iOS navigation behavior
+struct MovefullyStandardNavigation<Content: View>: View {
+    let title: String
+    let showProfileButton: Bool
+    let profileAction: (() -> Void)?
+    let trailingButton: ToolbarButton?
+    let leadingButton: ToolbarButton?
+    let content: Content
+    
+    struct ToolbarButton {
+        let icon: String
+        let action: () -> Void
+        let accessibilityLabel: String?
+        
+        init(icon: String, action: @escaping () -> Void, accessibilityLabel: String? = nil) {
+            self.icon = icon
+            self.action = action
+            self.accessibilityLabel = accessibilityLabel
+        }
+    }
+    
+    init(
+        title: String,
+        showProfileButton: Bool = false,
+        profileAction: (() -> Void)? = nil,
+        trailingButton: ToolbarButton? = nil,
+        leadingButton: ToolbarButton? = nil,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.title = title
+        self.showProfileButton = showProfileButton
+        self.profileAction = profileAction
+        self.trailingButton = trailingButton
+        self.leadingButton = leadingButton
+        self.content = content()
+    }
+    
+    var body: some View {
+        NavigationView {
+            ScrollView {
+                VStack(spacing: MovefullyTheme.Layout.paddingXL) {
+                    content
+                }
+                .padding(.horizontal, MovefullyTheme.Layout.paddingXL)
+                .padding(.top, MovefullyTheme.Layout.paddingM)
+                .padding(.bottom, MovefullyTheme.Layout.paddingXXL)
+            }
+            .background(MovefullyTheme.Colors.backgroundPrimary)
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                // Leading button
+                if let leadingButton = leadingButton {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        Button(action: leadingButton.action) {
+                            Image(systemName: leadingButton.icon)
+                                .font(.system(size: 18, weight: .medium))
+                                .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+                        }
+                        .accessibilityLabel(leadingButton.accessibilityLabel ?? "")
+                    }
+                }
+                
+                // Trailing buttons
+                if showProfileButton, let profileAction = profileAction {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button(action: profileAction) {
+                            ZStack {
+                                Circle()
+                                    .fill(MovefullyTheme.Colors.primaryTeal.opacity(0.1))
+                                    .frame(width: 32, height: 32)
+                                
+                                Image(systemName: "person.crop.circle")
+                                    .font(.system(size: 18, weight: .medium))
+                                    .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+                            }
+                        }
+                        .accessibilityLabel("Profile")
+                    }
+                } else if let trailingButton = trailingButton {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button(action: trailingButton.action) {
+                            Image(systemName: trailingButton.icon)
+                                .font(.system(size: 18, weight: .medium))
+                                .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+                        }
+                        .accessibilityLabel(trailingButton.accessibilityLabel ?? "")
+                    }
+                }
+            }
+        }
+        .navigationViewStyle(StackNavigationViewStyle())
+    }
+}
+
+// MARK: - Standard Navigation for Trainer Views
+/// Trainer-specific navigation wrapper with consistent trainer UI patterns
+struct MovefullyTrainerNavigation<Content: View>: View {
+    let title: String
+    let showProfileButton: Bool
+    let profileAction: (() -> Void)?
+    let trailingButton: MovefullyStandardNavigation<Content>.ToolbarButton?
+    let content: Content
+    
+    init(
+        title: String,
+        showProfileButton: Bool = false,
+        profileAction: (() -> Void)? = nil,
+        trailingButton: MovefullyStandardNavigation<Content>.ToolbarButton? = nil,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.title = title
+        self.showProfileButton = showProfileButton
+        self.profileAction = profileAction
+        self.trailingButton = trailingButton
+        self.content = content()
+    }
+    
+    var body: some View {
+        MovefullyStandardNavigation(
+            title: title,
+            showProfileButton: showProfileButton,
+            profileAction: profileAction,
+            trailingButton: trailingButton
+        ) {
+            content
+        }
+    }
+}
+
+// MARK: - Standard Navigation for Client Views
+/// Client-specific navigation wrapper with consistent client UI patterns
+struct MovefullyClientNavigation<Content: View>: View {
+    let title: String
+    let showProfileButton: Bool
+    let profileAction: (() -> Void)?
+    let trailingButton: MovefullyStandardNavigation<Content>.ToolbarButton?
+    let content: Content
+    
+    init(
+        title: String,
+        showProfileButton: Bool = true,
+        profileAction: (() -> Void)? = nil,
+        trailingButton: MovefullyStandardNavigation<Content>.ToolbarButton? = nil,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.title = title
+        self.showProfileButton = showProfileButton
+        self.profileAction = profileAction
+        self.trailingButton = trailingButton
+        self.content = content()
+    }
+    
+    var body: some View {
+        MovefullyStandardNavigation(
+            title: title,
+            showProfileButton: showProfileButton,
+            profileAction: profileAction,
+            trailingButton: trailingButton
+        ) {
+            content
+        }
+    }
 } 

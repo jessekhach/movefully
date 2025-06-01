@@ -6,35 +6,29 @@ struct ClientResourcesView: View {
     @State private var searchText = ""
     @State private var selectedExercise: Exercise?
     @State private var showingExerciseDetail = false
+    @State private var showingProfile = false
     
     var body: some View {
-        NavigationView {
-            VStack(spacing: 0) {
-                // Search and filters
-                searchAndFiltersSection
-                
-                // Exercise library
-                ScrollView {
-                    VStack(spacing: MovefullyTheme.Layout.paddingL) {
-                        // Category filters
-                        categoryFiltersSection
-                        
-                        // Exercise grid
-                        exerciseGridSection
-                        
-                        Spacer(minLength: MovefullyTheme.Layout.paddingXXL)
-                    }
-                    .padding(.horizontal, MovefullyTheme.Layout.paddingL)
-                }
-                .background(MovefullyTheme.Colors.backgroundPrimary)
-            }
-            .navigationTitle("Exercise Library")
-            .navigationBarTitleDisplayMode(.large)
+        MovefullyClientNavigation(
+            title: "Exercise Library",
+            showProfileButton: false
+        ) {
+            // Search and filters (now inside navigation content)
+            searchAndFiltersSection
+            
+            // Category filters
+            categoryFiltersSection
+            
+            // Exercise grid
+            exerciseGridSection
         }
         .sheet(isPresented: $showingExerciseDetail) {
             if let exercise = selectedExercise {
                 ExerciseDetailModal(exercise: exercise)
             }
+        }
+        .sheet(isPresented: $showingProfile) {
+            // ClientProfileView will be added when available
         }
     }
     
@@ -45,11 +39,8 @@ struct ClientResourcesView: View {
                 placeholder: "Search exercises...",
                 text: $searchText
             )
-            .padding(.horizontal, MovefullyTheme.Layout.paddingL)
         }
-        .padding(.vertical, MovefullyTheme.Layout.paddingM)
-        .background(MovefullyTheme.Colors.cardBackground)
-        .shadow(color: MovefullyTheme.Effects.cardShadow, radius: 2, x: 0, y: 1)
+        .padding(.vertical, MovefullyTheme.Layout.paddingS)
     }
     
     // MARK: - Category Filters Section

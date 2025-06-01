@@ -3,30 +3,27 @@ import SwiftUI
 // MARK: - Client Dashboard View
 struct ClientDashboardView: View {
     @ObservedObject var viewModel: ClientViewModel
+    @State private var showingProfile = false
     
     var body: some View {
-        NavigationView {
-            ScrollView {
-                VStack(spacing: MovefullyTheme.Layout.paddingXL) {
-                    // Welcome message
-                    welcomeSection
-                    
-                    // Weekly progress
-                    weeklyProgressSection
-                    
-                    // Monthly overview
-                    monthlyOverviewSection
-                    
-                    // Recent activity
-                    recentActivitySection
-                    
-                    Spacer(minLength: MovefullyTheme.Layout.paddingXXL)
-                }
-                .padding(.horizontal, MovefullyTheme.Layout.paddingXL)
-            }
-            .background(MovefullyTheme.Colors.backgroundPrimary)
-            .navigationTitle("Progress")
-            .navigationBarTitleDisplayMode(.large)
+        MovefullyClientNavigation(
+            title: "Progress",
+            showProfileButton: false
+        ) {
+            // Welcome message
+            welcomeSection
+            
+            // Weekly progress
+            weeklyProgressSection
+            
+            // Monthly overview
+            monthlyOverviewSection
+            
+            // Recent activity
+            recentActivitySection
+        }
+        .sheet(isPresented: $showingProfile) {
+            // ClientProfileView will be added when available
         }
     }
     
