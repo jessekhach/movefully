@@ -14,8 +14,8 @@ struct TrainerMessagesView: View {
                     VStack(spacing: MovefullyTheme.Layout.paddingM) {
                         HStack {
                             VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingXS) {
-                                Text("Messages")
-                                    .font(MovefullyTheme.Typography.title1)
+                                Text("Conversations")
+                                    .font(MovefullyTheme.Typography.title2)
                                     .foregroundColor(MovefullyTheme.Colors.textPrimary)
                                 
                                 Text("Stay connected with your wellness community")
@@ -30,32 +30,17 @@ struct TrainerMessagesView: View {
                             Button(action: {
                                 showingNewMessage = true
                             }) {
-                                HStack(spacing: MovefullyTheme.Layout.paddingS) {
-                                    Image(systemName: "plus.circle.fill")
-                                        .font(MovefullyTheme.Typography.buttonSmall)
-                                        .foregroundColor(.white)
-                                    Text("New")
-                                        .font(MovefullyTheme.Typography.buttonSmall)
-                                        .foregroundColor(.white)
-                                }
-                                .padding(.horizontal, MovefullyTheme.Layout.paddingL)
-                                .padding(.vertical, MovefullyTheme.Layout.paddingM)
-                                .background(
-                                    LinearGradient(
-                                        colors: [MovefullyTheme.Colors.primaryTeal, MovefullyTheme.Colors.primaryTeal.opacity(0.8)],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                                .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusL))
-                                .shadow(color: MovefullyTheme.Colors.primaryTeal.opacity(0.3), radius: 8, x: 0, y: 4)
+                                Image(systemName: "square.and.pencil")
+                                    .font(.system(size: 18, weight: .medium))
+                                    .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+                                    .frame(width: 32, height: 32)
+                                    .background(MovefullyTheme.Colors.primaryTeal.opacity(0.1))
+                                    .clipShape(Circle())
                             }
                         }
+                        .padding(.horizontal, MovefullyTheme.Layout.paddingXL)
+                        .padding(.top, MovefullyTheme.Layout.paddingL)
                     }
-                    .padding(.horizontal, MovefullyTheme.Layout.paddingXL)
-                    .padding(.top, MovefullyTheme.Layout.paddingL)
-                    .padding(.bottom, MovefullyTheme.Layout.paddingL)
-                    .background(MovefullyTheme.Colors.cardBackground)
                     
                     // Soft divider
                     Rectangle()
@@ -138,7 +123,8 @@ struct TrainerMessagesView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .movefullyBackground()
-            .navigationBarHidden(true)
+            .navigationTitle("Messages")
+            .navigationBarTitleDisplayMode(.inline)
             .refreshable {
                 viewModel.refreshConversations()
             }

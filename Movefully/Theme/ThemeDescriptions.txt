@@ -9,67 +9,122 @@ Prioritizes comfort, calm, and clarity over performance or "intensity"
 
 📱 STANDARDIZED NAVIGATION DESIGN SYSTEM
 
-⭐ Professional Large Title Navigation Pattern
-All main application views now use a consistent, professional navigation pattern featuring:
+⭐ Professional Navigation Patterns
+We use a sophisticated navigation system that adapts to content type and user context:
 
-• Large navigation titles that smoothly collapse when scrolling
-• Standardized toolbar buttons with consistent styling
-• Professional iOS-native scrolling behavior
-• Consistent background colors and spacing
-• Profile buttons positioned in top-right toolbar
-• Smooth transitions and animations
+## **CLIENT NAVIGATION PATTERNS:**
+
+✅ **TODAY VIEW** - Large Title + Profile Button
+- MovefullyClientNavigation with showProfileButton: true
+- Large navigation title (.navigationBarTitleDisplayMode(.large))
+- Profile icon in top-right toolbar
+- Main dashboard experience
+
+✅ **PROGRESS VIEW** - Inline Title, Clean
+- MovefullyClientNavigation with showProfileButton: false
+- Large navigation title for main section feel
+- No profile button (keeps focus on data)
+
+✅ **SCHEDULE VIEW** - Inline Title + Fixed Week Picker
+- Traditional NavigationView with .navigationBarTitleDisplayMode(.inline)
+- Fixed week selector header that stays pinned
+- Compact, professional look like Messages
+- Pre-collapsed title for maximum content space
+
+✅ **MESSAGES VIEW** - Inline Title + Custom Header
+- Traditional NavigationView with .navigationBarTitleDisplayMode(.inline)
+- Custom trainer info header section
+- Compact, focused messaging experience
+
+✅ **EXERCISE LIBRARY VIEW** - Inline Title, Clean
+- MovefullyClientNavigation with showProfileButton: false
+- Large navigation title for main section feel
+- Focus on content discovery
+
+## **TRAINER NAVIGATION PATTERNS:**
+
+✅ **CLIENT MANAGEMENT** - Large Title + Action Button
+- MovefullyTrainerNavigation with showProfileButton: false
+- Large navigation title (.navigationBarTitleDisplayMode(.large))
+- "Invite" button in top-right toolbar
+- Main management dashboard
+
+✅ **WELLNESS PLANS** - Large Title + Action Button
+- MovefullyTrainerNavigation with showProfileButton: false
+- Large navigation title for main section feel
+- "Create" button in top-right toolbar
+- Planning and creation focus
+
+✅ **TRAINER MESSAGES** - Inline Title + Custom Header
+- Traditional NavigationView with .navigationBarTitleDisplayMode(.inline)
+- Custom header with action button
+- Compact, professional messaging experience
+- Matches client Messages pattern
+
+✅ **TRAINER PROFILE** - Custom Navigation
+- Maintains existing .navigationBarHidden(true)
+- Custom scrollable profile design
+- Unique, immersive profile experience
+
+## **NAVIGATION DECISION MATRIX:**
+
+🎯 **Use LARGE Titles (.large) when:**
+- Primary dashboard/main views (Today, Progress, Client Management, Plans)
+- User needs prominent navigation context
+- Main content areas that benefit from visual hierarchy
+
+🎯 **Use INLINE Titles (.inline) when:**
+- Content-dense views (Schedule, Messages)
+- Custom header sections are present
+- Maximum content space is needed
+- Professional, compact feel is desired
+
+🎯 **Use CUSTOM Navigation (.navigationBarHidden) when:**
+- Unique user experiences (Profiles)
+- Complex header layouts
+- Immersive content presentation
 
 🔧 Implementation Components:
 
-1. MovefullyStandardNavigation<Content>
+1. **MovefullyStandardNavigation<Content>**
    - Base navigation wrapper with full customization
-   - Large titles (.navigationBarTitleDisplayMode(.large))
+   - Supports both large and inline titles
    - Toolbar button support (leading/trailing)
    - Profile button integration
    - Consistent ScrollView + VStack layout
 
-2. MovefullyClientNavigation<Content> 
+2. **MovefullyClientNavigation<Content>** 
    - Client-specific navigation wrapper
-   - Profile button enabled by default
+   - Profile button enabled by default (can be disabled)
    - Optimized for client user flows
    - Consistent with wellness-focused design
 
-3. MovefullyTrainerNavigation<Content>
+3. **MovefullyTrainerNavigation<Content>**
    - Trainer-specific navigation wrapper  
    - Optimized for trainer workflows
    - Professional coaching interface patterns
-
-🎯 Usage Patterns:
-
-CLIENT VIEWS - All use MovefullyClientNavigation:
-✅ ClientTodayView - "Today" with profile button
-✅ ClientDashboardView - "Progress" with profile button  
-✅ ClientScheduleView - "Schedule" with profile button
-✅ ClientResourcesView - "Exercise Library" with profile button
-✅ ClientMessagesView - "Messages" with profile button (custom header + toolbar)
-
-TRAINER VIEWS - Use MovefullyTrainerNavigation or existing systems:
-• TrainerDashboardView - Uses TabView structure (maintains existing)
-• ClientManagementView - Uses MovefullyNavigationPageLayout (maintains existing)
-• TrainerProfileView - Custom scrollable profile design (maintains existing)
+   - Action buttons for management tasks
 
 🎨 Visual Consistency Benefits:
 • Titles positioned identically across all views
-• Profile icons in same location (top-right toolbar)
-• Smooth scroll-to-collapse behavior everywhere
+• Action buttons in consistent locations
+• Smooth scroll-to-collapse behavior where appropriate
 • Professional iOS-native feel throughout app
 • Consistent spacing and background colors
 • Unified user experience patterns
+• Adaptive navigation based on content needs
 
 🚀 Implementation Results:
 ✨ Professional, polished navigation experience
+✨ Content-aware navigation patterns
 ✨ Consistent user muscle memory across all screens  
 ✨ Native iOS behavior that users expect
 ✨ Clean, maintainable code structure
 ✨ Easy to extend with new toolbar buttons
 ✨ Smooth, delightful animations throughout
+✨ Optimized for both client and trainer workflows
 
-This creates the foundation for a truly professional, wellness-focused app experience that feels both calming and sophisticated.
+This creates the foundation for a truly professional, wellness-focused app experience that feels both calming and sophisticated while adapting to the specific needs of each view and user type.
 
 🎨 Color Palette
 Use a pastel-inspired, wellness-focused palette with soft contrast and positive tones.

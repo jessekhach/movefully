@@ -7,67 +7,61 @@ struct PlansManagementView: View {
     @State private var showingCreatePlan = false
     
     var body: some View {
-        MovefullyNavigationPageLayout {
-            MovefullyPageLayout {
-                // Header Section
-                MovefullyContentSection {
-                    MovefullyPageSection {
-                        MovefullyPageHeader(
-                            title: "Wellness Plans",
-                            subtitle: "Craft meaningful movement journeys",
-                            actionButton: MovefullyPageHeader.ActionButton(
-                                title: "Create",
-                                icon: "plus.circle.fill",
-                                action: {
-                                    showingCreatePlan = true
-                                }
-                            )
-                        )
-                        
-                        MovefullySearchField(
-                            placeholder: "Search your wellness plans...",
-                            text: $searchText
-                        )
-                        
-                        MovefullyFilterPillsRow(
-                            filters: PlanFilter.allCases,
-                            selectedFilter: selectedFilter,
-                            filterTitle: { filter in filter.title },
-                            onFilterSelected: { filter in
-                                withAnimation(.easeInOut(duration: 0.3)) {
-                                    selectedFilter = filter
-                                }
-                            }
-                        )
+        MovefullyTrainerNavigation(
+            title: "Wellness Plans",
+            showProfileButton: false
+        ) {
+            MovefullySearchField(
+                placeholder: "Search your wellness plans...",
+                text: $searchText
+            )
+            
+            MovefullyFilterPillsRow(
+                filters: PlanFilter.allCases,
+                selectedFilter: selectedFilter,
+                filterTitle: { filter in filter.title },
+                onFilterSelected: { filter in
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        selectedFilter = filter
                     }
                 }
-                
-                // Content Section
-                if viewModel.isLoading {
-                    MovefullyLoadingState(message: "Loading your wellness plans...")
-                } else if filteredPlans.isEmpty {
-                    MovefullyEmptyState(
-                        icon: searchText.isEmpty ? "heart.text.square" : "magnifyingglass",
-                        title: searchText.isEmpty ? "Your wellness toolkit awaits" : "No plans found",
-                        description: searchText.isEmpty ? 
-                            "Create your first wellness plan to guide clients on their movement journey with structure and intention." : 
-                            "Try adjusting your search terms or filter to find the plan you're looking for.",
-                        actionButton: searchText.isEmpty ? 
-                            MovefullyEmptyState.ActionButton(
-                                title: "Create Your First Plan",
-                                action: { showingCreatePlan = true }
-                            ) : nil
-                    )
-                } else {
-                    MovefullyListLayout(
-                        items: filteredPlans,
-                        itemView: { plan in
-                            PlanRowView(plan: plan) {
-                                // Handle plan selection
-                            }
+            )
+            
+            // Content Section
+            if viewModel.isLoading {
+                MovefullyLoadingState(message: "Loading your wellness plans...")
+            } else if filteredPlans.isEmpty {
+                MovefullyEmptyState(
+                    icon: searchText.isEmpty ? "heart.text.square" : "magnifyingglass",
+                    title: searchText.isEmpty ? "Your wellness toolkit awaits" : "No plans found",
+                    description: searchText.isEmpty ? 
+                        "Create your first wellness plan to guide clients on their movement journey with structure and intention." : 
+                        "Try adjusting your search terms or filter to find the plan you're looking for.",
+                    actionButton: searchText.isEmpty ? 
+                        MovefullyEmptyState.ActionButton(
+                            title: "Create Your First Plan",
+                            action: { showingCreatePlan = true }
+                        ) : nil
+                )
+            } else {
+                MovefullyListLayout(
+                    items: filteredPlans,
+                    itemView: { plan in
+                        PlanRowView(plan: plan) {
+                            // Handle plan selection
                         }
-                    )
+                    }
+                )
+            }
+        }
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(action: { showingCreatePlan = true }) {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundColor(MovefullyTheme.Colors.primaryTeal)
                 }
+                .accessibilityLabel("Create Plan")
             }
         }
         .sheet(isPresented: $showingCreatePlan) {

@@ -8,69 +8,62 @@ struct ClientManagementView: View {
     @State private var showingFilters = false
 
     var body: some View {
-        NavigationStack {
-            MovefullyPageLayout {
-                // Header Section
-                MovefullyContentSection {
-                    MovefullyPageSection {
-                        MovefullyPageHeader(
-                            title: "Your Clients",
-                            subtitle: "Nurture connections, guide wellness journeys",
-                            actionButton: MovefullyPageHeader.ActionButton(
-                                title: "Invite",
-                                icon: "plus.circle.fill",
-                                action: {
-                                    viewModel.showInviteClientSheet = true
-                                }
-                            )
-                        )
-                        
-                        // Alert notifications as dedicated section when present
-                        if viewModel.alertCount > 0 {
-                            AlertNotificationCard(alertCount: viewModel.alertCount)
+        MovefullyTrainerNavigation(
+            title: "Your Clients",
+            showProfileButton: false
+        ) {
+            // Alert notifications as dedicated section when present
+            if viewModel.alertCount > 0 {
+                AlertNotificationCard(alertCount: viewModel.alertCount)
+            }
+            
+            MovefullySearchField(
+                placeholder: "Search your wellness community...",
+                text: $viewModel.searchText
+            )
+            
+            // Content Section
+            if viewModel.isLoading {
+                MovefullyLoadingState(message: "Loading your wellness community...")
+            } else if viewModel.filteredClients.isEmpty {
+                MovefullyEmptyState(
+                    icon: viewModel.searchText.isEmpty ? "heart.circle" : "magnifyingglass",
+                    title: viewModel.searchText.isEmpty ? "Your wellness community awaits" : "No clients found",
+                    description: viewModel.searchText.isEmpty ? 
+                        "Start building meaningful connections by inviting your first client to join their wellness journey with you." : 
+                        "Try adjusting your search terms to find the client you're looking for.",
+                    actionButton: viewModel.searchText.isEmpty ? 
+                        MovefullyEmptyState.ActionButton(
+                            title: "Begin Their Journey",
+                            action: { viewModel.showInviteClientSheet = true }
+                        ) : nil
+                )
+            } else {
+                MovefullyListLayout(
+                    items: viewModel.filteredClients,
+                    spacing: MovefullyTheme.Layout.paddingM,
+                    itemView: { client in
+                        NavigationLink(destination: ClientDetailView(client: client)) {
+                            ClientRowView(client: client)
                         }
-                        
-                        MovefullySearchField(
-                            placeholder: "Search your wellness community...",
-                            text: $viewModel.searchText
-                        )
+                        .buttonStyle(PlainButtonStyle())
                     }
-                }
-                
-                // Content Section
-                if viewModel.isLoading {
-                    MovefullyLoadingState(message: "Loading your wellness community...")
-                } else if viewModel.filteredClients.isEmpty {
-                    MovefullyEmptyState(
-                        icon: viewModel.searchText.isEmpty ? "heart.circle" : "magnifyingglass",
-                        title: viewModel.searchText.isEmpty ? "Your wellness community awaits" : "No clients found",
-                        description: viewModel.searchText.isEmpty ? 
-                            "Start building meaningful connections by inviting your first client to join their wellness journey with you." : 
-                            "Try adjusting your search terms to find the client you're looking for.",
-                        actionButton: viewModel.searchText.isEmpty ? 
-                            MovefullyEmptyState.ActionButton(
-                                title: "Begin Their Journey",
-                                action: { viewModel.showInviteClientSheet = true }
-                            ) : nil
-                    )
-                } else {
-                    MovefullyListLayout(
-                        items: viewModel.filteredClients,
-                        spacing: MovefullyTheme.Layout.paddingM,
-                        itemView: { client in
-                            NavigationLink(destination: ClientDetailView(client: client)) {
-                                ClientRowView(client: client)
-                            }
-                            .buttonStyle(PlainButtonStyle())
-                        }
-                    )
-                }
+                )
             }
-            .navigationBarHidden(true)
-            .sheet(isPresented: $viewModel.showInviteClientSheet) {
-                EnhancedInviteClientSheet()
-                    .environmentObject(viewModel)
+        }
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(action: { viewModel.showInviteClientSheet = true }) {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+                }
+                .accessibilityLabel("Invite Client")
             }
+        }
+        .sheet(isPresented: $viewModel.showInviteClientSheet) {
+            EnhancedInviteClientSheet()
+                .environmentObject(viewModel)
         }
     }
 }
