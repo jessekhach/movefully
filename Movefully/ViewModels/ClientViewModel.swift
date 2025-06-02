@@ -355,8 +355,30 @@ class ClientViewModel: ObservableObject {
     }
     
     func completeWorkout(_ assignment: WorkoutAssignment, rating: Int, notes: String) {
-        // Complete workout logic would go here
+        // Complete workout logic - update the assignment status
         print("Completed workout: \(assignment.title), Rating: \(rating), Notes: \(notes)")
+        
+        // Update the assignment status to completed
+        if let index = weeklyAssignments.firstIndex(where: { $0.id == assignment.id }) {
+            weeklyAssignments[index].status = .completed
+        }
+        
+        // Update today's workout if it's the same assignment
+        if let todayWorkout = todayWorkout, todayWorkout.id == assignment.id {
+            var updatedAssignment = todayWorkout
+            updatedAssignment.status = .completed
+            self.todayWorkout = updatedAssignment
+        }
+        
+        // Update completed count and stats
+        completedAssignments = weeklyAssignments.filter { $0.status == .completed }.count
+        currentStreak += 1
+        currentClient.totalWorkoutsCompleted += 1
+        currentClient.lastWorkoutDate = Date()
+        currentClient.lastActivityDate = Date()
+        
+        // Force UI update by triggering objectWillChange
+        objectWillChange.send()
     }
     
     // MARK: - Exercise Library

@@ -286,6 +286,7 @@ struct CircularProgressView: View {
 // MARK: - Recent Activity Card Component
 struct RecentActivityCard: View {
     let assignment: WorkoutAssignment
+    @ObservedObject private var themeManager = ThemeManager.shared
     
     var body: some View {
         MovefullyCard {

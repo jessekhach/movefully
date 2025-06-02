@@ -7,6 +7,7 @@ struct ClientScheduleView: View {
     @State private var selectedWeekOffset = 0
     @State private var selectedDate: Date?
     @State private var showingWorkoutDetail = false
+    @State private var showingWorkoutSession = false
     @State private var showingProfile = false
     
     var body: some View {
@@ -40,7 +41,13 @@ struct ClientScheduleView: View {
         .sheet(isPresented: $showingWorkoutDetail) {
             if let selectedDate = selectedDate,
                let assignment = getWorkoutAssignment(for: selectedDate) {
-                WorkoutDetailView(assignment: assignment, viewModel: viewModel)
+                WorkoutDetailView(assignment: assignment, viewModel: viewModel, isReadOnly: true)
+            }
+        }
+        .sheet(isPresented: $showingWorkoutSession) {
+            if let selectedDate = selectedDate,
+               let assignment = getWorkoutAssignment(for: selectedDate) {
+                WorkoutSessionView(assignment: assignment, viewModel: viewModel)
             }
         }
         .sheet(isPresented: $showingProfile) {
@@ -212,9 +219,16 @@ struct ClientScheduleView: View {
             }
             
             if let assignment = getWorkoutAssignment(for: date) {
-                WorkoutAssignmentCard(assignment: assignment) {
-                    showingWorkoutDetail = true
-                }
+                WorkoutAssignmentCard(
+                    assignment: assignment,
+                    isToday: Calendar.current.isDate(date, inSameDayAs: Date()),
+                    onViewDetails: {
+                        showingWorkoutDetail = true
+                    },
+                    onStartWorkout: {
+                        showingWorkoutSession = true
+                    }
+                )
             } else {
                 RestDayCard(date: date)
             }
@@ -276,6 +290,7 @@ struct CalendarDayView: View {
     let isToday: Bool
     let assignment: WorkoutAssignment?
     let action: () -> Void
+    @ObservedObject private var themeManager = ThemeManager.shared
     
     var body: some View {
         Button(action: action) {
@@ -343,7 +358,10 @@ struct CalendarDayView: View {
 // MARK: - Workout Assignment Card
 struct WorkoutAssignmentCard: View {
     let assignment: WorkoutAssignment
-    let action: () -> Void
+    let isToday: Bool
+    let onViewDetails: () -> Void
+    let onStartWorkout: () -> Void
+    @ObservedObject private var themeManager = ThemeManager.shared
     
     var body: some View {
         MovefullyCard {
@@ -401,20 +419,30 @@ struct WorkoutAssignmentCard: View {
                         .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusS))
                 }
                 
-                // Action button
-                Button(assignment.status == .completed ? "View Workout" : "Start Workout") {
-                    action()
+                // Action buttons
+                HStack(spacing: MovefullyTheme.Layout.paddingM) {
+                    Button("View Details") {
+                        onViewDetails()
+                    }
+                    .font(MovefullyTheme.Typography.buttonMedium)
+                    .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, MovefullyTheme.Layout.paddingM)
+                    .background(MovefullyTheme.Colors.primaryTeal.opacity(0.15))
+                    .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
+                    
+                    if isToday {
+                        Button("Start Workout") {
+                            onStartWorkout()
+                        }
+                        .font(MovefullyTheme.Typography.buttonMedium)
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, MovefullyTheme.Layout.paddingM)
+                        .background(MovefullyTheme.Colors.primaryTeal)
+                        .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
+                    }
                 }
-                .font(MovefullyTheme.Typography.buttonMedium)
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, MovefullyTheme.Layout.paddingM)
-                .background(
-                    assignment.status == .completed 
-                    ? MovefullyTheme.Colors.softGreen 
-                    : MovefullyTheme.Colors.primaryTeal
-                )
-                .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
             }
         }
     }
@@ -429,6 +457,7 @@ struct WorkoutAssignmentCard: View {
 // MARK: - Rest Day Card
 struct RestDayCard: View {
     let date: Date
+    @ObservedObject private var themeManager = ThemeManager.shared
     
     var body: some View {
         MovefullyCard {

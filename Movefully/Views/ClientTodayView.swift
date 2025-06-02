@@ -6,6 +6,7 @@ struct ClientTodayView: View {
     @EnvironmentObject var authViewModel: AuthenticationViewModel
     @ObservedObject private var themeManager = ThemeManager.shared
     @State private var showingWorkoutDetail = false
+    @State private var showingWorkoutSession = false
     @State private var showingCompletionDialog = false
     @State private var showingProfile = false
     
@@ -30,7 +31,12 @@ struct ClientTodayView: View {
         }
         .sheet(isPresented: $showingWorkoutDetail) {
             if let todayWorkout = viewModel.todayWorkout {
-                WorkoutDetailView(assignment: todayWorkout, viewModel: viewModel)
+                WorkoutDetailView(assignment: todayWorkout, viewModel: viewModel, isReadOnly: true)
+            }
+        }
+        .sheet(isPresented: $showingWorkoutSession) {
+            if let todayWorkout = viewModel.todayWorkout {
+                WorkoutSessionView(assignment: todayWorkout, viewModel: viewModel)
             }
         }
         .sheet(isPresented: $showingProfile) {
@@ -115,8 +121,8 @@ struct ClientTodayView: View {
                 
                 // Action buttons
                 HStack(spacing: MovefullyTheme.Layout.paddingM) {
-                    // View Details button
-                    Button("View Details") {
+                    // Details button - shows read-only view
+                    Button("Details") {
                         showingWorkoutDetail = true
                     }
                     .font(MovefullyTheme.Typography.buttonMedium)
@@ -125,11 +131,11 @@ struct ClientTodayView: View {
                     .padding(.vertical, MovefullyTheme.Layout.paddingM)
                     .background(MovefullyTheme.Colors.primaryTeal.opacity(0.1))
                     .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
+                    .lineLimit(1)
                     
-                    // Start Workout button
+                    // Start Workout button - begins interactive session
                     Button("Start Workout") {
-                        viewModel.startWorkout(workout)
-                        showingWorkoutDetail = true
+                        showingWorkoutSession = true
                     }
                     .font(MovefullyTheme.Typography.buttonMedium)
                     .foregroundColor(.white)
@@ -297,10 +303,11 @@ struct ClientTodayView: View {
     }
 }
 
-// MARK: - Workout Detail View
+// MARK: - Workout Detail View (Read-Only)
 struct WorkoutDetailView: View {
     let assignment: WorkoutAssignment
     @ObservedObject var viewModel: ClientViewModel
+    let isReadOnly: Bool
     @Environment(\.dismiss) private var dismiss
     @State private var showingCompletionDialog = false
     
@@ -354,8 +361,8 @@ struct WorkoutDetailView: View {
                         }
                     }
                     
-                    // Complete workout button
-                    if assignment.status != .completed {
+                    // Complete workout button (only if not read-only)
+                    if !isReadOnly && assignment.status != .completed {
                         Button("Mark as Complete") {
                             showingCompletionDialog = true
                         }
@@ -373,7 +380,7 @@ struct WorkoutDetailView: View {
                 .padding(.horizontal, MovefullyTheme.Layout.paddingXL)
             }
             .background(MovefullyTheme.Colors.backgroundPrimary)
-            .navigationTitle("Workout Details")
+            .navigationTitle(isReadOnly ? "Workout Preview" : "Workout Details")
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarBackButtonHidden()
             .toolbar {
@@ -395,80 +402,104 @@ struct WorkoutDetailView: View {
 struct ExerciseDetailCard: View {
     let exercise: AssignedExercise
     let number: Int
+    @State private var showingExerciseDetail = false
     
     var body: some View {
-        MovefullyCard {
-            VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingM) {
-                // Exercise header
-                HStack(spacing: MovefullyTheme.Layout.paddingM) {
-                    // Exercise number
-                    Text("\(number)")
-                        .font(MovefullyTheme.Typography.bodyMedium)
-                        .foregroundColor(.white)
-                        .frame(width: 32, height: 32)
-                        .background(MovefullyTheme.Colors.primaryTeal)
-                        .clipShape(Circle())
-                    
-                    VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingXS) {
-                        Text(exercise.title)
+        Button(action: {
+            showingExerciseDetail = true
+        }) {
+            MovefullyCard {
+                VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingM) {
+                    // Exercise header
+                    HStack(spacing: MovefullyTheme.Layout.paddingM) {
+                        // Exercise number
+                        Text("\(number)")
                             .font(MovefullyTheme.Typography.bodyMedium)
-                            .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                            .foregroundColor(.white)
+                            .frame(width: 32, height: 32)
+                            .background(MovefullyTheme.Colors.primaryTeal)
+                            .clipShape(Circle())
                         
-                        MovefullyStatusBadge(
-                            text: exercise.category.rawValue,
-                            color: MovefullyTheme.Colors.primaryTeal,
-                            showDot: false
-                        )
+                        VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingXS) {
+                            HStack {
+                                Text(exercise.title)
+                                    .font(MovefullyTheme.Typography.bodyMedium)
+                                    .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                                
+                                Spacer()
+                                
+                                // Tap indicator
+                                Image(systemName: "info.circle")
+                                    .font(MovefullyTheme.Typography.callout)
+                                    .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+                            }
+                            
+                            HStack {
+                                MovefullyStatusBadge(
+                                    text: exercise.category.rawValue,
+                                    color: MovefullyTheme.Colors.primaryTeal,
+                                    showDot: false
+                                )
+                                
+                                Text("Tap for detailed instructions")
+                                    .font(MovefullyTheme.Typography.caption)
+                                    .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+                            }
+                        }
                     }
                     
-                    Spacer()
-                }
-                
-                // Exercise description
-                Text(exercise.description)
-                    .font(MovefullyTheme.Typography.body)
-                    .foregroundColor(MovefullyTheme.Colors.textSecondary)
-                    .lineLimit(nil)
-                
-                // Exercise parameters
-                VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingS) {
-                    if let sets = exercise.sets {
-                        exerciseParam(icon: "repeat", text: "\(sets) sets")
-                    }
+                    // Exercise description
+                    Text(exercise.description)
+                        .font(MovefullyTheme.Typography.body)
+                        .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                        .lineLimit(nil)
                     
-                    if let reps = exercise.reps {
-                        exerciseParam(icon: "number", text: reps)
-                    }
-                    
-                    if let duration = exercise.duration {
-                        exerciseParam(icon: "timer", text: "\(duration) seconds")
-                    }
-                    
-                    if let restTime = exercise.restTime {
-                        exerciseParam(icon: "pause", text: "\(restTime)s rest")
-                    }
-                }
-                
-                // Trainer tips
-                if let tips = exercise.trainerTips {
+                    // Exercise parameters
                     VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingS) {
-                        HStack {
-                            Image(systemName: "lightbulb.fill")
-                                .foregroundColor(MovefullyTheme.Colors.warmOrange)
-                            Text("Trainer Tip")
-                                .font(MovefullyTheme.Typography.bodyMedium)
-                                .foregroundColor(MovefullyTheme.Colors.warmOrange)
+                        if let sets = exercise.sets {
+                            exerciseParam(icon: "repeat", text: "\(sets) sets")
                         }
                         
-                        Text(tips)
-                            .font(MovefullyTheme.Typography.body)
-                            .foregroundColor(MovefullyTheme.Colors.textSecondary)
-                            .italic()
+                        if let reps = exercise.reps {
+                            exerciseParam(icon: "number", text: reps)
+                        }
+                        
+                        if let duration = exercise.duration {
+                            exerciseParam(icon: "timer", text: "\(duration) seconds")
+                        }
+                        
+                        if let restTime = exercise.restTime {
+                            exerciseParam(icon: "pause", text: "\(restTime)s rest")
+                        }
                     }
-                    .padding(MovefullyTheme.Layout.paddingM)
-                    .background(MovefullyTheme.Colors.warmOrange.opacity(0.08))
-                    .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
+                    
+                    // Trainer tips
+                    if let tips = exercise.trainerTips {
+                        VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingS) {
+                            HStack {
+                                Image(systemName: "lightbulb.fill")
+                                    .foregroundColor(MovefullyTheme.Colors.warmOrange)
+                                Text("Trainer Tip")
+                                    .font(MovefullyTheme.Typography.bodyMedium)
+                                    .foregroundColor(MovefullyTheme.Colors.warmOrange)
+                            }
+                            
+                            Text(tips)
+                                .font(MovefullyTheme.Typography.body)
+                                .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                                .italic()
+                        }
+                        .padding(MovefullyTheme.Layout.paddingM)
+                        .background(MovefullyTheme.Colors.warmOrange.opacity(0.08))
+                        .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
+                    }
                 }
+            }
+        }
+        .buttonStyle(PlainButtonStyle())
+        .sheet(isPresented: $showingExerciseDetail) {
+            if let sourceExercise = findSourceExercise(for: exercise) {
+                ExerciseDetailView(exercise: sourceExercise)
             }
         }
     }
@@ -484,6 +515,29 @@ struct ExerciseDetailCard: View {
                 .foregroundColor(MovefullyTheme.Colors.textSecondary)
         }
     }
+    
+    // Link to the source of truth exercise database
+    private func findSourceExercise(for assignedExercise: AssignedExercise) -> Exercise? {
+        // This would typically query the Exercise database/viewModel
+        // For now, create a bridge from AssignedExercise to Exercise
+        return Exercise(
+            id: assignedExercise.id.uuidString, // Convert UUID to String
+            title: assignedExercise.title,
+            description: assignedExercise.description,
+            mediaUrl: nil, // Could be populated from exercise database
+            category: assignedExercise.category,
+            duration: assignedExercise.duration,
+            difficulty: .intermediate, // Could be derived from exercise database
+            createdByTrainerId: nil,
+            howToPerform: nil, // Would come from exercise database
+            trainerTips: assignedExercise.trainerTips.map { [$0] },
+            commonMistakes: nil,
+            modifications: nil,
+            equipmentNeeded: nil,
+            targetMuscles: nil,
+            breathingCues: nil
+        )
+    }
 }
 
 // MARK: - Workout Completion View
@@ -495,6 +549,7 @@ struct WorkoutCompletionView: View {
     @State private var notes = ""
     @State private var animateSuccess = false
     @State private var showConfetti = false
+    @FocusState private var isTextFieldFocused: Bool
     
     // Feeling level data with emojis and descriptions
     private let feelingLevels = [
@@ -677,14 +732,22 @@ struct WorkoutCompletionView: View {
                                         RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM)
                                             .stroke(MovefullyTheme.Colors.divider.opacity(0.5), lineWidth: 1)
                                     )
+                                    .focused($isTextFieldFocused)
                             }
                         }
                         
                         // Action buttons
                         VStack(spacing: MovefullyTheme.Layout.paddingM) {
-                            // Complete button
+                            // Complete button - now properly completes the session
                             Button("Complete Session") {
+                                // Dismiss keyboard first
+                                isTextFieldFocused = false
+                                
+                                // Complete the workout with feedback
                                 viewModel.completeWorkout(assignment, rating: feelingLevel, notes: notes)
+                                
+                                // Dismiss the completion dialog, which will return to the main view
+                                // The workout should now be marked as completed
                                 dismiss()
                             }
                             .font(MovefullyTheme.Typography.buttonLarge)
@@ -714,6 +777,7 @@ struct WorkoutCompletionView: View {
                             
                             // Skip button
                             Button("Skip for now") {
+                                isTextFieldFocused = false
                                 viewModel.completeWorkout(assignment, rating: 3, notes: "")
                                 dismiss()
                             }
@@ -725,11 +789,16 @@ struct WorkoutCompletionView: View {
                     }
                     .padding(.horizontal, MovefullyTheme.Layout.paddingXL)
                 }
+                .onTapGesture {
+                    // Dismiss keyboard when tapping outside the text field
+                    isTextFieldFocused = false
+                }
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Skip") {
+                        isTextFieldFocused = false
                         dismiss()
                     }
                     .font(MovefullyTheme.Typography.body)
@@ -737,6 +806,519 @@ struct WorkoutCompletionView: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - Workout Session View (Interactive)
+struct WorkoutSessionView: View {
+    let assignment: WorkoutAssignment
+    @ObservedObject var viewModel: ClientViewModel
+    @Environment(\.dismiss) private var dismiss
+    @State private var currentExerciseIndex = 0
+    @State private var completedExercises: Set<Int> = []
+    @State private var skippedExercises: Set<Int> = []
+    @State private var sessionStartTime = Date()
+    @State private var elapsedTime = 0
+    @State private var timer: Timer?
+    @State private var showingExitConfirmation = false
+    @State private var showingCompletionDialog = false
+    @State private var showingExerciseDetail = false
+    @State private var isPaused = false
+    
+    var currentExercise: AssignedExercise? {
+        guard currentExerciseIndex < assignment.exercises.count else { return nil }
+        return assignment.exercises[currentExerciseIndex]
+    }
+    
+    var progressPercentage: Double {
+        let totalCompleted = completedExercises.count + skippedExercises.count
+        return Double(totalCompleted) / Double(assignment.exercises.count)
+    }
+    
+    var isLastExercise: Bool {
+        return currentExerciseIndex >= assignment.exercises.count - 1
+    }
+    
+    var canCompleteWorkout: Bool {
+        // Only allow completion if the last exercise is completed or skipped
+        let lastExerciseIndex = assignment.exercises.count - 1
+        return completedExercises.contains(lastExerciseIndex) || skippedExercises.contains(lastExerciseIndex)
+    }
+    
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 0) {
+                // Progress header
+                sessionProgressHeader
+                
+                // Main scrollable content
+                ScrollView {
+                    VStack(spacing: MovefullyTheme.Layout.paddingXL) {
+                        // Current exercise display
+                        if let exercise = currentExercise {
+                            currentExerciseSection(exercise)
+                        }
+                        
+                        // Exercise list with checkboxes
+                        exerciseListSection
+                        
+                        // Add extra bottom padding for fixed controls
+                        Spacer(minLength: 140) // Increased padding for fixed bottom controls
+                    }
+                    .padding(.horizontal, MovefullyTheme.Layout.paddingXL)
+                }
+                .background(MovefullyTheme.Colors.backgroundPrimary)
+                
+                // Fixed bottom navigation
+                fixedBottomControls
+            }
+            .navigationTitle("Active Workout")
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarBackButtonHidden()
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        showingExitConfirmation = true
+                    }
+                    .foregroundColor(MovefullyTheme.Colors.warmOrange)
+                }
+            }
+        }
+        .onAppear {
+            startSession()
+        }
+        .onDisappear {
+            stopTimer()
+        }
+        .alert("Cancel Workout", isPresented: $showingExitConfirmation) {
+            Button("Keep Going", role: .cancel) { }
+            Button("Cancel Workout", role: .destructive) {
+                dismiss()
+            }
+        } message: {
+            Text("Are you sure you want to cancel this workout? Your progress will not be saved.")
+        }
+        .sheet(isPresented: $showingCompletionDialog) {
+            WorkoutCompletionView(assignment: assignment, viewModel: viewModel)
+                .onDisappear {
+                    // Check if workout was completed and dismiss session view if so
+                    if let updatedWorkout = viewModel.todayWorkout,
+                       updatedWorkout.id == assignment.id,
+                       updatedWorkout.status == .completed {
+                        dismiss()
+                    }
+                }
+        }
+        .sheet(isPresented: $showingExerciseDetail) {
+            if let exercise = currentExercise,
+               let sourceExercise = findSourceExercise(for: exercise) {
+                ExerciseDetailView(exercise: sourceExercise)
+            }
+        }
+        // Monitor for workout completion status changes
+        .onChange(of: viewModel.todayWorkout?.status) { newStatus in
+            if newStatus == .completed {
+                // Workout was completed, dismiss this session view
+                dismiss()
+            }
+        }
+    }
+    
+    // MARK: - Session Progress Header
+    private var sessionProgressHeader: some View {
+        VStack(spacing: MovefullyTheme.Layout.paddingM) {
+            // Timer and progress
+            HStack {
+                VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingXS) {
+                    Text("Elapsed Time")
+                        .font(MovefullyTheme.Typography.caption)
+                        .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                        .textCase(.uppercase)
+                        .tracking(1.2)
+                    
+                    Text(formattedElapsedTime)
+                        .font(MovefullyTheme.Typography.title3)
+                        .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                        .fontWeight(.semibold)
+                }
+                
+                Spacer()
+                
+                VStack(alignment: .trailing, spacing: MovefullyTheme.Layout.paddingXS) {
+                    Text("Progress")
+                        .font(MovefullyTheme.Typography.caption)
+                        .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                        .textCase(.uppercase)
+                        .tracking(1.2)
+                    
+                    Text("\(completedExercises.count + skippedExercises.count)/\(assignment.exercises.count)")
+                        .font(MovefullyTheme.Typography.title3)
+                        .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+                        .fontWeight(.semibold)
+                }
+            }
+            
+            // Progress bar
+            ProgressView(value: progressPercentage)
+                .tint(MovefullyTheme.Colors.primaryTeal)
+                .scaleEffect(y: 2)
+                .clipShape(RoundedRectangle(cornerRadius: 4))
+        }
+        .padding(MovefullyTheme.Layout.paddingL)
+        .background(MovefullyTheme.Colors.cardBackground)
+        .shadow(color: MovefullyTheme.Effects.cardShadow, radius: 4, x: 0, y: 2)
+    }
+    
+    // MARK: - Current Exercise Section
+    private func currentExerciseSection(_ exercise: AssignedExercise) -> some View {
+        MovefullyCard {
+            VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingL) {
+                HStack {
+                    Text("Current Exercise")
+                        .font(MovefullyTheme.Typography.callout)
+                        .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                        .textCase(.uppercase)
+                        .tracking(1.2)
+                    
+                    Spacer()
+                    
+                    MovefullyStatusBadge(
+                        text: exercise.category.rawValue,
+                        color: exercise.category.color,
+                        showDot: false
+                    )
+                }
+                
+                // Clickable exercise title for details
+                Button(action: {
+                    showingExerciseDetail = true
+                }) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingS) {
+                            Text(exercise.title)
+                                .font(MovefullyTheme.Typography.title2)
+                                .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                            
+                            Text("Tap for detailed instructions")
+                                .font(MovefullyTheme.Typography.caption)
+                                .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+                        }
+                        
+                        Spacer()
+                        
+                        Image(systemName: "info.circle")
+                            .font(MovefullyTheme.Typography.title3)
+                            .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+                    }
+                }
+                .buttonStyle(PlainButtonStyle())
+                
+                Text(exercise.description)
+                    .font(MovefullyTheme.Typography.body)
+                    .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                    .lineLimit(nil)
+                
+                // Exercise specifications
+                VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingS) {
+                    if let sets = exercise.sets {
+                        exerciseSpecRow(icon: "repeat", text: "\(sets) sets")
+                    }
+                    
+                    if let reps = exercise.reps {
+                        exerciseSpecRow(icon: "number", text: reps)
+                    }
+                    
+                    if let duration = exercise.duration {
+                        exerciseSpecRow(icon: "clock", text: "\(duration) seconds")
+                    }
+                    
+                    if let rest = exercise.restTime {
+                        exerciseSpecRow(icon: "pause", text: "\(rest)s rest")
+                    }
+                }
+                
+                if let tips = exercise.trainerTips {
+                    Text("💡 \(tips)")
+                        .font(MovefullyTheme.Typography.callout)
+                        .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+                        .padding(MovefullyTheme.Layout.paddingM)
+                        .background(MovefullyTheme.Colors.primaryTeal.opacity(0.08))
+                        .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
+                }
+                
+                // Exercise action buttons
+                HStack(spacing: MovefullyTheme.Layout.paddingM) {
+                    // Mark as complete button
+                    Button(completedExercises.contains(currentExerciseIndex) ? "Completed ✓" : "Mark Complete") {
+                        toggleExerciseCompletion(currentExerciseIndex)
+                    }
+                    .font(MovefullyTheme.Typography.buttonMedium)
+                    .foregroundColor(completedExercises.contains(currentExerciseIndex) ? .white : MovefullyTheme.Colors.primaryTeal)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, MovefullyTheme.Layout.paddingM)
+                    .background(
+                        completedExercises.contains(currentExerciseIndex) 
+                            ? MovefullyTheme.Colors.softGreen 
+                            : MovefullyTheme.Colors.primaryTeal.opacity(0.1)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
+                    .animation(.easeInOut(duration: 0.2), value: completedExercises.contains(currentExerciseIndex))
+                    
+                    // Skip button
+                    Button(skippedExercises.contains(currentExerciseIndex) ? "Skipped" : "Skip") {
+                        toggleExerciseSkip(currentExerciseIndex)
+                    }
+                    .font(MovefullyTheme.Typography.buttonMedium)
+                    .foregroundColor(skippedExercises.contains(currentExerciseIndex) ? .white : MovefullyTheme.Colors.textSecondary)
+                    .padding(.horizontal, MovefullyTheme.Layout.paddingL)
+                    .padding(.vertical, MovefullyTheme.Layout.paddingM)
+                    .background(
+                        skippedExercises.contains(currentExerciseIndex)
+                            ? MovefullyTheme.Colors.textSecondary
+                            : MovefullyTheme.Colors.textSecondary.opacity(0.1)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
+                    .animation(.easeInOut(duration: 0.2), value: skippedExercises.contains(currentExerciseIndex))
+                }
+            }
+        }
+    }
+    
+    // MARK: - Exercise List Section
+    private var exerciseListSection: some View {
+        VStack(spacing: MovefullyTheme.Layout.paddingM) {
+            HStack {
+                Text("All Exercises")
+                    .font(MovefullyTheme.Typography.title3)
+                    .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                Spacer()
+            }
+            
+            ForEach(Array(assignment.exercises.enumerated()), id: \.element.id) { index, exercise in
+                exerciseRowWithStatus(exercise: exercise, index: index)
+            }
+        }
+    }
+    
+    private func exerciseRowWithStatus(exercise: AssignedExercise, index: Int) -> some View {
+        HStack(spacing: MovefullyTheme.Layout.paddingM) {
+            // Status indicator (completed, skipped, or pending)
+            statusIndicator(for: index)
+            
+            // Exercise info - clickable to switch to this exercise
+            Button(action: {
+                currentExerciseIndex = index
+            }) {
+                VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingXS) {
+                    HStack {
+                        Text(exercise.title)
+                            .font(MovefullyTheme.Typography.bodyMedium)
+                            .foregroundColor(currentExerciseIndex == index ? MovefullyTheme.Colors.primaryTeal : MovefullyTheme.Colors.textPrimary)
+                            .strikethrough(completedExercises.contains(index) || skippedExercises.contains(index))
+                        
+                        Spacer()
+                        
+                        if currentExerciseIndex == index {
+                            Text("CURRENT")
+                                .font(MovefullyTheme.Typography.caption)
+                                .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+                                .fontWeight(.semibold)
+                                .textCase(.uppercase)
+                                .tracking(1.2)
+                        }
+                    }
+                }
+            }
+            .buttonStyle(PlainButtonStyle())
+            
+            Spacer()
+            
+            // Tap for details icon - clickable to show exercise details
+            Button(action: {
+                // Set current exercise and show details
+                currentExerciseIndex = index
+                showingExerciseDetail = true
+            }) {
+                Image(systemName: "info.circle")
+                    .font(MovefullyTheme.Typography.callout)
+                    .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+            }
+            .buttonStyle(PlainButtonStyle())
+        }
+        .padding(MovefullyTheme.Layout.paddingM)
+        .background(
+            currentExerciseIndex == index 
+                ? MovefullyTheme.Colors.primaryTeal.opacity(0.08)
+                : MovefullyTheme.Colors.cardBackground
+        )
+        .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
+        .overlay(
+            RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM)
+                .stroke(
+                    currentExerciseIndex == index 
+                        ? MovefullyTheme.Colors.primaryTeal.opacity(0.3)
+                        : Color.clear, 
+                    lineWidth: 2
+                )
+        )
+    }
+    
+    private func statusIndicator(for index: Int) -> some View {
+        Group {
+            if completedExercises.contains(index) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 24, weight: .medium))
+                    .foregroundColor(MovefullyTheme.Colors.softGreen)
+            } else if skippedExercises.contains(index) {
+                Image(systemName: "forward.circle.fill")
+                    .font(.system(size: 24, weight: .medium))
+                    .foregroundColor(MovefullyTheme.Colors.textSecondary)
+            } else {
+                Image(systemName: "circle")
+                    .font(.system(size: 24, weight: .medium))
+                    .foregroundColor(MovefullyTheme.Colors.textSecondary)
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: completedExercises.contains(index))
+        .animation(.easeInOut(duration: 0.2), value: skippedExercises.contains(index))
+    }
+    
+    // MARK: - Fixed Bottom Controls
+    private var fixedBottomControls: some View {
+        VStack(spacing: MovefullyTheme.Layout.paddingM) {
+            Divider()
+                .background(MovefullyTheme.Colors.divider)
+            
+            // Always show navigation buttons (Previous + Complete or Previous + Next)
+            HStack(spacing: MovefullyTheme.Layout.paddingM) {
+                Button("Previous") {
+                    if currentExerciseIndex > 0 {
+                        currentExerciseIndex -= 1
+                    }
+                }
+                .disabled(currentExerciseIndex <= 0)
+                .font(MovefullyTheme.Typography.buttonMedium)
+                .foregroundColor(currentExerciseIndex <= 0 ? MovefullyTheme.Colors.textSecondary : MovefullyTheme.Colors.primaryTeal)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, MovefullyTheme.Layout.paddingM)
+                .background(MovefullyTheme.Colors.cardBackground)
+                .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
+                .overlay(
+                    RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM)
+                        .stroke(MovefullyTheme.Colors.textSecondary.opacity(0.3), lineWidth: 1)
+                )
+                
+                if isLastExercise {
+                    Button("Complete Workout") {
+                        showingCompletionDialog = true
+                    }
+                    .font(MovefullyTheme.Typography.buttonMedium)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, MovefullyTheme.Layout.paddingM)
+                    .background(MovefullyTheme.Colors.softGreen)
+                    .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
+                    .shadow(color: MovefullyTheme.Colors.softGreen.opacity(0.3), radius: 6, x: 0, y: 3)
+                } else {
+                    Button("Next") {
+                        if currentExerciseIndex < assignment.exercises.count - 1 {
+                            currentExerciseIndex += 1
+                        }
+                    }
+                    .font(MovefullyTheme.Typography.buttonMedium)
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, MovefullyTheme.Layout.paddingM)
+                    .background(MovefullyTheme.Colors.primaryTeal)
+                    .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
+                }
+            }
+        }
+        .padding(.horizontal, MovefullyTheme.Layout.paddingXL)
+        .padding(.bottom, MovefullyTheme.Layout.paddingL)
+        .background(MovefullyTheme.Colors.cardBackground)
+        .shadow(color: MovefullyTheme.Effects.cardShadow, radius: 8, x: 0, y: -4)
+    }
+    
+    // MARK: - Helper Functions
+    private func startSession() {
+        sessionStartTime = Date()
+        startTimer()
+    }
+    
+    private func startTimer() {
+        timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
+            if !isPaused {
+                elapsedTime = Int(Date().timeIntervalSince(sessionStartTime))
+            }
+        }
+    }
+    
+    private func stopTimer() {
+        timer?.invalidate()
+        timer = nil
+    }
+    
+    private func toggleExerciseCompletion(_ index: Int) {
+        if completedExercises.contains(index) {
+            completedExercises.remove(index)
+        } else {
+            completedExercises.insert(index)
+            // Remove from skipped if it was skipped
+            skippedExercises.remove(index)
+        }
+    }
+    
+    private func toggleExerciseSkip(_ index: Int) {
+        if skippedExercises.contains(index) {
+            skippedExercises.remove(index)
+        } else {
+            skippedExercises.insert(index)
+            // Remove from completed if it was completed
+            completedExercises.remove(index)
+        }
+    }
+    
+    private func exerciseSpecRow(icon: String, text: String) -> some View {
+        HStack(spacing: MovefullyTheme.Layout.paddingS) {
+            Image(systemName: icon)
+                .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+                .frame(width: 16)
+            
+            Text(text)
+                .font(MovefullyTheme.Typography.callout)
+                .foregroundColor(MovefullyTheme.Colors.textSecondary)
+        }
+    }
+    
+    private var formattedElapsedTime: String {
+        let minutes = elapsedTime / 60
+        let seconds = elapsedTime % 60
+        return String(format: "%02d:%02d", minutes, seconds)
+    }
+    
+    // Link to the source of truth exercise database
+    private func findSourceExercise(for assignedExercise: AssignedExercise) -> Exercise? {
+        // This would typically query the Exercise database/viewModel
+        // For now, create a bridge from AssignedExercise to Exercise
+        return Exercise(
+            id: assignedExercise.id.uuidString, // Convert UUID to String
+            title: assignedExercise.title,
+            description: assignedExercise.description,
+            mediaUrl: nil, // Could be populated from exercise database
+            category: assignedExercise.category,
+            duration: assignedExercise.duration,
+            difficulty: .intermediate, // Could be derived from exercise database
+            createdByTrainerId: nil,
+            howToPerform: nil, // Would come from exercise database
+            trainerTips: assignedExercise.trainerTips.map { [$0] },
+            commonMistakes: nil,
+            modifications: nil,
+            equipmentNeeded: nil,
+            targetMuscles: nil,
+            breathingCues: nil
+        )
     }
 }
 
