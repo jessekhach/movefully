@@ -11,6 +11,7 @@ struct MovefullyApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .movefullyThemed()
         }
     }
     

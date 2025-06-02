@@ -180,3 +180,183 @@ Think:
 Apple Fitness' onboarding screens
 Headspace's visual gentleness
 The calm, focused structure of apps like Whoop or Balance
+
+# Movefully Theme System
+
+## Overview
+Movefully uses a comprehensive design system that ensures consistency across all UI components while providing a warm, supportive, and non-toxic user experience focused on movement over metrics.
+
+## NEW: Three-Option Theme Management
+
+### ThemeManager
+The app now includes a comprehensive theme management system with three options:
+
+1. **Light Mode**: Traditional light theme
+2. **Dark Mode**: Dark theme with appropriate contrast
+3. **System**: Automatically follows the device's system setting
+
+### Usage
+
+#### 1. Apply Theme to Entire App
+Add `.movefullyThemed()` to your root view (usually in App.swift):
+
+```swift
+@main
+struct MovefullyApp: App {
+    var body: some Scene {
+        WindowGroup {
+            ContentView()
+                .movefullyThemed() // Apply theme management here
+        }
+    }
+}
+```
+
+#### 2. Use Theme Picker Component
+Replace old dark mode toggles with the new `MovefullyThemePicker`:
+
+```swift
+// OLD: Simple toggle
+MovefullyToggleField(title: "Dark Mode", isOn: $darkModeEnabled)
+
+// NEW: Three-option picker
+MovefullyThemePicker()
+```
+
+#### 3. Access Theme Manager
+```swift
+@ObservedObject private var themeManager = ThemeManager.shared
+
+// Current theme mode
+let currentMode = themeManager.currentTheme // .light, .dark, or .system
+
+// Is currently in dark mode (accounting for system setting)
+let isDark = themeManager.isDarkMode
+
+// Change theme programmatically
+themeManager.setTheme(.dark)
+```
+
+### Features
+- **Persistent**: Theme preference is saved in UserDefaults
+- **System Integration**: System mode automatically follows device settings
+- **Real-time Updates**: Changes apply immediately throughout the app
+- **Smooth Transitions**: Animated theme switching
+- **Automatic Colors**: All theme colors automatically adapt to current mode
+
+### How It Works
+The theme system uses computed properties that dynamically return different colors based on the current theme mode. When `ThemeManager.shared.isDarkMode` changes, all UI components using `MovefullyTheme.Colors.*` automatically update their appearance.
+
+## Color Palette
+
+### Primary Colors
+- **Primary Teal**: #56C2C6 - Main brand color (same in both themes)
+- **Warm Orange**: #F4A261 - Alerts and attention-grabbing elements
+- **Soft Green**: #70C18C - Success states and active elements
+- **Gentle Blue**: #6FB1FC - Information and new states
+- **Lavender**: #C69AE3 - Pending and accent states
+
+### Adaptive Colors (Change with Theme)
+- **Background Primary**: Light: #FAFAFA | Dark: #1C1C1E
+- **Background Secondary**: Light: #F9F9F9 | Dark: #242428
+- **Card Background**: Light: White | Dark: #2C2C2E
+- **Text Primary**: Light: #333333 | Dark: White
+- **Text Secondary**: Light: #4F4F4F | Dark: #EBEBF5
+- **Text Tertiary**: Light: #9E9E9E | Dark: #8E8E93
+- **Divider**: Light: #ECECEC | Dark: #545458
+
+### Usage Examples
+```swift
+// These automatically adapt to current theme
+.backgroundColor(MovefullyTheme.Colors.backgroundPrimary)
+.foregroundColor(MovefullyTheme.Colors.textPrimary)
+.stroke(MovefullyTheme.Colors.divider)
+```
+
+## Typography
+- **Rounded Design**: All fonts use `.rounded` design for warmth
+- **Clear Hierarchy**: From largeTitle (32pt) down to footnote (12pt)
+- **Consistent Weights**: Bold for titles, medium for emphasis, regular for body
+
+### Font Scale
+- Large Title: 32pt, Bold
+- Title 1: 24pt, Bold (Main page titles)
+- Title 2: 22pt, Semibold (Secondary titles)
+- Title 3: 18pt, Medium (Section headers)
+- Body: 16pt, Regular (Standard text)
+- Body Medium: 16pt, Medium (Emphasized body)
+- Callout: 15pt, Regular
+- Caption: 13pt, Regular
+- Footnote: 12pt, Regular
+
+## Layout & Spacing
+- **Consistent Padding**: XS(4) to XXL(40) in logical increments
+- **Corner Radius**: XS(6) to XL(20) for different UI elements
+- **Button Heights**: Small(40), Medium(48), Large(56)
+
+## Components
+
+### New Component: MovefullyThemePicker
+A beautiful three-option selector for theme preference:
+- Visual icons for each mode (sun, moon, gear)
+- Selected state with gradient background
+- Smooth animations and shadows
+- Automatic state management
+
+### Standard Components
+All existing components automatically support the new theme system:
+- MovefullySearchField
+- MovefullyPill (with various styles)
+- MovefullyCard
+- MovefullyTextField/TextEditor/SecureField
+- MovefullyToggleField
+- MovefullyActionRow
+- MovefullyAlertBanner
+- MovefullyEmptyState/LoadingState
+- Navigation components
+
+## Best Practices
+
+### Theme Implementation
+1. Always use `MovefullyTheme.Colors.*` instead of hardcoded colors
+2. Apply `.movefullyThemed()` only once at the app root
+3. Use `MovefullyThemePicker` instead of custom dark mode toggles
+4. Test both light and dark themes during development
+
+### Color Usage
+- Use semantic colors (success, warning, info) for consistent meaning
+- Prefer adaptive colors over static colors for better dark mode support
+- Use primaryTeal for primary actions and brand elements
+- Use warmOrange sparingly for alerts and important calls-to-action
+
+### Component Usage
+- Prefer provided components over custom implementations
+- Use appropriate pill styles (category, status, filter, tag)
+- Implement proper loading and empty states
+- Follow navigation patterns (MovefullyStandardNavigation)
+
+## Migration from Old Dark Mode Toggle
+
+### Step 1: Remove old state
+```swift
+// Remove this:
+@State private var darkModeEnabled = false
+```
+
+### Step 2: Replace toggle with picker
+```swift
+// Replace this:
+MovefullyToggleField(title: "Dark Mode", subtitle: "Use dark theme", isOn: $darkModeEnabled)
+
+// With this:
+MovefullyThemePicker()
+```
+
+### Step 3: Apply theme modifier (if not done already)
+```swift
+// In your main App file:
+ContentView()
+    .movefullyThemed()
+```
+
+The new system is much more robust and provides a better user experience with three options instead of just two!

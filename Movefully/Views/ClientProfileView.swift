@@ -6,6 +6,7 @@ import MessageUI
 struct ClientProfileView: View {
     @EnvironmentObject var authViewModel: AuthenticationViewModel
     @ObservedObject var viewModel: ClientViewModel
+    @ObservedObject private var themeManager = ThemeManager.shared
     @Environment(\.dismiss) private var dismiss
     @State private var showSignOutAlert = false
     @State private var showEditProfile = false
@@ -158,6 +159,7 @@ struct ClientProfileView: View {
                         .foregroundColor(MovefullyTheme.Colors.primaryTeal)
                 }
             }
+            .movefullyNavigationThemed()
         }
         .navigationViewStyle(StackNavigationViewStyle())
         .sheet(isPresented: $isEditing) {
@@ -194,6 +196,7 @@ struct ClientProfileStatView: View {
     let value: String
     let subtitle: String
     let icon: String
+    @ObservedObject private var themeManager = ThemeManager.shared
     
     var body: some View {
         VStack(spacing: MovefullyTheme.Layout.paddingS) {
@@ -224,6 +227,7 @@ struct ClientProfileSectionCard<Content: View>: View {
     let title: String
     let icon: String
     let content: Content
+    @ObservedObject private var themeManager = ThemeManager.shared
     
     init(title: String, icon: String, @ViewBuilder content: () -> Content) {
         self.title = title
@@ -258,6 +262,7 @@ struct ClientProfileInfoItem: View {
     let label: String
     let value: String
     var fullWidth: Bool = false
+    @ObservedObject private var themeManager = ThemeManager.shared
     
     var body: some View {
         VStack(alignment: fullWidth ? .leading : .center, spacing: MovefullyTheme.Layout.paddingXS) {
@@ -279,6 +284,7 @@ struct ClientProfileActionRow: View {
     let icon: String
     var isDanger: Bool = false
     let action: () -> Void
+    @ObservedObject private var themeManager = ThemeManager.shared
     
     var body: some View {
         Button(action: action) {
@@ -296,9 +302,12 @@ struct ClientProfileActionRow: View {
                 
                 Image(systemName: "chevron.right")
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(MovefullyTheme.Colors.textTertiary)
+                    .foregroundColor(MovefullyTheme.Colors.textSecondary)
             }
             .padding(.vertical, MovefullyTheme.Layout.paddingS)
+            .padding(.horizontal, MovefullyTheme.Layout.paddingM)
+            .background(MovefullyTheme.Colors.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
         }
         .buttonStyle(PlainButtonStyle())
     }
@@ -423,6 +432,7 @@ struct ClientEditProfileView: View {
 struct ClientEditSection<Content: View>: View {
     let title: String
     let content: Content
+    @ObservedObject private var themeManager = ThemeManager.shared
     
     init(title: String, @ViewBuilder content: () -> Content) {
         self.title = title
@@ -589,7 +599,7 @@ struct ClientNotificationSettingsView: View {
 
 struct ClientSettingsView: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var darkModeEnabled = false
+    @ObservedObject private var themeManager = ThemeManager.shared
     @State private var biometricAuth = true
     @State private var dataSharing = false
     
@@ -622,9 +632,8 @@ struct ClientSettingsView: View {
                         
                         // App Preferences
                         ClientSettingsSection(title: "App Preferences", icon: "slider.horizontal.3") {
-                            VStack(spacing: MovefullyTheme.Layout.paddingM) {
-                                ClientSettingsToggle(title: "Dark Mode", subtitle: "Use dark theme for the app", isOn: $darkModeEnabled)
-                            }
+                            MovefullyThemePicker()
+                                .environmentObject(themeManager)
                         }
                     }
                 }
@@ -640,6 +649,7 @@ struct ClientSettingsView: View {
                 }
             }
         }
+        .environmentObject(themeManager)
     }
 }
 
@@ -647,6 +657,7 @@ struct ClientSettingsSection<Content: View>: View {
     let title: String
     let icon: String
     let content: Content
+    @ObservedObject private var themeManager = ThemeManager.shared
     
     init(title: String, icon: String, @ViewBuilder content: () -> Content) {
         self.title = title
@@ -681,6 +692,7 @@ struct ClientSettingsToggle: View {
     let title: String
     let subtitle: String
     @Binding var isOn: Bool
+    @ObservedObject private var themeManager = ThemeManager.shared
     
     var body: some View {
         HStack {
@@ -706,6 +718,7 @@ struct ClientSettingsToggle: View {
 
 struct ClientHelpSupportView: View {
     @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var themeManager = ThemeManager.shared
     @State private var showingFeedback = false
     @State private var showingIssueReport = false
     @State private var showingTermsOfService = false
@@ -1019,8 +1032,6 @@ struct ClientFeedbackView: View {
     enum FeedbackType: String, CaseIterable {
         case general = "General Feedback"
         case feature = "Feature Request"
-        case improvement = "App Improvement"
-        case trainer = "Trainer Experience"
     }
     
     var body: some View {
@@ -1080,7 +1091,7 @@ struct ClientFeedbackView: View {
                         
                         MovefullyToggleField(
                             title: "Include my email",
-                            subtitle: "Allow us to contact you about your feedback",
+                            subtitle: "Let us contact you about this feedback",
                             isOn: $includeEmail
                         )
                     }

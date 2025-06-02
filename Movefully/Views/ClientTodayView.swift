@@ -4,6 +4,7 @@ import SwiftUI
 struct ClientTodayView: View {
     @ObservedObject var viewModel: ClientViewModel
     @EnvironmentObject var authViewModel: AuthenticationViewModel
+    @ObservedObject private var themeManager = ThemeManager.shared
     @State private var showingWorkoutDetail = false
     @State private var showingCompletionDialog = false
     @State private var showingProfile = false

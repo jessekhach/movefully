@@ -3,9 +3,9 @@ import SwiftUI
 // MARK: - Client Messages View
 struct ClientMessagesView: View {
     @ObservedObject var viewModel: ClientViewModel
+    @ObservedObject private var themeManager = ThemeManager.shared
     @State private var messageText = ""
     @State private var showingTrainerProfile = false
-    @State private var showingProfile = false
     @FocusState private var isMessageFieldFocused: Bool
     
     var body: some View {
@@ -29,6 +29,10 @@ struct ClientMessagesView: View {
                         .padding(.horizontal, MovefullyTheme.Layout.paddingL)
                         .padding(.vertical, MovefullyTheme.Layout.paddingM)
                     }
+                    .onTapGesture {
+                        // Dismiss keyboard when tapping outside of text field
+                        isMessageFieldFocused = false
+                    }
                     .onChange(of: viewModel.messages.count) { _ in
                         // Auto-scroll to bottom when new message is added
                         if let lastMessage = viewModel.messages.last {
@@ -47,63 +51,69 @@ struct ClientMessagesView: View {
             .navigationBarTitleDisplayMode(.inline)
         }
         .sheet(isPresented: $showingTrainerProfile) {
-            TrainerProfileView()
-        }
-        .sheet(isPresented: $showingProfile) {
-            // ClientProfileView will be added when available
+            ClientViewTrainerProfileView(trainer: sampleTrainer)
         }
     }
     
     // MARK: - Custom Header Section
     private var customHeaderSection: some View {
-        Button(action: { showingTrainerProfile = true }) {
-            HStack(spacing: MovefullyTheme.Layout.paddingM) {
-                // Trainer avatar
-                AsyncImage(url: URL(string: sampleTrainer.profileImageUrl ?? "")) { image in
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                } placeholder: {
-                    Image(systemName: "person.circle.fill")
-                        .foregroundColor(MovefullyTheme.Colors.primaryTeal)
-                }
-                .frame(width: 50, height: 50)
-                .clipShape(Circle())
-                .overlay(
-                    Circle()
-                        .stroke(MovefullyTheme.Colors.primaryTeal.opacity(0.2), lineWidth: 2)
-                )
-                
-                // Trainer info
-                VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingXS) {
-                    Text(sampleTrainer.name)
-                        .font(MovefullyTheme.Typography.bodyMedium)
-                        .foregroundColor(MovefullyTheme.Colors.textPrimary)
-                    
-                    HStack(spacing: MovefullyTheme.Layout.paddingXS) {
-                        Circle()
-                            .fill(MovefullyTheme.Colors.softGreen)
-                            .frame(width: 8, height: 8)
-                        
-                        Text("Online")
-                            .font(MovefullyTheme.Typography.caption)
-                            .foregroundColor(MovefullyTheme.Colors.textSecondary)
+        VStack(spacing: 0) {
+            Button(action: {
+                // Dismiss keyboard and show trainer profile
+                isMessageFieldFocused = false
+                showingTrainerProfile = true
+            }) {
+                HStack(spacing: MovefullyTheme.Layout.paddingM) {
+                    // Trainer avatar
+                    AsyncImage(url: URL(string: sampleTrainer.profileImageUrl ?? "")) { image in
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    } placeholder: {
+                        Image(systemName: "person.circle.fill")
+                            .foregroundColor(MovefullyTheme.Colors.primaryTeal)
                     }
+                    .frame(width: 50, height: 50)
+                    .clipShape(Circle())
+                    .overlay(
+                        Circle()
+                            .stroke(MovefullyTheme.Colors.primaryTeal.opacity(0.2), lineWidth: 2)
+                    )
+                    
+                    // Trainer info
+                    VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingXS) {
+                        Text(sampleTrainer.name)
+                            .font(MovefullyTheme.Typography.bodyMedium)
+                            .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                        
+                        HStack(spacing: MovefullyTheme.Layout.paddingXS) {
+                            Circle()
+                                .fill(MovefullyTheme.Colors.softGreen)
+                                .frame(width: 8, height: 8)
+                            
+                            Text("Online")
+                                .font(MovefullyTheme.Typography.caption)
+                                .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                        }
+                    }
+                    
+                    Spacer()
+                    
+                    // Profile access indicator
+                    Image(systemName: "chevron.right")
+                        .font(MovefullyTheme.Typography.caption)
+                        .foregroundColor(MovefullyTheme.Colors.textSecondary)
                 }
-                
-                Spacer()
-                
-                // Profile access indicator
-                Image(systemName: "chevron.right")
-                    .font(MovefullyTheme.Typography.caption)
-                    .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                .padding(.horizontal, MovefullyTheme.Layout.paddingL)
+                .padding(.vertical, MovefullyTheme.Layout.paddingM)
+                .background(MovefullyTheme.Colors.cardBackground)
+                .shadow(color: MovefullyTheme.Effects.cardShadow, radius: 2, x: 0, y: 1)
             }
-            .padding(.horizontal, MovefullyTheme.Layout.paddingL)
-            .padding(.vertical, MovefullyTheme.Layout.paddingM)
-            .background(MovefullyTheme.Colors.cardBackground)
-            .shadow(color: MovefullyTheme.Effects.cardShadow, radius: 2, x: 0, y: 1)
+            .buttonStyle(PlainButtonStyle())
+            
+            Divider()
+                .background(MovefullyTheme.Colors.divider)
         }
-        .buttonStyle(PlainButtonStyle())
     }
     
     // MARK: - Message Input Section
@@ -168,6 +178,7 @@ struct ClientMessagesView: View {
 struct MessageBubble: View {
     let message: Message
     let isFromCurrentUser: Bool
+    @ObservedObject private var themeManager = ThemeManager.shared
     
     var body: some View {
         HStack {

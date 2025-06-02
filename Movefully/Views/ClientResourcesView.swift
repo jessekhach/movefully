@@ -3,6 +3,7 @@ import SwiftUI
 // MARK: - Client Resources View
 struct ClientResourcesView: View {
     @ObservedObject var viewModel: ClientViewModel
+    @ObservedObject private var themeManager = ThemeManager.shared
     @State private var searchText = ""
     @State private var selectedExercise: Exercise?
     @State private var showingProfile = false

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ExerciseLibraryView: View {
     @StateObject private var viewModel = ExerciseLibraryViewModel()
+    @ObservedObject private var themeManager = ThemeManager.shared
     @State private var searchText = ""
     @State private var selectedCategory: ExerciseCategory? = nil // nil means "all"
     @State private var selectedExercise: Exercise?

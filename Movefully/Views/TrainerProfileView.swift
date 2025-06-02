@@ -293,8 +293,12 @@ struct TrainerProfileActionRow: View {
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(MovefullyTheme.Colors.textTertiary)
             }
-            .padding(.vertical, MovefullyTheme.Layout.paddingS)
+            .padding(.horizontal, MovefullyTheme.Layout.paddingM)
+            .padding(.vertical, MovefullyTheme.Layout.paddingM)
+            .background(MovefullyTheme.Colors.backgroundSecondary)
+            .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
         }
+        .buttonStyle(PlainButtonStyle())
     }
 }
 
@@ -468,7 +472,6 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var notificationsEnabled = true
     @State private var emailUpdates = true
-    @State private var darkModeEnabled = false
     @State private var biometricAuth = true
     @State private var dataSharing = false
     
@@ -507,13 +510,7 @@ struct SettingsView: View {
                         }
                         
                         SettingsSection(title: "Appearance", icon: "paintbrush") {
-                            VStack(spacing: MovefullyTheme.Layout.paddingM) {
-                                MovefullyToggleField(
-                                    title: "Dark Mode",
-                                    subtitle: "Use dark theme for the app interface",
-                                    isOn: $darkModeEnabled
-                                )
-                            }
+                            MovefullyThemePicker()
                         }
                         
                         SettingsSection(title: "Security", icon: "lock.shield") {
@@ -544,11 +541,11 @@ struct SettingsView: View {
                             VStack(spacing: MovefullyTheme.Layout.paddingM) {
                                 SettingsToggle(title: "Anonymous Usage Data", subtitle: "Help improve Movefully by sharing anonymous data", isOn: $dataSharing)
                                 
-                                SettingsActionRow(title: "Privacy Policy", icon: "doc.text", action: {
+                                SettingsActionRow(title: "Privacy Policy", icon: "doc.text", isDanger: false, action: {
                                     // Handle privacy policy
                                 })
                                 
-                                SettingsActionRow(title: "Terms of Service", icon: "doc.plaintext", action: {
+                                SettingsActionRow(title: "Terms of Service", icon: "doc.plaintext", isDanger: false, action: {
                                     // Handle terms of service
                                 })
                             }
@@ -557,7 +554,7 @@ struct SettingsView: View {
                         // Danger Zone
                         SettingsSection(title: "Account", icon: "person.circle", isDanger: true) {
                             VStack(spacing: MovefullyTheme.Layout.paddingM) {
-                                SettingsActionRow(title: "Export Data", icon: "square.and.arrow.up", action: {
+                                SettingsActionRow(title: "Export Data", icon: "square.and.arrow.up", isDanger: true, action: {
                                     // Handle data export
                                 })
                                 
@@ -681,7 +678,12 @@ struct SettingsActionRow: View {
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(MovefullyTheme.Colors.textTertiary)
             }
+            .padding(.horizontal, MovefullyTheme.Layout.paddingM)
+            .padding(.vertical, MovefullyTheme.Layout.paddingM)
+            .background(MovefullyTheme.Colors.backgroundSecondary)
+            .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
         }
+        .buttonStyle(PlainButtonStyle())
     }
 }
 

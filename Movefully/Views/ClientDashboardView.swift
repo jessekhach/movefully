@@ -3,6 +3,7 @@ import SwiftUI
 // MARK: - Client Dashboard View
 struct ClientDashboardView: View {
     @ObservedObject var viewModel: ClientViewModel
+    @ObservedObject private var themeManager = ThemeManager.shared
     @State private var showingProfile = false
     
     var body: some View {

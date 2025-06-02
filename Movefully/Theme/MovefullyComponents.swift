@@ -12,6 +12,7 @@ struct MovefullySearchField: View {
     let placeholder: String
     @Binding var text: String
     let onTextChange: ((String) -> Void)?
+    @ObservedObject private var themeManager = ThemeManager.shared
     
     init(placeholder: String, text: Binding<String>, onTextChange: ((String) -> Void)? = nil) {
         self.placeholder = placeholder
@@ -937,6 +938,82 @@ struct MovefullyClientNavigation<Content: View>: View {
             trailingButton: trailingButton
         ) {
             content
+        }
+    }
+}
+
+// MARK: - Theme Picker Component
+struct MovefullyThemePicker: View {
+    @ObservedObject private var themeManager = ThemeManager.shared
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingM) {
+            Text("Appearance")
+                .font(MovefullyTheme.Typography.bodyMedium)
+                .foregroundColor(MovefullyTheme.Colors.textPrimary)
+            
+            HStack(spacing: MovefullyTheme.Layout.paddingS) {
+                ForEach(ThemeManager.ThemeMode.allCases, id: \.self) { theme in
+                    Button(action: {
+                        themeManager.setTheme(theme)
+                    }) {
+                        VStack(spacing: MovefullyTheme.Layout.paddingS) {
+                            Image(systemName: theme.systemImage)
+                                .font(.system(size: 20, weight: .medium))
+                                .foregroundColor(themeManager.currentTheme == theme ? .white : MovefullyTheme.Colors.primaryTeal)
+                            
+                            Text(theme.displayName)
+                                .font(MovefullyTheme.Typography.caption)
+                                .foregroundColor(themeManager.currentTheme == theme ? .white : MovefullyTheme.Colors.textSecondary)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, MovefullyTheme.Layout.paddingM)
+                        .background(
+                            Group {
+                                if themeManager.currentTheme == theme {
+                                    LinearGradient(
+                                        colors: [MovefullyTheme.Colors.primaryTeal, MovefullyTheme.Colors.primaryTeal.opacity(0.8)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                } else {
+                                    MovefullyTheme.Colors.cardBackground
+                                }
+                            }
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM)
+                                .stroke(
+                                    themeManager.currentTheme == theme 
+                                        ? Color.clear 
+                                        : MovefullyTheme.Colors.divider, 
+                                    lineWidth: 1
+                                )
+                        )
+                        .shadow(
+                            color: themeManager.currentTheme == theme 
+                                ? MovefullyTheme.Colors.primaryTeal.opacity(0.3) 
+                                : MovefullyTheme.Effects.cardShadow,
+                            radius: themeManager.currentTheme == theme ? 6 : 2,
+                            x: 0,
+                            y: themeManager.currentTheme == theme ? 3 : 1
+                        )
+                        .scaleEffect(themeManager.currentTheme == theme ? 1.02 : 1.0)
+                        .animation(.easeInOut(duration: 0.2), value: themeManager.currentTheme)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                }
+            }
+        }
+        .padding(MovefullyTheme.Layout.paddingM)
+        .background(MovefullyTheme.Colors.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
+        .onReceive(themeManager.$isDarkMode) { _ in
+            // Force UI update when theme changes
+        }
+        .onReceive(themeManager.$currentTheme) { _ in
+            // Force UI update when theme mode changes
         }
     }
 } 

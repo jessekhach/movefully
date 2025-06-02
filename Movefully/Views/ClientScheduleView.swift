@@ -3,6 +3,7 @@ import SwiftUI
 // MARK: - Client Schedule View
 struct ClientScheduleView: View {
     @ObservedObject var viewModel: ClientViewModel
+    @ObservedObject private var themeManager = ThemeManager.shared
     @State private var selectedWeekOffset = 0
     @State private var selectedDate: Date?
     @State private var showingWorkoutDetail = false
@@ -94,6 +95,7 @@ struct ClientScheduleView: View {
                         .frame(maxWidth: .infinity)
                 }
             }
+            .padding(.top, MovefullyTheme.Layout.paddingS)
             
             // Calendar days
             HStack(spacing: MovefullyTheme.Layout.paddingS) {
