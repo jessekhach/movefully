@@ -32,16 +32,7 @@ struct ExerciseRowView: View {
                 
                 // Tags
                 HStack(spacing: MovefullyTheme.Layout.paddingS) {
-                    // Duration
-                    if let duration = exercise.duration {
-                        ExerciseTagView(
-                            text: "\(duration) min",
-                            icon: "clock",
-                            color: MovefullyTheme.Colors.primaryTeal
-                        )
-                    }
-                    
-                    // Difficulty
+                    // Difficulty only (removed duration)
                     if let difficulty = exercise.difficulty {
                         ExerciseTagView(
                             text: difficulty.rawValue,

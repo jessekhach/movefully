@@ -5,7 +5,6 @@ struct ClientResourcesView: View {
     @ObservedObject var viewModel: ClientViewModel
     @State private var searchText = ""
     @State private var selectedExercise: Exercise?
-    @State private var showingExerciseDetail = false
     @State private var showingProfile = false
     
     var body: some View {
@@ -22,10 +21,8 @@ struct ClientResourcesView: View {
             // Exercise grid
             exerciseGridSection
         }
-        .sheet(isPresented: $showingExerciseDetail) {
-            if let exercise = selectedExercise {
-                ExerciseDetailModal(exercise: exercise)
-            }
+        .sheet(item: $selectedExercise) { exercise in
+            ExerciseDetailView(exercise: exercise)
         }
         .sheet(isPresented: $showingProfile) {
             // ClientProfileView will be added when available
@@ -86,7 +83,6 @@ struct ClientResourcesView: View {
             ForEach(filteredExercises) { exercise in
                 ExerciseCard(exercise: exercise) {
                     selectedExercise = exercise
-                    showingExerciseDetail = true
                 }
             }
         }
@@ -191,16 +187,6 @@ struct ExerciseCard: View {
                             }
                             
                             Spacer()
-                            
-                            if let duration = exercise.duration {
-                                HStack(spacing: MovefullyTheme.Layout.paddingXS) {
-                                    Image(systemName: "clock")
-                                        .font(MovefullyTheme.Typography.caption)
-                                    Text("\(duration) min")
-                                        .font(MovefullyTheme.Typography.caption)
-                                }
-                                .foregroundColor(MovefullyTheme.Colors.textSecondary)
-                            }
                         }
                     }
                 }
@@ -326,10 +312,6 @@ struct ExerciseDetailModal: View {
                     .foregroundColor(MovefullyTheme.Colors.textPrimary)
                 
                 VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingS) {
-                    if let duration = exercise.duration {
-                        specRow(icon: "clock", label: "Duration", value: "\(duration) minutes")
-                    }
-                    
                     if let difficulty = exercise.difficulty {
                         specRow(icon: "chart.bar", label: "Difficulty", value: difficulty.rawValue)
                     }
@@ -372,32 +354,105 @@ struct ExerciseDetailModal: View {
                         .foregroundColor(MovefullyTheme.Colors.textPrimary)
                 }
                 
+                // Dynamic instructions from Exercise model
                 VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingS) {
-                    instructionStep(number: 1, text: "Begin in a comfortable starting position with your feet hip-width apart")
-                    instructionStep(number: 2, text: "Take a deep breath and engage your core muscles")
-                    instructionStep(number: 3, text: "Move slowly and mindfully through the exercise")
-                    instructionStep(number: 4, text: "Focus on your breath throughout the movement")
-                    instructionStep(number: 5, text: "Return to starting position with control")
+                    let instructions = exercise.howToPerform ?? [
+                        "Begin in a comfortable starting position with your feet hip-width apart",
+                        "Take a deep breath and engage your core muscles",
+                        "Move slowly and mindfully through the exercise",
+                        "Focus on your breath throughout the movement",
+                        "Return to starting position with control"
+                    ]
+                    
+                    ForEach(Array(instructions.enumerated()), id: \.offset) { index, instruction in
+                        instructionStep(number: index + 1, text: instruction)
+                    }
                 }
                 
-                // Trainer tips
-                VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingS) {
-                    HStack {
-                        Image(systemName: "lightbulb.fill")
-                            .foregroundColor(MovefullyTheme.Colors.warmOrange)
-                        Text("Trainer Tips")
-                            .font(MovefullyTheme.Typography.bodyMedium)
-                            .foregroundColor(MovefullyTheme.Colors.warmOrange)
+                // Dynamic trainer tips from Exercise model
+                if let trainerTips = exercise.trainerTips, !trainerTips.isEmpty {
+                    VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingS) {
+                        HStack {
+                            Image(systemName: "lightbulb.fill")
+                                .foregroundColor(MovefullyTheme.Colors.warmOrange)
+                            Text("Trainer Tips")
+                                .font(MovefullyTheme.Typography.bodyMedium)
+                                .foregroundColor(MovefullyTheme.Colors.warmOrange)
+                        }
+                        
+                        VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingXS) {
+                            ForEach(trainerTips, id: \.self) { tip in
+                                HStack(alignment: .top, spacing: MovefullyTheme.Layout.paddingS) {
+                                    Text("•")
+                                        .font(MovefullyTheme.Typography.body)
+                                        .foregroundColor(MovefullyTheme.Colors.warmOrange)
+                                    
+                                    Text(tip)
+                                        .font(MovefullyTheme.Typography.body)
+                                        .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                                        .lineLimit(nil)
+                                    
+                                    Spacer()
+                                }
+                            }
+                        }
                     }
-                    
-                    Text("Listen to your body and move at your own pace. If you feel any discomfort, modify the movement or take a break. Quality over quantity always!")
-                        .font(MovefullyTheme.Typography.body)
-                        .foregroundColor(MovefullyTheme.Colors.textSecondary)
-                        .italic()
+                    .padding(MovefullyTheme.Layout.paddingM)
+                    .background(MovefullyTheme.Colors.warmOrange.opacity(0.08))
+                    .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
+                } else {
+                    // Fallback trainer tips
+                    VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingS) {
+                        HStack {
+                            Image(systemName: "lightbulb.fill")
+                                .foregroundColor(MovefullyTheme.Colors.warmOrange)
+                            Text("Trainer Tips")
+                                .font(MovefullyTheme.Typography.bodyMedium)
+                                .foregroundColor(MovefullyTheme.Colors.warmOrange)
+                        }
+                        
+                        Text("Listen to your body and move at your own pace. If you feel any discomfort, modify the movement or take a break. Quality over quantity always!")
+                            .font(MovefullyTheme.Typography.body)
+                            .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                            .italic()
+                    }
+                    .padding(MovefullyTheme.Layout.paddingM)
+                    .background(MovefullyTheme.Colors.warmOrange.opacity(0.08))
+                    .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
                 }
-                .padding(MovefullyTheme.Layout.paddingM)
-                .background(MovefullyTheme.Colors.warmOrange.opacity(0.08))
-                .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
+                
+                // Dynamic modifications from Exercise model
+                if let modifications = exercise.modifications, !modifications.isEmpty {
+                    VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingS) {
+                        HStack {
+                            Image(systemName: "slider.horizontal.3")
+                                .foregroundColor(MovefullyTheme.Colors.gentleBlue)
+                            Text("Modifications")
+                                .font(MovefullyTheme.Typography.bodyMedium)
+                                .foregroundColor(MovefullyTheme.Colors.gentleBlue)
+                        }
+                        
+                        VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingXS) {
+                            ForEach(modifications, id: \.self) { modification in
+                                HStack(alignment: .top, spacing: MovefullyTheme.Layout.paddingS) {
+                                    Text("•")
+                                        .font(MovefullyTheme.Typography.body)
+                                        .foregroundColor(MovefullyTheme.Colors.gentleBlue)
+                                    
+                                    Text(modification)
+                                        .font(MovefullyTheme.Typography.body)
+                                        .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                                        .lineLimit(nil)
+                                    
+                                    Spacer()
+                                }
+                            }
+                        }
+                    }
+                    .padding(MovefullyTheme.Layout.paddingM)
+                    .background(MovefullyTheme.Colors.gentleBlue.opacity(0.08))
+                    .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
+                }
             }
         }
     }
