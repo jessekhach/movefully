@@ -1,0 +1,362 @@
+🎨 Movefully UI Theme for Cursor
+
+iOS target = iOS 16+
+
+🖼️ Overall Feel
+Soft, clean, and inviting
+Feels more like a wellness app than a gym tracker
+Prioritizes comfort, calm, and clarity over performance or "intensity"
+
+📱 STANDARDIZED NAVIGATION DESIGN SYSTEM
+
+⭐ Professional Navigation Patterns
+We use a sophisticated navigation system that adapts to content type and user context:
+
+## **CLIENT NAVIGATION PATTERNS:**
+
+✅ **TODAY VIEW** - Large Title + Profile Button
+- MovefullyClientNavigation with showProfileButton: true
+- Large navigation title (.navigationBarTitleDisplayMode(.large))
+- Profile icon in top-right toolbar
+- Main dashboard experience
+
+✅ **PROGRESS VIEW** - Inline Title, Clean
+- MovefullyClientNavigation with showProfileButton: false
+- Large navigation title for main section feel
+- No profile button (keeps focus on data)
+
+✅ **SCHEDULE VIEW** - Inline Title + Fixed Week Picker
+- Traditional NavigationView with .navigationBarTitleDisplayMode(.inline)
+- Fixed week selector header that stays pinned
+- Compact, professional look like Messages
+- Pre-collapsed title for maximum content space
+
+✅ **MESSAGES VIEW** - Inline Title + Custom Header
+- Traditional NavigationView with .navigationBarTitleDisplayMode(.inline)
+- Custom trainer info header section
+- Compact, focused messaging experience
+
+✅ **EXERCISE LIBRARY VIEW** - Inline Title, Clean
+- MovefullyClientNavigation with showProfileButton: false
+- Large navigation title for main section feel
+- Focus on content discovery
+
+## **TRAINER NAVIGATION PATTERNS:**
+
+✅ **CLIENT MANAGEMENT** - Large Title + Action Button
+- MovefullyTrainerNavigation with showProfileButton: false
+- Large navigation title (.navigationBarTitleDisplayMode(.large))
+- "Invite" button in top-right toolbar
+- Main management dashboard
+
+✅ **WELLNESS PLANS** - Large Title + Action Button
+- MovefullyTrainerNavigation with showProfileButton: false
+- Large navigation title for main section feel
+- "Create" button in top-right toolbar
+- Planning and creation focus
+
+✅ **TRAINER MESSAGES** - Inline Title + Custom Header
+- Traditional NavigationView with .navigationBarTitleDisplayMode(.inline)
+- Custom header with action button
+- Compact, professional messaging experience
+- Matches client Messages pattern
+
+✅ **TRAINER PROFILE** - Custom Navigation
+- Maintains existing .navigationBarHidden(true)
+- Custom scrollable profile design
+- Unique, immersive profile experience
+
+## **NAVIGATION DECISION MATRIX:**
+
+🎯 **Use LARGE Titles (.large) when:**
+- Primary dashboard/main views (Today, Progress, Client Management, Plans)
+- User needs prominent navigation context
+- Main content areas that benefit from visual hierarchy
+
+🎯 **Use INLINE Titles (.inline) when:**
+- Content-dense views (Schedule, Messages)
+- Custom header sections are present
+- Maximum content space is needed
+- Professional, compact feel is desired
+
+🎯 **Use CUSTOM Navigation (.navigationBarHidden) when:**
+- Unique user experiences (Profiles)
+- Complex header layouts
+- Immersive content presentation
+
+🔧 Implementation Components:
+
+1. **MovefullyStandardNavigation<Content>**
+   - Base navigation wrapper with full customization
+   - Supports both large and inline titles
+   - Toolbar button support (leading/trailing)
+   - Profile button integration
+   - Consistent ScrollView + VStack layout
+
+2. **MovefullyClientNavigation<Content>** 
+   - Client-specific navigation wrapper
+   - Profile button enabled by default (can be disabled)
+   - Optimized for client user flows
+   - Consistent with wellness-focused design
+
+3. **MovefullyTrainerNavigation<Content>**
+   - Trainer-specific navigation wrapper  
+   - Optimized for trainer workflows
+   - Professional coaching interface patterns
+   - Action buttons for management tasks
+
+🎨 Visual Consistency Benefits:
+• Titles positioned identically across all views
+• Action buttons in consistent locations
+• Smooth scroll-to-collapse behavior where appropriate
+• Professional iOS-native feel throughout app
+• Consistent spacing and background colors
+• Unified user experience patterns
+• Adaptive navigation based on content needs
+
+🚀 Implementation Results:
+✨ Professional, polished navigation experience
+✨ Content-aware navigation patterns
+✨ Consistent user muscle memory across all screens  
+✨ Native iOS behavior that users expect
+✨ Clean, maintainable code structure
+✨ Easy to extend with new toolbar buttons
+✨ Smooth, delightful animations throughout
+✨ Optimized for both client and trainer workflows
+
+This creates the foundation for a truly professional, wellness-focused app experience that feels both calming and sophisticated while adapting to the specific needs of each view and user type.
+
+🎨 Color Palette
+Use a pastel-inspired, wellness-focused palette with soft contrast and positive tones.
+
+Primary Brand Color
+
+Soft Aqua / Teal (e.g., #56C2C6 or similar)
+Used for primary actions (e.g., Invite button, highlights)
+Accent Colors
+
+Warm Orange for alerts or "Needs Attention" (e.g., #F4A261)
+Soft Green for "Active" (e.g., #70C18C)
+Gentle Blue for "New" or info states (e.g., #6FB1FC)
+Lavender or Orchid for "Pending Invite" (e.g., #C69AE3)
+Medium Gray for muted/paused states (#B0B0B0)
+Backgrounds & Neutrals
+
+App background: #FAFAFA (off-white, not pure white)
+Cards: White with soft shadows or borders
+Text:
+Headings: #333333
+Body: #4F4F4F
+Secondary/muted: #9E9E9E
+🧱 Component Design
+Rounded Corners (all components, 12–16pt radius)
+Shadows should be soft and subtle (avoid harsh elevation)
+Cards float slightly off the background for hierarchy
+Buttons use solid fill or pill style, never full-width edge to edge
+📝 Typography
+Use a modern, calming typeface — ideally native to iOS for performance but styled softly.
+
+Recommended Fonts:
+
+SF Pro Rounded or SF Pro Display (built-in for iOS)
+Rounded edge feel is preferred
+Font Weights:
+Bold for names, section headers
+Regular for body text
+Light or Medium for helper text or captions
+Text Sizes:
+
+Title: 22–24 pt
+Section headers: 17–19 pt
+Body: 15–17 pt
+Captions / metadata: 13–14 pt
+🔄 Interactions
+Use soft animations for transitions (fade, slide-up)
+Taps should give subtle haptic feedback where appropriate
+Form inputs should be large, clean, and spaced — never cramped
+🧘‍♀️ Overall Inspiration
+Think:
+
+Apple Fitness' onboarding screens
+Headspace's visual gentleness
+The calm, focused structure of apps like Whoop or Balance
+
+# Movefully Theme System
+
+## Overview
+Movefully uses a comprehensive design system that ensures consistency across all UI components while providing a warm, supportive, and non-toxic user experience focused on movement over metrics.
+
+## NEW: Three-Option Theme Management
+
+### ThemeManager
+The app now includes a comprehensive theme management system with three options:
+
+1. **Light Mode**: Traditional light theme
+2. **Dark Mode**: Dark theme with appropriate contrast
+3. **System**: Automatically follows the device's system setting
+
+### Usage
+
+#### 1. Apply Theme to Entire App
+Add `.movefullyThemed()` to your root view (usually in App.swift):
+
+```swift
+@main
+struct MovefullyApp: App {
+    var body: some Scene {
+        WindowGroup {
+            ContentView()
+                .movefullyThemed() // Apply theme management here
+        }
+    }
+}
+```
+
+#### 2. Use Theme Picker Component
+Replace old dark mode toggles with the new `MovefullyThemePicker`:
+
+```swift
+// OLD: Simple toggle
+MovefullyToggleField(title: "Dark Mode", isOn: $darkModeEnabled)
+
+// NEW: Three-option picker
+MovefullyThemePicker()
+```
+
+#### 3. Access Theme Manager
+```swift
+@ObservedObject private var themeManager = ThemeManager.shared
+
+// Current theme mode
+let currentMode = themeManager.currentTheme // .light, .dark, or .system
+
+// Is currently in dark mode (accounting for system setting)
+let isDark = themeManager.isDarkMode
+
+// Change theme programmatically
+themeManager.setTheme(.dark)
+```
+
+### Features
+- **Persistent**: Theme preference is saved in UserDefaults
+- **System Integration**: System mode automatically follows device settings
+- **Real-time Updates**: Changes apply immediately throughout the app
+- **Smooth Transitions**: Animated theme switching
+- **Automatic Colors**: All theme colors automatically adapt to current mode
+
+### How It Works
+The theme system uses computed properties that dynamically return different colors based on the current theme mode. When `ThemeManager.shared.isDarkMode` changes, all UI components using `MovefullyTheme.Colors.*` automatically update their appearance.
+
+## Color Palette
+
+### Primary Colors
+- **Primary Teal**: #56C2C6 - Main brand color (same in both themes)
+- **Warm Orange**: #F4A261 - Alerts and attention-grabbing elements
+- **Soft Green**: #70C18C - Success states and active elements
+- **Gentle Blue**: #6FB1FC - Information and new states
+- **Lavender**: #C69AE3 - Pending and accent states
+
+### Adaptive Colors (Change with Theme)
+- **Background Primary**: Light: #FAFAFA | Dark: #1C1C1E
+- **Background Secondary**: Light: #F9F9F9 | Dark: #242428
+- **Card Background**: Light: White | Dark: #2C2C2E
+- **Text Primary**: Light: #333333 | Dark: White
+- **Text Secondary**: Light: #4F4F4F | Dark: #EBEBF5
+- **Text Tertiary**: Light: #9E9E9E | Dark: #8E8E93
+- **Divider**: Light: #ECECEC | Dark: #545458
+
+### Usage Examples
+```swift
+// These automatically adapt to current theme
+.backgroundColor(MovefullyTheme.Colors.backgroundPrimary)
+.foregroundColor(MovefullyTheme.Colors.textPrimary)
+.stroke(MovefullyTheme.Colors.divider)
+```
+
+## Typography
+- **Rounded Design**: All fonts use `.rounded` design for warmth
+- **Clear Hierarchy**: From largeTitle (32pt) down to footnote (12pt)
+- **Consistent Weights**: Bold for titles, medium for emphasis, regular for body
+
+### Font Scale
+- Large Title: 32pt, Bold
+- Title 1: 24pt, Bold (Main page titles)
+- Title 2: 22pt, Semibold (Secondary titles)
+- Title 3: 18pt, Medium (Section headers)
+- Body: 16pt, Regular (Standard text)
+- Body Medium: 16pt, Medium (Emphasized body)
+- Callout: 15pt, Regular
+- Caption: 13pt, Regular
+- Footnote: 12pt, Regular
+
+## Layout & Spacing
+- **Consistent Padding**: XS(4) to XXL(40) in logical increments
+- **Corner Radius**: XS(6) to XL(20) for different UI elements
+- **Button Heights**: Small(40), Medium(48), Large(56)
+
+## Components
+
+### New Component: MovefullyThemePicker
+A beautiful three-option selector for theme preference:
+- Visual icons for each mode (sun, moon, gear)
+- Selected state with gradient background
+- Smooth animations and shadows
+- Automatic state management
+
+### Standard Components
+All existing components automatically support the new theme system:
+- MovefullySearchField
+- MovefullyPill (with various styles)
+- MovefullyCard
+- MovefullyTextField/TextEditor/SecureField
+- MovefullyToggleField
+- MovefullyActionRow
+- MovefullyAlertBanner
+- MovefullyEmptyState/LoadingState
+- Navigation components
+
+## Best Practices
+
+### Theme Implementation
+1. Always use `MovefullyTheme.Colors.*` instead of hardcoded colors
+2. Apply `.movefullyThemed()` only once at the app root
+3. Use `MovefullyThemePicker` instead of custom dark mode toggles
+4. Test both light and dark themes during development
+
+### Color Usage
+- Use semantic colors (success, warning, info) for consistent meaning
+- Prefer adaptive colors over static colors for better dark mode support
+- Use primaryTeal for primary actions and brand elements
+- Use warmOrange sparingly for alerts and important calls-to-action
+
+### Component Usage
+- Prefer provided components over custom implementations
+- Use appropriate pill styles (category, status, filter, tag)
+- Implement proper loading and empty states
+- Follow navigation patterns (MovefullyStandardNavigation)
+
+## Migration from Old Dark Mode Toggle
+
+### Step 1: Remove old state
+```swift
+// Remove this:
+@State private var darkModeEnabled = false
+```
+
+### Step 2: Replace toggle with picker
+```swift
+// Replace this:
+MovefullyToggleField(title: "Dark Mode", subtitle: "Use dark theme", isOn: $darkModeEnabled)
+
+// With this:
+MovefullyThemePicker()
+```
+
+### Step 3: Apply theme modifier (if not done already)
+```swift
+// In your main App file:
+ContentView()
+    .movefullyThemed()
+```
+
+The new system is much more robust and provides a better user experience with three options instead of just two!
