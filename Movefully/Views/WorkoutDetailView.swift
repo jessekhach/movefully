@@ -8,7 +8,7 @@ struct ExerciseDetailView: View {
     @State private var showingVideoPlayer = false
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView {
                 VStack(spacing: MovefullyTheme.Layout.paddingL) {
                     // Demo video/GIF section - now at the top and prominent
@@ -447,7 +447,7 @@ struct VideoPlayerView: View {
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ZStack {
                 Color.black.ignoresSafeArea()
                 

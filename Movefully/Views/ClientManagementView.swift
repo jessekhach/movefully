@@ -16,14 +16,11 @@ struct ClientManagementView: View {
                 accessibilityLabel: "Invite Client"
             )
         ) {
-            // Search field inside navigation content
-            VStack(spacing: MovefullyTheme.Layout.paddingM) {
-                MovefullySearchField(
-                    placeholder: "Search clients...",
-                    text: $searchText
-                )
-            }
-            .padding(.vertical, MovefullyTheme.Layout.paddingS)
+            // Search field with tighter spacing for trainer views
+            MovefullySearchField(
+                placeholder: "Search clients...",
+                text: $searchText
+            )
             
             // Clients content
             clientsContent

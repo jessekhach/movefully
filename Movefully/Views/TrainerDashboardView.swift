@@ -23,11 +23,11 @@ struct TrainerDashboardView: View {
                 }
                 .tag(1)
             
-            // Library Tab
+            // Templates Tab
             LibraryManagementView()
                 .tabItem {
                     Image(systemName: selectedTab == 2 ? "books.vertical.fill" : "books.vertical")
-                    Text("Library")
+                    Text("Templates")
                 }
                 .tag(2)
             

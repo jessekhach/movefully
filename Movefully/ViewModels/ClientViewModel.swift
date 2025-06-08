@@ -253,6 +253,7 @@ struct InspirationalQuote: Identifiable {
 }
 
 // MARK: - Client View Model
+@MainActor
 class ClientViewModel: ObservableObject {
     @Published var currentClient: Client = Client(
         id: "client1",

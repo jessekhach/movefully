@@ -9,7 +9,7 @@ struct ClientViewTrainerProfileView: View {
     @ObservedObject private var themeManager = ThemeManager.shared
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView {
                 VStack(spacing: 0) {
                     // Header with gradient background
@@ -167,7 +167,6 @@ struct ClientViewTrainerProfileView: View {
                 }
             }
         }
-        .navigationViewStyle(StackNavigationViewStyle())
     }
     
     // Helper computed properties

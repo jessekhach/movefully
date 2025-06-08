@@ -167,8 +167,6 @@ struct WorkoutPlanRowView: View {
                     Spacer()
                     
                     VStack(alignment: .trailing, spacing: MovefullyTheme.Layout.paddingXS) {
-                        DifficultyBadge(difficulty: plan.difficulty)
-                        
                         Text("\(plan.duration) weeks")
                             .font(MovefullyTheme.Typography.caption)
                             .foregroundColor(MovefullyTheme.Colors.textSecondary)
@@ -177,7 +175,6 @@ struct WorkoutPlanRowView: View {
                 
                 // Stats
                 HStack(spacing: MovefullyTheme.Layout.paddingL) {
-                    PlanStatView(icon: "calendar", value: "\(plan.exercisesPerWeek)", label: "sessions/week")
                     PlanStatView(icon: "clock", value: "\(plan.sessionDuration)", label: "min/session")
                     PlanStatView(icon: "person.2", value: "\(plan.assignedClients)", label: "clients")
                     
@@ -186,28 +183,18 @@ struct WorkoutPlanRowView: View {
                 
                 // Tags
                 if !plan.tags.isEmpty {
-                    HStack {
-                        ForEach(plan.tags.prefix(3), id: \.self) { tag in
-                            Text(tag)
-                                .font(MovefullyTheme.Typography.caption)
-                                .foregroundColor(MovefullyTheme.Colors.primaryTeal)
-                                .padding(.horizontal, MovefullyTheme.Layout.paddingS)
-                                .padding(.vertical, MovefullyTheme.Layout.paddingXS)
-                                .background(MovefullyTheme.Colors.primaryTeal.opacity(0.15))
-                                .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusS))
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: MovefullyTheme.Layout.paddingS) {
+                            ForEach(plan.tags, id: \.self) { tag in
+                                Text(tag)
+                                    .font(MovefullyTheme.Typography.caption)
+                                    .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+                                    .padding(.horizontal, MovefullyTheme.Layout.paddingS)
+                                    .padding(.vertical, MovefullyTheme.Layout.paddingXS)
+                                    .background(MovefullyTheme.Colors.primaryTeal.opacity(0.15))
+                                    .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusS))
+                            }
                         }
-                        
-                        if plan.tags.count > 3 {
-                            Text("+\(plan.tags.count - 3)")
-                                .font(MovefullyTheme.Typography.caption)
-                                .foregroundColor(MovefullyTheme.Colors.textSecondary)
-                                .padding(.horizontal, MovefullyTheme.Layout.paddingS)
-                                .padding(.vertical, MovefullyTheme.Layout.paddingXS)
-                                .background(MovefullyTheme.Colors.divider)
-                                .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusS))
-                        }
-                        
-                        Spacer()
                     }
                 }
             }
@@ -241,27 +228,6 @@ struct PlanStatView: View {
                 .foregroundColor(MovefullyTheme.Colors.textSecondary)
         }
         .frame(maxWidth: .infinity)
-    }
-}
-
-// MARK: - Difficulty Badge
-struct DifficultyBadge: View {
-    let difficulty: WorkoutDifficulty
-    
-    var body: some View {
-        HStack(spacing: MovefullyTheme.Layout.paddingXS) {
-            ForEach(1...3, id: \.self) { index in
-                Image(systemName: "star.fill")
-                    .font(MovefullyTheme.Typography.footnote)
-                    .foregroundColor(index <= difficulty.starRating ? 
-                                   MovefullyTheme.Colors.secondaryPeach : 
-                                   MovefullyTheme.Colors.inactive)
-            }
-        }
-        .padding(.horizontal, MovefullyTheme.Layout.paddingS)
-        .padding(.vertical, MovefullyTheme.Layout.paddingXS)
-        .background(MovefullyTheme.Colors.secondaryPeach.opacity(0.15))
-        .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusS))
     }
 }
 
@@ -315,7 +281,6 @@ struct PlanDetailView: View {
         VStack(spacing: MovefullyTheme.Layout.paddingL) {
             planBasicInfo
             planStatsGrid
-            planDifficulty
             planTags
             planExercises
         }
@@ -344,17 +309,7 @@ struct PlanDetailView: View {
         }
     }
     
-    private var planDifficulty: some View {
-        HStack {
-            Text("Difficulty:")
-                .font(MovefullyTheme.Typography.bodyMedium)
-                .foregroundColor(MovefullyTheme.Colors.textPrimary)
-            
-            Spacer()
-            
-            DifficultyBadge(difficulty: plan.difficulty)
-        }
-    }
+
     
     @ViewBuilder
     private var planTags: some View {
@@ -459,15 +414,8 @@ struct CreatePlanSheet: View {
     @State private var isLoading = false
     @State private var currentStep = 1
     
-    // Mock exercise data - in real app this would come from ExerciseLibraryViewModel
-    private let availableExercises = [
-        Exercise(id: "1", title: "Push-ups", description: "Classic upper body exercise", category: .strength, duration: 15, difficulty: .beginner),
-        Exercise(id: "2", title: "Squats", description: "Fundamental lower body movement", category: .strength, duration: 20, difficulty: .beginner),
-        Exercise(id: "3", title: "Plank", description: "Core strengthening exercise", category: .strength, duration: 10, difficulty: .beginner),
-        Exercise(id: "4", title: "Jumping Jacks", description: "Full body cardio movement", category: .cardio, duration: 15, difficulty: .beginner),
-        Exercise(id: "5", title: "Mountain Climbers", description: "Dynamic cardio and core exercise", category: .cardio, duration: 12, difficulty: .intermediate),
-        Exercise(id: "6", title: "Downward Dog", description: "Yoga pose for flexibility", category: .flexibility, duration: 8, difficulty: .beginner)
-    ]
+    // Use the master exercise repository
+    private let availableExercises = Exercise.sampleExercises
     
     var body: some View {
         NavigationStack {

@@ -11,7 +11,7 @@ struct ClientScheduleView: View {
     @State private var showingProfile = false
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(spacing: 0) {
                 // Week selector (back to fixed header at top)
                 weekSelectorSection

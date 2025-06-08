@@ -16,7 +16,7 @@ struct ClientProfileView: View {
     @State private var showingSettings = false
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView {
                 VStack(spacing: 0) {
                     // Header with gradient background
@@ -161,7 +161,6 @@ struct ClientProfileView: View {
             }
             .movefullyNavigationThemed()
         }
-        .navigationViewStyle(StackNavigationViewStyle())
         .sheet(isPresented: $isEditing) {
             ClientEditProfileView(viewModel: viewModel)
         }
@@ -332,7 +331,7 @@ struct ClientEditProfileView: View {
     }
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: MovefullyTheme.Layout.paddingL) {
                     // Header
@@ -467,7 +466,7 @@ struct ClientNotificationSettingsView: View {
     @State private var vibrationEnabled = true
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: MovefullyTheme.Layout.paddingL) {
                     // Header
@@ -604,7 +603,7 @@ struct ClientSettingsView: View {
     @State private var dataSharing = false
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: MovefullyTheme.Layout.paddingL) {
                     // Header
@@ -725,7 +724,7 @@ struct ClientHelpSupportView: View {
     @State private var showingPrivacyPolicy = false
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: MovefullyTheme.Layout.paddingL) {
                     // Header
@@ -838,7 +837,7 @@ struct ClientContactTrainerView: View {
     }
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView {
                 VStack(spacing: MovefullyTheme.Layout.paddingL) {
                     // Header
@@ -923,7 +922,7 @@ struct ClientFAQView: View {
     @State private var searchText = ""
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(spacing: 0) {
                 // Search
                 VStack(spacing: MovefullyTheme.Layout.paddingM) {
@@ -1035,7 +1034,7 @@ struct ClientFeedbackView: View {
     }
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView {
                 VStack(spacing: MovefullyTheme.Layout.paddingL) {
                     // Header
@@ -1144,7 +1143,7 @@ struct ClientIssueReportView: View {
     }
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView {
                 VStack(spacing: MovefullyTheme.Layout.paddingL) {
                     // Header
@@ -1296,7 +1295,7 @@ struct ClientTermsOfServiceView: View {
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingL) {
                     Text("Terms of Service")
@@ -1366,7 +1365,7 @@ struct ClientPrivacyPolicyView: View {
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingL) {
                     Text("Privacy Policy")

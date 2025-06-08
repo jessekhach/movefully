@@ -5,6 +5,7 @@ import FirebaseFirestore
 import AuthenticationServices
 import CryptoKit
 
+@MainActor
 class AuthenticationViewModel: NSObject, ObservableObject {
     @Published var isAuthenticated = false
     @Published var userRole: String? = nil

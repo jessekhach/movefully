@@ -9,14 +9,11 @@ struct TrainerMessagesView: View {
             title: "Conversations",
             showProfileButton: false
         ) {
-            // Search field inside navigation content
-            VStack(spacing: MovefullyTheme.Layout.paddingM) {
-                MovefullySearchField(
-                    placeholder: "Search conversations...",
-                    text: $viewModel.searchText
-                )
-            }
-            .padding(.vertical, MovefullyTheme.Layout.paddingS)
+            // Search field with tighter spacing for trainer views
+            MovefullySearchField(
+                placeholder: "Search conversations...",
+                text: $viewModel.searchText
+            )
             
             // Messages content
             messagesContent

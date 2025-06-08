@@ -2,6 +2,7 @@ import Foundation
 import SwiftUI
 
 // MARK: - Programs View Model (New Unified)
+@MainActor
 class ProgramsViewModel: ObservableObject {
     @Published var workoutTemplates: [WorkoutTemplate] = []
     @Published var programs: [Program] = []
@@ -119,6 +120,7 @@ class ProgramsViewModel: ObservableObject {
 }
 
 // MARK: - Legacy Workout Plans View Model (Kept for compatibility)
+@MainActor
 class WorkoutPlansViewModel: ObservableObject {
     @Published var workoutPlans: [WorkoutPlan] = []
     @Published var selectedDifficulty: WorkoutDifficulty = .beginner

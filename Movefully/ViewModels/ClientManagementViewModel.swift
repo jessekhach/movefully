@@ -36,6 +36,7 @@ enum ClientSortOption {
 }
 
 // MARK: - Client Management View Model
+@MainActor
 class ClientManagementViewModel: ObservableObject {
     @Published var clients: [Client] = []
     @Published var filteredClients: [Client] = []

@@ -318,7 +318,7 @@ struct WorkoutDetailView: View {
     @State private var showingCompletionDialog = false
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView {
                 VStack(spacing: MovefullyTheme.Layout.paddingXL) {
                     // Workout header
@@ -535,6 +535,7 @@ struct ExerciseDetailCard: View {
             duration: assignedExercise.duration,
             difficulty: .intermediate, // Could be derived from exercise database
             createdByTrainerId: nil,
+            exerciseType: .reps,
             howToPerform: nil, // Would come from exercise database
             trainerTips: assignedExercise.trainerTips.map { [$0] },
             commonMistakes: nil,
@@ -567,7 +568,7 @@ struct WorkoutCompletionView: View {
     ]
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ZStack {
                 // Gradient background
                 LinearGradient(
@@ -852,7 +853,7 @@ struct WorkoutSessionView: View {
     }
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(spacing: 0) {
                 // Progress header
                 sessionProgressHeader
@@ -1317,6 +1318,7 @@ struct WorkoutSessionView: View {
             duration: assignedExercise.duration,
             difficulty: .intermediate, // Could be derived from exercise database
             createdByTrainerId: nil,
+            exerciseType: .reps,
             howToPerform: nil, // Would come from exercise database
             trainerTips: assignedExercise.trainerTips.map { [$0] },
             commonMistakes: nil,

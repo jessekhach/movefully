@@ -128,8 +128,6 @@ struct PlanCard: View {
                                 .foregroundColor(MovefullyTheme.Colors.textPrimary)
                             
                             Spacer()
-                            
-                            DifficultyBadge(difficulty: plan.difficulty)
                         }
                         
                         Text(plan.description)
@@ -149,12 +147,6 @@ struct PlanCard: View {
                     )
                     
                     PlanStatView(
-                        icon: "doc.text.below.ecg",
-                        value: "\(plan.workoutCount)",
-                        label: "workouts"
-                    )
-                    
-                    PlanStatView(
                         icon: "person.2",
                         value: "\(plan.usageCount)",
                         label: "assigned"
@@ -169,24 +161,18 @@ struct PlanCard: View {
                 
                 // Tags (if any)
                 if !plan.tags.isEmpty {
-                    HStack {
-                        ForEach(plan.tags.prefix(3), id: \.self) { tag in
-                            Text(tag)
-                                .font(MovefullyTheme.Typography.caption)
-                                .foregroundColor(MovefullyTheme.Colors.primaryTeal)
-                                .padding(.horizontal, MovefullyTheme.Layout.paddingM)
-                                .padding(.vertical, 4)
-                                .background(MovefullyTheme.Colors.primaryTeal.opacity(0.1))
-                                .clipShape(Capsule())
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: MovefullyTheme.Layout.paddingS) {
+                            ForEach(plan.tags, id: \.self) { tag in
+                                Text(tag)
+                                    .font(MovefullyTheme.Typography.caption)
+                                    .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+                                    .padding(.horizontal, MovefullyTheme.Layout.paddingM)
+                                    .padding(.vertical, 4)
+                                    .background(MovefullyTheme.Colors.primaryTeal.opacity(0.1))
+                                    .clipShape(Capsule())
+                            }
                         }
-                        
-                        if plan.tags.count > 3 {
-                            Text("+\(plan.tags.count - 3)")
-                                .font(MovefullyTheme.Typography.caption)
-                                .foregroundColor(MovefullyTheme.Colors.textTertiary)
-                        }
-                        
-                        Spacer()
                     }
                 }
             }

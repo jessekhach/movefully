@@ -125,16 +125,8 @@ struct MovefullyNavigationPageLayout<Content: View>: View {
     }
     
     var body: some View {
-        if useStackStyle {
-            NavigationView {
-                content
-            }
-            .navigationViewStyle(StackNavigationViewStyle())
-        } else {
-            NavigationView {
-                content
-            }
-            .navigationViewStyle(DefaultNavigationViewStyle())
+        NavigationStack {
+            content
         }
     }
 } 

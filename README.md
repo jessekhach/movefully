@@ -31,14 +31,14 @@ Movefully is a native iOS application designed to connect fitness trainers with 
 
 ## Technology Stack
 
-- **Frontend**: SwiftUI (iOS 15.0+)
+- **Frontend**: SwiftUI (iOS 18.0+)
 - **Authentication**: Apple Sign-In + Firebase Auth
 - **Backend**: Firebase
   - Authentication (Apple Sign-In, Email/Password)
   - Firestore (Database)
   - Storage (Media assets)
 - **Architecture**: MVVM with ObservableObject
-- **Minimum iOS Version**: 15.0
+- **Minimum iOS Version**: 18.0
 
 ## Project Structure
 

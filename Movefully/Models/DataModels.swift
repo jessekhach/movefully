@@ -461,6 +461,7 @@ struct Exercise: Identifiable, Codable {
     var duration: Int? // in minutes
     var difficulty: DifficultyLevel?
     var createdByTrainerId: String? // If trainers can add their own
+    var exerciseType: ExerciseType // New property to distinguish duration vs reps based
     
     // New detailed instruction fields
     var howToPerform: [String]? // Step-by-step instructions
@@ -483,6 +484,7 @@ struct Exercise: Identifiable, Codable {
             duration: 15,
             difficulty: .beginner,
             createdByTrainerId: nil,
+            exerciseType: .duration,
             howToPerform: [
                 "Start in a plank position with hands placed slightly wider than shoulder-width apart",
                 "Keep your body in a straight line from head to heels, engaging your core",
@@ -523,6 +525,7 @@ struct Exercise: Identifiable, Codable {
             duration: 20,
             difficulty: .beginner,
             createdByTrainerId: nil,
+            exerciseType: .duration,
             howToPerform: [
                 "Stand with feet shoulder-width apart, toes slightly turned out",
                 "Keep your chest up and shoulders back, core engaged",
@@ -564,6 +567,7 @@ struct Exercise: Identifiable, Codable {
             duration: 10,
             difficulty: .beginner,
             createdByTrainerId: nil,
+            exerciseType: .duration,
             howToPerform: [
                 "Start in a push-up position, then lower onto your forearms",
                 "Place elbows directly under your shoulders, forearms parallel",
@@ -605,6 +609,7 @@ struct Exercise: Identifiable, Codable {
             duration: 15,
             difficulty: .beginner,
             createdByTrainerId: nil,
+            exerciseType: .reps,
             howToPerform: [
                 "Stand tall with feet hip-width apart, hands on hips or at sides",
                 "Take a large step forward with your right foot",
@@ -646,6 +651,7 @@ struct Exercise: Identifiable, Codable {
             duration: 12,
             difficulty: .beginner,
             createdByTrainerId: nil,
+            exerciseType: .duration,
             howToPerform: [
                 "Lie on your back with arms extended toward the ceiling",
                 "Bend your hips and knees to 90 degrees, shins parallel to the floor",
@@ -687,6 +693,7 @@ struct Exercise: Identifiable, Codable {
             duration: 15,
             difficulty: .beginner,
             createdByTrainerId: nil,
+            exerciseType: .reps,
             howToPerform: [
                 "Lie on your back with knees bent and feet flat on the floor",
                 "Place feet hip-width apart, about 6 inches from your glutes",
@@ -728,6 +735,7 @@ struct Exercise: Identifiable, Codable {
             duration: 10,
             difficulty: .beginner,
             createdByTrainerId: nil,
+            exerciseType: .reps,
             howToPerform: [
                 "Stand arm's length away from a wall",
                 "Place your palms flat against the wall at shoulder height and width",
@@ -769,6 +777,7 @@ struct Exercise: Identifiable, Codable {
             duration: 10,
             difficulty: .intermediate,
             createdByTrainerId: nil,
+            exerciseType: .duration,
             howToPerform: [
                 "Start on hands and knees in a tabletop position",
                 "Place hands directly under shoulders, knees under hips",
@@ -798,7 +807,7 @@ struct Exercise: Identifiable, Codable {
                 "For wrist issues: Perform on forearms instead of hands"
             ],
             equipmentNeeded: ["Exercise mat (recommended)"],
-            targetMuscles: ["Core", "Glutes", "Back muscles", "Shoulders"],
+            targetMuscles: ["Core", "Glutes", "Back", "Shoulders"],
             breathingCues: "Breathe normally throughout - don't hold your breath"
         ),
         Exercise(
@@ -810,6 +819,7 @@ struct Exercise: Identifiable, Codable {
             duration: 8,
             difficulty: .intermediate,
             createdByTrainerId: nil,
+            exerciseType: .duration,
             howToPerform: [
                 "Lie on your side with legs extended and stacked",
                 "Prop yourself up on your forearm, elbow directly under shoulder",
@@ -851,6 +861,7 @@ struct Exercise: Identifiable, Codable {
             duration: 12,
             difficulty: .intermediate,
             createdByTrainerId: nil,
+            exerciseType: .reps,
             howToPerform: [
                 "Stand on your right leg with a slight bend in the knee",
                 "Keep your left leg slightly behind you",
@@ -895,6 +906,7 @@ struct Exercise: Identifiable, Codable {
             duration: 5,
             difficulty: .beginner,
             createdByTrainerId: nil,
+            exerciseType: .duration,
             howToPerform: [
                 "Stand with feet together and arms at your sides",
                 "Jump up and spread your feet to shoulder-width apart",
@@ -936,6 +948,7 @@ struct Exercise: Identifiable, Codable {
             duration: 8,
             difficulty: .intermediate,
             createdByTrainerId: nil,
+            exerciseType: .duration,
             howToPerform: [
                 "Start in a plank position with hands under shoulders",
                 "Keep your body in a straight line from head to heels",
@@ -977,6 +990,7 @@ struct Exercise: Identifiable, Codable {
             duration: 5,
             difficulty: .beginner,
             createdByTrainerId: nil,
+            exerciseType: .duration,
             howToPerform: [
                 "Stand tall with feet hip-width apart",
                 "Lift your right knee up toward your chest",
@@ -1018,6 +1032,7 @@ struct Exercise: Identifiable, Codable {
             duration: 10,
             difficulty: .beginner,
             createdByTrainerId: nil,
+            exerciseType: .duration,
             howToPerform: [
                 "Stand in front of a sturdy step, bench, or bottom stair",
                 "Place your right foot completely on the step",
@@ -1059,6 +1074,7 @@ struct Exercise: Identifiable, Codable {
             duration: 5,
             difficulty: .beginner,
             createdByTrainerId: nil,
+            exerciseType: .duration,
             howToPerform: [
                 "Stand tall with feet hip-width apart",
                 "Begin jogging in place, bringing your heels toward your glutes",
@@ -1100,6 +1116,7 @@ struct Exercise: Identifiable, Codable {
             duration: 8,
             difficulty: .advanced,
             createdByTrainerId: nil,
+            exerciseType: .reps,
             howToPerform: [
                 "Start standing with feet shoulder-width apart",
                 "Squat down and place your hands on the floor",
@@ -1141,6 +1158,7 @@ struct Exercise: Identifiable, Codable {
             duration: 5,
             difficulty: .beginner,
             createdByTrainerId: nil,
+            exerciseType: .duration,
             howToPerform: [
                 "Stand tall with feet hip-width apart",
                 "Begin running in place, lifting your knees as high as possible",
@@ -1182,6 +1200,7 @@ struct Exercise: Identifiable, Codable {
             duration: 8,
             difficulty: .intermediate,
             createdByTrainerId: nil,
+            exerciseType: .reps,
             howToPerform: [
                 "Start in a squat position with feet shoulder-width apart",
                 "Lower into a squat by pushing hips back and bending knees",
@@ -1225,6 +1244,7 @@ struct Exercise: Identifiable, Codable {
             duration: 5,
             difficulty: .beginner,
             createdByTrainerId: nil,
+            exerciseType: .duration,
             howToPerform: [
                 "Start on your hands and knees in a tabletop position",
                 "Bring your big toes together and separate your knees",
@@ -1266,6 +1286,7 @@ struct Exercise: Identifiable, Codable {
             duration: 5,
             difficulty: .beginner,
             createdByTrainerId: nil,
+            exerciseType: .duration,
             howToPerform: [
                 "Start on hands and knees in tabletop position",
                 "Place wrists under shoulders and knees under hips",
@@ -1307,6 +1328,7 @@ struct Exercise: Identifiable, Codable {
             duration: 8,
             difficulty: .beginner,
             createdByTrainerId: nil,
+            exerciseType: .duration,
             howToPerform: [
                 "Start on hands and knees in tabletop position",
                 "Tuck your toes under and lift your hips up and back",
@@ -1348,6 +1370,7 @@ struct Exercise: Identifiable, Codable {
             duration: 5,
             difficulty: .beginner,
             createdByTrainerId: nil,
+            exerciseType: .duration,
             howToPerform: [
                 "Stand with feet hip-width apart, hands on your hips",
                 "Begin making slow, controlled circles with your hips",
@@ -1389,6 +1412,7 @@ struct Exercise: Identifiable, Codable {
             duration: 3,
             difficulty: .beginner,
             createdByTrainerId: nil,
+            exerciseType: .duration,
             howToPerform: [
                 "Stand or sit with your arms relaxed at your sides",
                 "Slowly lift your shoulders up toward your ears",
@@ -1430,6 +1454,7 @@ struct Exercise: Identifiable, Codable {
             duration: 8,
             difficulty: .beginner,
             createdByTrainerId: nil,
+            exerciseType: .duration,
             howToPerform: [
                 "Sit tall in a chair with feet flat on the floor",
                 "Place your hands on your shoulders or cross them over your chest",
@@ -1471,6 +1496,7 @@ struct Exercise: Identifiable, Codable {
             duration: 10,
             difficulty: .intermediate,
             createdByTrainerId: nil,
+            exerciseType: .duration,
             howToPerform: [
                 "Start in a tabletop position on hands and knees",
                 "Bring your right knee forward and place it behind your right wrist",
@@ -1512,6 +1538,7 @@ struct Exercise: Identifiable, Codable {
             duration: 5,
             difficulty: .beginner,
             createdByTrainerId: nil,
+            exerciseType: .duration,
             howToPerform: [
                 "Lie face down with your forehead on the mat",
                 "Place your palms flat on the floor under your shoulders",
@@ -1555,6 +1582,7 @@ struct Exercise: Identifiable, Codable {
             duration: 10,
             difficulty: .intermediate,
             createdByTrainerId: nil,
+            exerciseType: .duration,
             howToPerform: [
                 "Stand tall with feet hip-width apart",
                 "Shift your weight to your left foot",
@@ -1596,6 +1624,7 @@ struct Exercise: Identifiable, Codable {
             duration: 5,
             difficulty: .beginner,
             createdByTrainerId: nil,
+            exerciseType: .duration,
             howToPerform: [
                 "Stand tall with feet hip-width apart",
                 "Shift your weight to your right foot",
@@ -1637,6 +1666,7 @@ struct Exercise: Identifiable, Codable {
             duration: 5,
             difficulty: .beginner,
             createdByTrainerId: nil,
+            exerciseType: .duration,
             howToPerform: [
                 "Find a straight line on the floor or imagine one",
                 "Stand at one end with feet together",
@@ -1678,6 +1708,7 @@ struct Exercise: Identifiable, Codable {
             duration: 8,
             difficulty: .advanced,
             createdByTrainerId: nil,
+            exerciseType: .duration,
             howToPerform: [
                 "Start standing with feet hip-width apart",
                 "Shift weight to your right foot",
@@ -1721,6 +1752,7 @@ struct Exercise: Identifiable, Codable {
             duration: 5,
             difficulty: .beginner,
             createdByTrainerId: nil,
+            exerciseType: .duration,
             howToPerform: [
                 "Sit comfortably or lie down in a quiet space",
                 "Close your eyes or soften your gaze downward",
@@ -1763,6 +1795,7 @@ struct Exercise: Identifiable, Codable {
             duration: 10,
             difficulty: .beginner,
             createdByTrainerId: nil,
+            exerciseType: .duration,
             howToPerform: [
                 "Lie down comfortably on your back",
                 "Close your eyes and take a few deep breaths",
@@ -1805,6 +1838,7 @@ struct Exercise: Identifiable, Codable {
             duration: 15,
             difficulty: .beginner,
             createdByTrainerId: nil,
+            exerciseType: .duration,
             howToPerform: [
                 "Find a quiet path or space where you can walk slowly",
                 "Begin walking at about half your normal pace",
@@ -1847,6 +1881,7 @@ struct Exercise: Identifiable, Codable {
             duration: 5,
             difficulty: .beginner,
             createdByTrainerId: nil,
+            exerciseType: .duration,
             howToPerform: [
                 "Sit comfortably and close your eyes or soften your gaze",
                 "Take a few deep breaths to center yourself",
@@ -1889,6 +1924,7 @@ struct Exercise: Identifiable, Codable {
             duration: 15,
             difficulty: .beginner,
             createdByTrainerId: nil,
+            exerciseType: .duration,
             howToPerform: [
                 "Lie down comfortably and close your eyes",
                 "Start with your toes - tense them tightly for 5 seconds",
@@ -1949,6 +1985,29 @@ enum ExerciseCategory: String, CaseIterable, Codable {
     }
 }
 
+enum ExerciseType: String, CaseIterable, Codable {
+    case reps = "Reps"
+    case duration = "Duration"
+    
+    var displayName: String {
+        switch self {
+        case .reps:
+            return "Reps"
+        case .duration:
+            return "Duration"
+        }
+    }
+    
+    var icon: String {
+        switch self {
+        case .reps:
+            return "number.circle"
+        case .duration:
+            return "clock"
+        }
+    }
+}
+
 enum DifficultyLevel: String, CaseIterable, Codable {
     case beginner = "Beginner"
     case intermediate = "Intermediate"
@@ -1988,6 +2047,8 @@ struct WorkoutTemplate: Identifiable, Codable {
     let estimatedDuration: Int // in minutes
     let exercises: [Exercise]
     let tags: [String]
+    let icon: String // SF Symbol name for the template icon
+    let coachingNotes: String? // Optional coaching notes for trainers
     let usageCount: Int // How many times this template has been used
     let createdDate: Date
     let updatedDate: Date
@@ -1999,11 +2060,13 @@ struct WorkoutTemplate: Identifiable, Codable {
             difficulty: .beginner,
             estimatedDuration: 25,
             exercises: [
-                Exercise(id: "3", title: "Plank", description: "Core strengthening exercise", mediaUrl: nil, category: .strength, duration: 10, difficulty: .beginner),
-                Exercise(id: "4", title: "Dead Bug", description: "Core stability exercise", mediaUrl: nil, category: .strength, duration: 8, difficulty: .beginner),
-                Exercise(id: "5", title: "Bird Dog", description: "Core and balance exercise", mediaUrl: nil, category: .strength, duration: 10, difficulty: .beginner)
+                Exercise(id: "3", title: "Plank", description: "Core strengthening exercise", mediaUrl: nil, category: .strength, duration: 10, difficulty: .beginner, exerciseType: .duration),
+                Exercise(id: "4", title: "Dead Bug", description: "Core stability exercise", mediaUrl: nil, category: .strength, duration: 8, difficulty: .beginner, exerciseType: .reps),
+                Exercise(id: "5", title: "Bird Dog", description: "Core and balance exercise", mediaUrl: nil, category: .strength, duration: 10, difficulty: .beginner, exerciseType: .duration)
             ],
             tags: ["Core", "Strength", "Beginner", "No Equipment"],
+            icon: "target",
+            coachingNotes: "Focus on maintaining proper form throughout. Encourage slow, controlled movements and remind clients to breathe steadily during holds.",
             usageCount: 12,
             createdDate: Date().addingTimeInterval(-30 * 24 * 60 * 60), // 30 days ago
             updatedDate: Date().addingTimeInterval(-5 * 24 * 60 * 60)   // 5 days ago
@@ -2014,11 +2077,13 @@ struct WorkoutTemplate: Identifiable, Codable {
             difficulty: .intermediate,
             estimatedDuration: 35,
             exercises: [
-                Exercise(id: "6", title: "Burpees", description: "Full body explosive exercise", mediaUrl: nil, category: .cardio, duration: 12, difficulty: .intermediate),
-                Exercise(id: "7", title: "Mountain Climbers", description: "Cardio and core exercise", mediaUrl: nil, category: .cardio, duration: 10, difficulty: .intermediate),
-                Exercise(id: "8", title: "Jump Squats", description: "Explosive lower body exercise", mediaUrl: nil, category: .cardio, duration: 8, difficulty: .intermediate)
+                Exercise(id: "6", title: "Burpees", description: "Full body explosive exercise", mediaUrl: nil, category: .cardio, duration: 12, difficulty: .intermediate, exerciseType: .reps),
+                Exercise(id: "7", title: "Mountain Climbers", description: "Cardio and core exercise", mediaUrl: nil, category: .cardio, duration: 10, difficulty: .intermediate, exerciseType: .reps),
+                Exercise(id: "8", title: "Jump Squats", description: "Explosive lower body exercise", mediaUrl: nil, category: .cardio, duration: 8, difficulty: .intermediate, exerciseType: .reps)
             ],
             tags: ["HIIT", "Cardio", "Intermediate", "No Equipment"],
+            icon: "flame.fill",
+            coachingNotes: "Monitor clients closely for proper form during high-intensity intervals. Ensure adequate rest between sets and watch for signs of overexertion.",
             usageCount: 8,
             createdDate: Date().addingTimeInterval(-20 * 24 * 60 * 60),
             updatedDate: Date().addingTimeInterval(-2 * 24 * 60 * 60)
@@ -2029,11 +2094,13 @@ struct WorkoutTemplate: Identifiable, Codable {
             difficulty: .beginner,
             estimatedDuration: 20,
             exercises: [
-                Exercise(id: "9", title: "Cat-Cow Stretch", description: "Spinal mobility exercise", mediaUrl: nil, category: .flexibility, duration: 5, difficulty: .beginner),
-                Exercise(id: "10", title: "Hip Circles", description: "Hip mobility exercise", mediaUrl: nil, category: .flexibility, duration: 8, difficulty: .beginner),
-                Exercise(id: "11", title: "Shoulder Rolls", description: "Shoulder mobility exercise", mediaUrl: nil, category: .flexibility, duration: 5, difficulty: .beginner)
+                Exercise(id: "9", title: "Cat-Cow Stretch", description: "Spinal mobility exercise", mediaUrl: nil, category: .flexibility, duration: 5, difficulty: .beginner, exerciseType: .duration),
+                Exercise(id: "10", title: "Hip Circles", description: "Hip mobility exercise", mediaUrl: nil, category: .flexibility, duration: 8, difficulty: .beginner, exerciseType: .reps),
+                Exercise(id: "11", title: "Shoulder Rolls", description: "Shoulder mobility exercise", mediaUrl: nil, category: .flexibility, duration: 5, difficulty: .beginner, exerciseType: .reps)
             ],
             tags: ["Flexibility", "Recovery", "Beginner", "Yoga"],
+            icon: "leaf.fill",
+            coachingNotes: nil, // No specific coaching notes for this basic routine
             usageCount: 15,
             createdDate: Date().addingTimeInterval(-45 * 24 * 60 * 60),
             updatedDate: Date().addingTimeInterval(-10 * 24 * 60 * 60)
@@ -2044,11 +2111,13 @@ struct WorkoutTemplate: Identifiable, Codable {
             difficulty: .advanced,
             estimatedDuration: 45,
             exercises: [
-                Exercise(id: "1", title: "Push-ups", description: "Upper body exercise", mediaUrl: nil, category: .strength, duration: 15, difficulty: .beginner),
-                Exercise(id: "12", title: "Pike Push-ups", description: "Shoulder-focused push-up variation", mediaUrl: nil, category: .strength, duration: 12, difficulty: .advanced),
-                Exercise(id: "13", title: "Diamond Push-ups", description: "Tricep-focused push-up variation", mediaUrl: nil, category: .strength, duration: 10, difficulty: .advanced)
+                Exercise(id: "1", title: "Push-ups", description: "Upper body exercise", mediaUrl: nil, category: .strength, duration: 15, difficulty: .beginner, exerciseType: .reps),
+                Exercise(id: "12", title: "Pike Push-ups", description: "Shoulder-focused push-up variation", mediaUrl: nil, category: .strength, duration: 12, difficulty: .advanced, exerciseType: .reps),
+                Exercise(id: "13", title: "Diamond Push-ups", description: "Tricep-focused push-up variation", mediaUrl: nil, category: .strength, duration: 10, difficulty: .advanced, exerciseType: .reps)
             ],
             tags: ["Strength", "Upper Body", "Advanced", "Bodyweight"],
+            icon: "dumbbell.fill",
+            coachingNotes: "Advanced template requiring excellent push-up form. Ensure clients can perform 20+ standard push-ups before progressing to variations.",
             usageCount: 5,
             createdDate: Date().addingTimeInterval(-15 * 24 * 60 * 60),
             updatedDate: Date().addingTimeInterval(-1 * 24 * 60 * 60)
@@ -2068,6 +2137,9 @@ struct Program: Identifiable, Codable {
     let usageCount: Int // How many times this program has been assigned
     let createdDate: Date
     let lastModified: Date
+    let isDraft: Bool // Whether this is a saved draft or completed plan
+    let icon: String // SF Symbol name for the plan icon
+    let coachingNotes: String? // Optional coaching notes for trainers
     
     var durationText: String {
         let weeks = duration / 7
@@ -2103,7 +2175,10 @@ struct Program: Identifiable, Codable {
             tags: ["Strength", "Foundation", "4-Week", "Beginner-Friendly"],
             usageCount: 12,
             createdDate: Calendar.current.date(byAdding: .day, value: -30, to: Date()) ?? Date(),
-            lastModified: Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date()
+            lastModified: Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date(),
+            isDraft: false,
+            icon: "dumbbell.fill",
+            coachingNotes: "Focus on progressive overload while maintaining perfect form. Monitor clients closely during compound movements and encourage rest between workout days."
         ),
         Program(
             name: "3-Week HIIT Challenge",
@@ -2122,7 +2197,10 @@ struct Program: Identifiable, Codable {
             tags: ["HIIT", "Cardio", "Challenge", "3-Week"],
             usageCount: 8,
             createdDate: Calendar.current.date(byAdding: .day, value: -20, to: Date()) ?? Date(),
-            lastModified: Calendar.current.date(byAdding: .day, value: -5, to: Date()) ?? Date()
+            lastModified: Calendar.current.date(byAdding: .day, value: -5, to: Date()) ?? Date(),
+            isDraft: false,
+            icon: "flame.fill",
+            coachingNotes: "Monitor intensity levels closely. Ensure proper warm-up and recovery. Watch for signs of overexertion and modify rest periods as needed."
         ),
         Program(
             name: "Gentle Recovery Program",
@@ -2133,7 +2211,10 @@ struct Program: Identifiable, Codable {
             tags: ["Recovery", "Mobility", "Gentle", "2-Week"],
             usageCount: 15,
             createdDate: Calendar.current.date(byAdding: .day, value: -45, to: Date()) ?? Date(),
-            lastModified: Calendar.current.date(byAdding: .day, value: -10, to: Date()) ?? Date()
+            lastModified: Calendar.current.date(byAdding: .day, value: -10, to: Date()) ?? Date(),
+            isDraft: false,
+            icon: "leaf.fill",
+            coachingNotes: "Emphasize gentle movement and listening to the body. Perfect for clients recovering from injury or high stress periods."
         ),
         Program(
             name: "Advanced Strength Building",
@@ -2152,7 +2233,32 @@ struct Program: Identifiable, Codable {
             tags: ["Advanced", "Strength", "4-Week", "Intensive"],
             usageCount: 3,
             createdDate: Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date(),
-            lastModified: Date()
+            lastModified: Date(),
+            isDraft: false,
+            icon: "bolt.fill",
+            coachingNotes: "Only for experienced trainees with excellent form. Focus on periodization and adequate recovery between intense sessions."
+        ),
+        Program(
+            name: "Summer Prep Program",
+            description: "Work in progress - building a comprehensive summer fitness preparation plan",
+            duration: 21,
+            difficulty: .intermediate,
+            scheduledWorkouts: [
+                ScheduledWorkout(
+                    id: UUID(),
+                    date: Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date(),
+                    workoutTemplate: WorkoutTemplate.sampleTemplates[0],
+                    isCompleted: false,
+                    completedDate: nil
+                )
+            ],
+            tags: ["Summer", "Prep", "3-Week"],
+            usageCount: 0,
+            createdDate: Date(),
+            lastModified: Date(),
+            isDraft: true,
+            icon: "sun.max.fill",
+            coachingNotes: nil
         )
     ]
 }
@@ -2170,11 +2276,42 @@ struct ScheduledWorkout: Identifiable, Codable {
     
     var date: Date { scheduledDate }
     
+    var title: String {
+        if let template = workoutTemplate {
+            return template.name
+        } else if let custom = customWorkout {
+            return custom.name
+        } else {
+            return "Workout"
+        }
+    }
+    
+    var estimatedDuration: Int {
+        if let template = workoutTemplate {
+            return template.estimatedDuration
+        } else if let custom = customWorkout {
+            return custom.estimatedDuration
+        } else {
+            return 30
+        }
+    }
+    
     init(id: UUID = UUID(), date: Date, workoutTemplate: WorkoutTemplate?, isCompleted: Bool = false, completedDate: Date? = nil, clientNotes: String? = nil, trainerNotes: String? = nil) {
         self.id = id
         self.scheduledDate = date
         self.workoutTemplate = workoutTemplate
         self.customWorkout = nil
+        self.isCompleted = isCompleted
+        self.completedDate = completedDate
+        self.clientNotes = clientNotes
+        self.trainerNotes = trainerNotes
+    }
+    
+    init(id: UUID = UUID(), date: Date, customWorkout: CustomWorkout?, isCompleted: Bool = false, completedDate: Date? = nil, clientNotes: String? = nil, trainerNotes: String? = nil) {
+        self.id = id
+        self.scheduledDate = date
+        self.workoutTemplate = nil
+        self.customWorkout = customWorkout
         self.isCompleted = isCompleted
         self.completedDate = completedDate
         self.clientNotes = clientNotes
@@ -2192,6 +2329,8 @@ struct CustomWorkout: Identifiable, Codable {
     let difficulty: WorkoutDifficulty
     let createdDate: Date
 }
+
+
 
 // MARK: - Client Program Status Enum (New)
 enum ClientProgramStatus: String, CaseIterable, Codable {

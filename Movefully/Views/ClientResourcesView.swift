@@ -13,7 +13,7 @@ struct ClientResourcesView: View {
             title: "Exercise Library",
             showProfileButton: false
         ) {
-            // Search and filters (now inside navigation content)
+            // Search and filters
             searchAndFiltersSection
             
             // Category filters
@@ -32,19 +32,10 @@ struct ClientResourcesView: View {
     
     // MARK: - Search and Filters Section
     private var searchAndFiltersSection: some View {
-        VStack(spacing: 0) {
-            // Add top padding to match other pages
-            Spacer()
-                .frame(height: MovefullyTheme.Layout.paddingM)
-            
-            VStack(spacing: MovefullyTheme.Layout.paddingM) {
-                MovefullySearchField(
-                    placeholder: "Search exercises...",
-                    text: $searchText
-                )
-            }
-            .padding(.vertical, MovefullyTheme.Layout.paddingS)
-        }
+        MovefullySearchField(
+            placeholder: "Search exercises...",
+            text: $searchText
+        )
     }
     
     // MARK: - Category Filters Section
@@ -161,10 +152,10 @@ struct ExerciseCard: View {
                                     endPoint: .bottomTrailing
                                 )
                             )
-                            .frame(height: 100)
+                            .frame(height: 80)
                         
                         Image(systemName: exercise.category?.icon ?? "figure.flexibility")
-                            .font(MovefullyTheme.Typography.largeTitle)
+                            .font(MovefullyTheme.Typography.title1)
                             .foregroundColor(exercise.category?.color ?? MovefullyTheme.Colors.primaryTeal)
                     }
                     
@@ -173,16 +164,20 @@ struct ExerciseCard: View {
                         Text(exercise.title)
                             .font(MovefullyTheme.Typography.bodyMedium)
                             .foregroundColor(MovefullyTheme.Colors.textPrimary)
-                            .lineLimit(2)
+                            .lineLimit(1)
                             .multilineTextAlignment(.leading)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                         
                         if let description = exercise.description {
                             Text(description)
                                 .font(MovefullyTheme.Typography.caption)
                                 .foregroundColor(MovefullyTheme.Colors.textSecondary)
-                                .lineLimit(3)
+                                .lineLimit(2)
                                 .multilineTextAlignment(.leading)
+                                .frame(maxWidth: .infinity, alignment: .leading)
                         }
+                        
+                        Spacer()
                         
                         HStack {
                             if let category = exercise.category {
@@ -197,6 +192,7 @@ struct ExerciseCard: View {
                         }
                     }
                 }
+                .frame(maxWidth: .infinity, minHeight: 190, maxHeight: 210, alignment: .topLeading)
             }
         }
         .buttonStyle(PlainButtonStyle())
@@ -209,7 +205,7 @@ struct ExerciseDetailModal: View {
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView {
                 VStack(spacing: MovefullyTheme.Layout.paddingXL) {
                     // Exercise header

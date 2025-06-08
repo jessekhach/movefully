@@ -13,7 +13,7 @@ struct TrainerProfileView: View {
     @State private var selectedTab = 0
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView {
                 VStack(spacing: 0) {
                     // Header with gradient background
@@ -154,7 +154,6 @@ struct TrainerProfileView: View {
             .background(MovefullyTheme.Colors.backgroundPrimary)
             .navigationBarHidden(true)
         }
-        .navigationViewStyle(StackNavigationViewStyle())
         .sheet(isPresented: $isEditing) {
             EditProfileView()
         }
@@ -315,7 +314,7 @@ struct EditProfileView: View {
     @State private var isEditing = false
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: MovefullyTheme.Layout.paddingL) {
                     // Profile Picture Section
@@ -476,7 +475,7 @@ struct SettingsView: View {
     @State private var dataSharing = false
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: MovefullyTheme.Layout.paddingL) {
                     // Header
@@ -691,7 +690,7 @@ struct HelpSupportView: View {
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: MovefullyTheme.Layout.paddingL) {
                     // Header
@@ -903,7 +902,7 @@ struct ShareProfileView: View {
     @State private var showingQRCode = false
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: MovefullyTheme.Layout.paddingL) {
                     // Header
@@ -1087,7 +1086,7 @@ struct QRCodeView: View {
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(spacing: MovefullyTheme.Layout.paddingXL) {
                 Spacer()
                 

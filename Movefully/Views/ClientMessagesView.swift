@@ -9,7 +9,7 @@ struct ClientMessagesView: View {
     @FocusState private var isMessageFieldFocused: Bool
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(spacing: 0) {
                 // Custom header with trainer info and profile button
                 customHeaderSection

@@ -825,12 +825,13 @@ struct MovefullyStandardNavigation<Content: View>: View {
     }
     
     var body: some View {
-                NavigationView {
+        NavigationStack {
             ScrollView {
                 VStack(spacing: MovefullyTheme.Layout.paddingXL) {
                     content
                 }
                 .padding(.horizontal, MovefullyTheme.Layout.paddingXL)
+                .padding(.top, MovefullyTheme.Layout.paddingL) // Add proper top padding above search field
                 .padding(.bottom, MovefullyTheme.Layout.paddingXXL)
             }
             .background(MovefullyTheme.Colors.backgroundPrimary)
@@ -883,7 +884,6 @@ struct MovefullyStandardNavigation<Content: View>: View {
                 }
             }
         }
-        .navigationViewStyle(StackNavigationViewStyle())
     }
 }
 
@@ -918,7 +918,7 @@ struct MovefullyInlineNavigation<Content: View>: View {
     }
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(spacing: 0) {
                 // Custom inline header with title and buttons on same line
                 HStack(alignment: .center, spacing: MovefullyTheme.Layout.paddingL) {
@@ -959,7 +959,6 @@ struct MovefullyInlineNavigation<Content: View>: View {
             .background(MovefullyTheme.Colors.backgroundPrimary)
             .navigationBarHidden(true)
         }
-        .navigationViewStyle(StackNavigationViewStyle())
     }
 }
 
@@ -1016,8 +1015,8 @@ struct MovefullyTrainerNavigation<Content: View>: View {
                 content
             }
         } else {
-            // Use standard navigation (large title with toolbar buttons)
-            MovefullyStandardNavigation(
+            // Use trainer-optimized navigation with tighter spacing
+            MovefullyTrainerOptimizedNavigation(
                 title: title,
                 showProfileButton: showProfileButton,
                 profileAction: profileAction,
@@ -1025,6 +1024,83 @@ struct MovefullyTrainerNavigation<Content: View>: View {
                 titleDisplayMode: titleDisplayMode
             ) {
                 content
+            }
+        }
+    }
+}
+
+// MARK: - Trainer-Optimized Navigation (Internal Component)
+/// Internal navigation component optimized specifically for trainer views with tighter spacing
+private struct MovefullyTrainerOptimizedNavigation<Content: View>: View {
+    let title: String
+    let showProfileButton: Bool
+    let profileAction: (() -> Void)?
+    let trailingButtons: [MovefullyStandardNavigation<Content>.ToolbarButton]
+    let titleDisplayMode: NavigationBarItem.TitleDisplayMode
+    let content: Content
+    
+    init(
+        title: String,
+        showProfileButton: Bool = false,
+        profileAction: (() -> Void)? = nil,
+        trailingButtons: [MovefullyStandardNavigation<Content>.ToolbarButton] = [],
+        titleDisplayMode: NavigationBarItem.TitleDisplayMode = .large,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.title = title
+        self.showProfileButton = showProfileButton
+        self.profileAction = profileAction
+        self.trailingButtons = trailingButtons
+        self.titleDisplayMode = titleDisplayMode
+        self.content = content()
+    }
+    
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: MovefullyTheme.Layout.paddingL) { // Reduced from paddingXL (32pt) to paddingL (24pt)
+                    content
+                }
+                .padding(.horizontal, MovefullyTheme.Layout.paddingL) // Reduced from paddingXL (32pt) to paddingL (24pt)
+                .padding(.top, MovefullyTheme.Layout.paddingL) // Add proper top padding above search field
+                .padding(.bottom, MovefullyTheme.Layout.paddingXXL)
+            }
+            .background(MovefullyTheme.Colors.backgroundPrimary)
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(titleDisplayMode)
+            .navigationBarHidden(false)
+            .toolbar {
+                // Trailing buttons - support multiple buttons
+                if showProfileButton, let profileAction = profileAction {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button(action: profileAction) {
+                            ZStack {
+                                Circle()
+                                    .fill(MovefullyTheme.Colors.primaryTeal.opacity(0.1))
+                                    .frame(width: 32, height: 32)
+                                
+                                Image(systemName: "person.crop.circle")
+                                    .font(.system(size: 18, weight: .medium))
+                                    .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+                            }
+                        }
+                        .accessibilityLabel("Profile")
+                    }
+                } else if !trailingButtons.isEmpty {
+                    // Multiple trailing buttons in a single ToolbarItem
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        HStack(spacing: MovefullyTheme.Layout.paddingM) {
+                            ForEach(Array(trailingButtons.enumerated()), id: \.offset) { index, button in
+                                Button(action: button.action) {
+                                    Image(systemName: button.icon)
+                                        .font(.system(size: 18, weight: .medium))
+                                        .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+                                }
+                                .accessibilityLabel(button.accessibilityLabel ?? "")
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -1143,4 +1219,46 @@ struct MovefullyThemePicker: View {
             // Force UI update when theme mode changes
         }
     }
-} 
+}
+
+// MARK: - Icon Selector Component
+struct MovefullyIconSelector: View {
+    @Binding var selectedIcon: String
+    
+    private let availableIcons = [
+        "dumbbell.fill", "heart.fill", "flame.fill", "leaf.fill",
+        "bolt.fill", "sun.max.fill", "star.fill", "target",
+        "timer", "moon.fill", "drop.fill", "wind"
+    ]
+    
+    var body: some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: MovefullyTheme.Layout.paddingM) {
+            ForEach(availableIcons, id: \.self) { icon in
+                iconButton(for: icon)
+            }
+        }
+    }
+    
+    private func iconButton(for icon: String) -> some View {
+        Button(action: {
+            selectedIcon = icon
+        }) {
+            ZStack {
+                RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM)
+                    .fill(selectedIcon == icon ? MovefullyTheme.Colors.primaryTeal.opacity(0.15) : MovefullyTheme.Colors.backgroundSecondary)
+                    .frame(width: 56, height: 56)
+                
+                Image(systemName: icon)
+                    .font(.system(size: 20, weight: .medium))
+                    .foregroundColor(selectedIcon == icon ? MovefullyTheme.Colors.primaryTeal : MovefullyTheme.Colors.textSecondary)
+            }
+            .overlay(
+                RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM)
+                    .stroke(selectedIcon == icon ? MovefullyTheme.Colors.primaryTeal : MovefullyTheme.Colors.divider.opacity(0.5), lineWidth: selectedIcon == icon ? 2 : 1)
+            )
+            .scaleEffect(selectedIcon == icon ? 1.05 : 1.0)
+            .animation(.easeInOut(duration: 0.15), value: selectedIcon)
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
