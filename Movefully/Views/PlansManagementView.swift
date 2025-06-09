@@ -15,11 +15,13 @@ struct ProgramsManagementView: View {
                 accessibilityLabel: "Create Plan"
             )
         ) {
-            // Search field with tighter spacing for trainer views
-            MovefullySearchField(
-                placeholder: "Search plans...",
-                text: $searchText
-            )
+            // Search field - only show when there are plans to search
+            if !viewModel.programs.isEmpty {
+                MovefullySearchField(
+                    placeholder: "Search plans...",
+                    text: $searchText
+                )
+            }
             
             // Plans content
             programsContent
@@ -230,7 +232,7 @@ struct CreatePlanView: View {
     @State private var planDescription = ""
     @State private var selectedDuration = 1 // weeks
     @State private var selectedDifficulty: WorkoutDifficulty = .beginner
-    @State private var selectedIcon = "dumbbell.fill"
+
     @State private var selectedTags: Set<String> = []
     @State private var coachingNotes: String = ""
     @State private var scheduledWorkouts: [Int: ScheduledWorkout] = [:] // Day index to workout
@@ -248,6 +250,28 @@ struct CreatePlanView: View {
     
     private var hasUnsavedChanges: Bool {
         !planName.isEmpty || !planDescription.isEmpty || !scheduledWorkouts.isEmpty || !selectedTags.isEmpty || !coachingNotes.isEmpty
+    }
+    
+    // MARK: - Dynamic Icon Logic
+    private var dynamicIcon: String {
+        // Priority order for icon selection based on tags
+        if selectedTags.contains("Strength") || selectedTags.contains("Upper Body") || selectedTags.contains("Lower Body") {
+            return "dumbbell.fill"
+        } else if selectedTags.contains("Cardio") || selectedTags.contains("HIIT") || selectedTags.contains("Endurance") {
+            return "heart.fill"
+        } else if selectedTags.contains("Flexibility") || selectedTags.contains("Mobility") {
+            return "figure.yoga"
+        } else if selectedTags.contains("Core") || selectedTags.contains("Stability") {
+            return "circle.grid.3x3.fill"
+        } else if selectedTags.contains("Balance") || selectedTags.contains("Functional") {
+            return "figure.stand"
+        } else if selectedTags.contains("Recovery") {
+            return "leaf.fill"
+        } else if selectedTags.contains("Quick Workout") || selectedTags.contains("Beginner Friendly") {
+            return "timer"
+        } else {
+            return "calendar.badge.plus"
+        }
     }
     
     var body: some View {
@@ -397,10 +421,6 @@ struct CreatePlanView: View {
                             }
                             .padding(.horizontal, MovefullyTheme.Layout.paddingXS)
                         }
-                    }
-                    
-                    MovefullyFormField(title: "Plan Icon") {
-                        MovefullyIconSelector(selectedIcon: $selectedIcon)
                     }
                 }
             }
@@ -601,7 +621,7 @@ struct CreatePlanView: View {
              createdDate: Date(),
              lastModified: Date(),
              isDraft: isDraft,
-             icon: selectedIcon,
+             icon: dynamicIcon,
              coachingNotes: coachingNotes.isEmpty ? nil : coachingNotes
          )
      }
@@ -1822,7 +1842,7 @@ struct PlansDetailView: View {
                     .font(MovefullyTheme.Typography.bodyMedium)
                     .foregroundColor(MovefullyTheme.Colors.textPrimary)
                 
-                if workoutCount == 0 {
+                if program.scheduledWorkouts.isEmpty {
                     Text("No workouts scheduled")
                         .font(MovefullyTheme.Typography.body)
                         .foregroundColor(MovefullyTheme.Colors.textSecondary)
@@ -1830,13 +1850,12 @@ struct PlansDetailView: View {
                         .padding(.vertical, MovefullyTheme.Layout.paddingL)
                 } else {
                     VStack(spacing: MovefullyTheme.Layout.paddingS) {
-                        // TODO: Add actual workout schedule from program.scheduledWorkouts
-                        // For now, show placeholder for all workouts
-                        ForEach(0..<workoutCount, id: \.self) { index in
+                        // Display actual scheduled workouts from the program
+                        ForEach(Array(program.scheduledWorkouts.enumerated()), id: \.offset) { index, workout in
                             WorkoutScheduleRow(
                                 day: index + 1,
-                                workoutName: "Sample Workout \(index + 1)",
-                                duration: 45,
+                                workoutName: workout.title,
+                                duration: workout.estimatedDuration,
                                 difficulty: program.difficulty
                             )
                         }
@@ -1904,9 +1923,7 @@ struct PlansDetailView: View {
     
     // MARK: - Computed Properties
     private var workoutCount: Int {
-        // TODO: Calculate from actual scheduled workouts
-        // For now, return a sample count based on duration
-        program.duration * 3 // Assuming 3 workouts per week
+        return program.scheduledWorkouts.count
     }
     
     private var planColor: Color {
@@ -2076,7 +2093,7 @@ struct EditPlanView: View {
     @State private var planDescription: String
     @State private var selectedDifficulty: WorkoutDifficulty
     @State private var selectedDuration: Int // in weeks
-    @State private var selectedIcon: String
+
     @State private var selectedTags: Set<String>
     @State private var coachingNotes: String
     @State private var scheduledWorkouts: [Int: ScheduledWorkout]
@@ -2095,12 +2112,7 @@ struct EditPlanView: View {
         "4-Week", "8-Week", "12-Week", "Foundation", "Sport Specific"
     ]
     
-    // Available icon options
-    private let availableIcons = [
-        "dumbbell.fill", "flame.fill", "leaf.fill", "bolt.fill", 
-        "sun.max.fill", "heart.fill", "star.fill", "target",
-        "figure.run", "figure.strengthtraining.functional", "timer", "chart.line.uptrend.xyaxis"
-    ]
+
     
     init(program: Program) {
         self.program = program
@@ -2109,10 +2121,22 @@ struct EditPlanView: View {
         self._planDescription = State(initialValue: program.description)
         self._selectedDifficulty = State(initialValue: program.difficulty)
         self._selectedDuration = State(initialValue: program.duration / 7) // Convert days to weeks
-        self._selectedIcon = State(initialValue: program.icon)
+
         self._selectedTags = State(initialValue: Set(program.tags))
         self._coachingNotes = State(initialValue: program.coachingNotes ?? "")
-        self._scheduledWorkouts = State(initialValue: [:]) // TODO: Load actual scheduled workouts
+        
+        // Convert program's scheduled workouts to the [Int: ScheduledWorkout] format needed by the UI
+        var workoutsDict: [Int: ScheduledWorkout] = [:]
+        let programStartDate = program.createdDate
+        
+        for workout in program.scheduledWorkouts {
+            let daysBetween = Calendar.current.dateComponents([.day], from: programStartDate, to: workout.scheduledDate).day ?? 0
+            if daysBetween >= 0 && daysBetween < program.duration {
+                workoutsDict[daysBetween] = workout
+            }
+        }
+        
+        self._scheduledWorkouts = State(initialValue: workoutsDict)
     }
     
     var body: some View {
@@ -2253,10 +2277,6 @@ struct EditPlanView: View {
                             }
                             .padding(.horizontal, MovefullyTheme.Layout.paddingXS)
                         }
-                    }
-                    
-                    MovefullyFormField(title: "Plan Icon") {
-                        MovefullyIconSelector(selectedIcon: $selectedIcon)
                     }
                 }
             }
@@ -2438,9 +2458,30 @@ struct EditPlanView: View {
         planDescription != program.description ||
         selectedDifficulty != program.difficulty ||
         selectedDuration != (program.duration / 7) ||
-        selectedIcon != program.icon ||
         coachingNotes != (program.coachingNotes ?? "") ||
         Set(program.tags) != selectedTags
+    }
+    
+    // MARK: - Dynamic Icon Logic  
+    private var dynamicIcon: String {
+        // Priority order for icon selection based on tags
+        if selectedTags.contains("Strength") || selectedTags.contains("Upper Body") || selectedTags.contains("Lower Body") {
+            return "dumbbell.fill"
+        } else if selectedTags.contains("Cardio") || selectedTags.contains("HIIT") || selectedTags.contains("Endurance") {
+            return "heart.fill"
+        } else if selectedTags.contains("Flexibility") || selectedTags.contains("Mobility") {
+            return "figure.yoga"
+        } else if selectedTags.contains("Core") || selectedTags.contains("Stability") {
+            return "circle.grid.3x3.fill"
+        } else if selectedTags.contains("Balance") || selectedTags.contains("Functional") {
+            return "figure.stand"
+        } else if selectedTags.contains("Recovery") {
+            return "leaf.fill"
+        } else if selectedTags.contains("Quick Workout") || selectedTags.contains("Beginner Friendly") {
+            return "timer"
+        } else {
+            return "calendar.badge.plus"
+        }
     }
     
     // MARK: - Actions
@@ -2458,7 +2499,7 @@ struct EditPlanView: View {
             createdDate: program.createdDate,
             lastModified: Date(),
             isDraft: false,
-            icon: selectedIcon,
+            icon: dynamicIcon,
             coachingNotes: coachingNotes.isEmpty ? nil : coachingNotes
         )
         
@@ -2482,7 +2523,7 @@ struct EditPlanView: View {
             createdDate: program.createdDate,
             lastModified: Date(),
             isDraft: true,
-            icon: selectedIcon,
+            icon: dynamicIcon,
             coachingNotes: coachingNotes.isEmpty ? nil : coachingNotes
         )
         

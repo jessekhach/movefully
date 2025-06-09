@@ -13,11 +13,13 @@ struct LibraryManagementView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: MovefullyTheme.Layout.paddingL) {
-                    // Search field with consistent spacing
-                    MovefullySearchField(
-                        placeholder: "Search templates...",
-                        text: $searchText
-                    )
+                    // Search field - only show when there are templates to search
+                    if !programsViewModel.workoutTemplates.isEmpty {
+                        MovefullySearchField(
+                            placeholder: "Search templates...",
+                            text: $searchText
+                        )
+                    }
                     
                     // Templates content
                     templatesContent
@@ -141,6 +143,25 @@ struct ExerciseWithSetsReps: Identifiable, Codable {
             self.reps = "12" // Default reps
         }
     }
+    
+    // Custom Codable implementation to handle UUID
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.exercise = try container.decode(Exercise.self, forKey: .exercise)
+        self.sets = try container.decode(Int.self, forKey: .sets)
+        self.reps = try container.decode(String.self, forKey: .reps)
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(exercise, forKey: .exercise)
+        try container.encode(sets, forKey: .sets)
+        try container.encode(reps, forKey: .reps)
+    }
+    
+    private enum CodingKeys: String, CodingKey {
+        case exercise, sets, reps
+    }
 }
 
 // MARK: - Comprehensive Template Builder
@@ -153,7 +174,7 @@ struct CreateTemplateView: View {
     @State private var templateDescription: String = ""
     @State private var selectedDifficulty: WorkoutDifficulty = .beginner
     @State private var estimatedDuration: Int = 30
-    @State private var selectedIcon: String = "dumbbell.fill"
+
     @State private var selectedTags: Set<String> = []
     @State private var selectedExercises: [ExerciseWithSetsReps] = []
     @State private var targetMuscleGroups: [String] = []
@@ -166,7 +187,7 @@ struct CreateTemplateView: View {
     
     // Check if there are unsaved changes
     private var hasUnsavedChanges: Bool {
-        !templateName.isEmpty || !templateDescription.isEmpty || !selectedExercises.isEmpty || !selectedTags.isEmpty || !coachingNotes.isEmpty || selectedIcon != "dumbbell.fill"
+        !templateName.isEmpty || !templateDescription.isEmpty || !selectedExercises.isEmpty || !selectedTags.isEmpty || !coachingNotes.isEmpty
     }
     
     // Pre-defined tag options for multi-select
@@ -321,9 +342,7 @@ struct CreateTemplateView: View {
                         }
                     }
                     
-                    MovefullyFormField(title: "Template Icon") {
-                        MovefullyIconSelector(selectedIcon: $selectedIcon)
-                    }
+
                 }
             }
         }
@@ -534,7 +553,7 @@ struct CreateTemplateView: View {
             estimatedDuration: estimatedDuration,
             exercises: selectedExercises.map { $0.exercise },
             tags: Array(selectedTags).sorted(),
-            icon: selectedIcon,
+            icon: "doc.text.fill", // Default icon, will be derived from tags
             coachingNotes: coachingNotes.isEmpty ? nil : coachingNotes,
             usageCount: 0,
             createdDate: Date(),
@@ -1016,7 +1035,24 @@ struct WorkoutTemplateCardContent: View {
     }
     
     private var templateIcon: String {
-        return template.icon
+        // Priority order for icon selection based on tags
+        if template.tags.contains("Strength") || template.tags.contains("Upper Body") || template.tags.contains("Lower Body") {
+            return "dumbbell.fill"
+        } else if template.tags.contains("Cardio") || template.tags.contains("HIIT") || template.tags.contains("Endurance") {
+            return "heart.fill"
+        } else if template.tags.contains("Flexibility") || template.tags.contains("Mobility") {
+            return "figure.yoga"
+        } else if template.tags.contains("Core") || template.tags.contains("Stability") {
+            return "circle.grid.3x3.fill"
+        } else if template.tags.contains("Balance") || template.tags.contains("Functional") {
+            return "figure.stand"
+        } else if template.tags.contains("Recovery") {
+            return "leaf.fill"
+        } else if template.tags.contains("Quick Workout") || template.tags.contains("Beginner Friendly") {
+            return "timer"
+        } else {
+            return "doc.text.fill"
+        }
     }
 }
 
@@ -1425,14 +1461,21 @@ struct TemplateDetailView: View {
     }
     
     private var templateIcon: String {
-        if template.tags.contains("Strength") {
+        // Priority order for icon selection based on tags
+        if template.tags.contains("Strength") || template.tags.contains("Upper Body") || template.tags.contains("Lower Body") {
             return "dumbbell.fill"
-        } else if template.tags.contains("Cardio") || template.tags.contains("HIIT") {
+        } else if template.tags.contains("Cardio") || template.tags.contains("HIIT") || template.tags.contains("Endurance") {
             return "heart.fill"
-        } else if template.tags.contains("Flexibility") || template.tags.contains("Yoga") {
+        } else if template.tags.contains("Flexibility") || template.tags.contains("Mobility") {
             return "figure.yoga"
+        } else if template.tags.contains("Core") || template.tags.contains("Stability") {
+            return "circle.grid.3x3.fill"
+        } else if template.tags.contains("Balance") || template.tags.contains("Functional") {
+            return "figure.stand"
         } else if template.tags.contains("Recovery") {
             return "leaf.fill"
+        } else if template.tags.contains("Quick Workout") || template.tags.contains("Beginner Friendly") {
+            return "timer"
         } else {
             return "doc.text.fill"
         }
@@ -1571,12 +1614,13 @@ struct EditTemplateView: View {
     @State private var templateDescription: String
     @State private var selectedDifficulty: WorkoutDifficulty
     @State private var estimatedDuration: Int
-    @State private var selectedIcon: String
+
     @State private var selectedTags: Set<String>
     @State private var selectedExercises: [ExerciseWithSetsReps]
     @State private var coachingNotes: String
     @State private var isLoading = false
     @State private var showingExerciseLibrary = false
+    @State private var showingUnsavedChangesAlert = false
     
     private let availableExercises = Exercise.sampleExercises
     private let totalSteps = 4
@@ -1595,7 +1639,7 @@ struct EditTemplateView: View {
         self._templateDescription = State(initialValue: template.description)
         self._selectedDifficulty = State(initialValue: template.difficulty)
         self._estimatedDuration = State(initialValue: template.estimatedDuration)
-        self._selectedIcon = State(initialValue: template.icon)
+
         self._selectedTags = State(initialValue: Set(template.tags))
         self._selectedExercises = State(initialValue: template.exercises.map { exercise in
             ExerciseWithSetsReps(exercise: exercise) // Will use default sets/reps
@@ -1605,13 +1649,13 @@ struct EditTemplateView: View {
     
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                // Progress Header
-                templateCreationProgressHeader
-                
-                // Step Content
-                ScrollView {
-                    VStack(spacing: MovefullyTheme.Layout.paddingL) {
+            ScrollView {
+                VStack(spacing: MovefullyTheme.Layout.paddingL) {
+                    // Progress Indicator
+                    progressIndicator
+                    
+                    // Step Content
+                    Group {
                         switch currentStep {
                         case 1:
                             templateBasicsStep
@@ -1625,21 +1669,40 @@ struct EditTemplateView: View {
                             EmptyView()
                         }
                     }
-                    .padding(.horizontal, MovefullyTheme.Layout.paddingL)
-                    .padding(.bottom, MovefullyTheme.Layout.paddingXXL)
+                    
+                    // Navigation Buttons
+                    navigationButtons
                 }
-                
-                // Step Navigation
-                templateCreationNavigationFooter
+                .padding(.horizontal, MovefullyTheme.Layout.paddingL)
+                .padding(.bottom, MovefullyTheme.Layout.paddingXXL)
             }
             .movefullyBackground()
             .navigationTitle("Edit Template")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") { 
+                        if hasUnsavedChanges {
+                            showingUnsavedChangesAlert = true
+                        } else {
+                            dismiss()
+                        }
+                    }
+                    .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                }
+            }
         }
         .fullScreenCover(isPresented: $showingExerciseLibrary) {
             ExerciseSelectionSheet(selectedExercises: $selectedExercises)
         }
         .interactiveDismissDisabled(showingExerciseLibrary) // Prevent swipe to dismiss exercise selection
+        .alert("Unsaved Changes", isPresented: $showingUnsavedChangesAlert) {
+            Button("Save Changes") { updateTemplate() }
+            Button("Discard", role: .destructive) { dismiss() }
+            Button("Continue Editing", role: .cancel) { }
+        } message: {
+            Text("You have unsaved changes. Would you like to save them?")
+        }
         .overlay(
             Group {
                 if isLoading {
@@ -1666,125 +1729,93 @@ struct EditTemplateView: View {
         )
     }
     
-    // Copy the same progress header from CreateTemplateView
-    private var templateCreationProgressHeader: some View {
-        VStack(spacing: MovefullyTheme.Layout.paddingM) {
-            HStack {
-                ForEach(1...totalSteps, id: \.self) { step in
-                    HStack(spacing: 0) {
-                        // Step circle
-                        ZStack {
-                            Circle()
-                                .fill(step <= currentStep ? 
-                                     MovefullyTheme.Colors.primaryTeal : 
-                                     MovefullyTheme.Colors.backgroundSecondary)
-                                .frame(width: 32, height: 32)
-                            
+    // MARK: - Progress Indicator
+    private var progressIndicator: some View {
+        HStack {
+            ForEach(1...totalSteps, id: \.self) { step in
+                HStack(spacing: MovefullyTheme.Layout.paddingS) {
+                    Circle()
+                        .fill(step <= currentStep ? MovefullyTheme.Colors.primaryTeal : MovefullyTheme.Colors.inactive)
+                        .frame(width: 32, height: 32)
+                        .overlay(
                             Text("\(step)")
-                                .font(MovefullyTheme.Typography.caption.weight(.medium))
-                                .foregroundColor(step <= currentStep ? 
-                                               .white : 
-                                               MovefullyTheme.Colors.textTertiary)
-                        }
-                        
-                        // Connecting line (except for last step)
-                        if step < totalSteps {
-                            Rectangle()
-                                .fill(step < currentStep ? 
-                                     MovefullyTheme.Colors.primaryTeal : 
-                                     MovefullyTheme.Colors.backgroundSecondary)
-                                .frame(height: 2)
-                                .frame(maxWidth: .infinity)
-                        }
+                                .font(MovefullyTheme.Typography.footnote)
+                                .foregroundColor(.white)
+                        )
+                    
+                    if step < totalSteps {
+                        Rectangle()
+                            .fill(step < currentStep ? MovefullyTheme.Colors.primaryTeal : MovefullyTheme.Colors.inactive)
+                            .frame(height: 2)
+                            .frame(maxWidth: .infinity)
                     }
                 }
             }
-            .padding(.horizontal, MovefullyTheme.Layout.paddingL)
-            
-            // Step title
-            Text(stepTitle)
-                .font(MovefullyTheme.Typography.title2)
-                .foregroundColor(MovefullyTheme.Colors.textPrimary)
-                .multilineTextAlignment(.center)
         }
-        .padding(.vertical, MovefullyTheme.Layout.paddingL)
-        .background(MovefullyTheme.Colors.backgroundPrimary)
+        .padding(.top, MovefullyTheme.Layout.paddingL)
     }
     
-    private var stepTitle: String {
-        switch currentStep {
-        case 1: return "Template Basics"
-        case 2: return "Exercise Selection"
-        case 3: return "Additional Details"  
-        case 4: return "Review & Update"
-        default: return ""
-        }
-    }
+
     
-    // Copy the same step views from CreateTemplateView (simplified here)
+    // MARK: - Step 1: Template Basics
     private var templateBasicsStep: some View {
-        VStack(spacing: MovefullyTheme.Layout.paddingL) {
-            VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingS) {
-                Text("Update template basics")
-                    .font(MovefullyTheme.Typography.title2)
-                    .foregroundColor(MovefullyTheme.Colors.textPrimary)
-                
-                Text("Modify the basic information for your workout template")
-                    .font(MovefullyTheme.Typography.body)
-                    .foregroundColor(MovefullyTheme.Colors.textSecondary)
-            }
-            
+        MovefullyCard {
             VStack(spacing: MovefullyTheme.Layout.paddingL) {
-                MovefullyFormField(title: "Template Name") {
-                    MovefullyTextField(
-                        placeholder: "Enter template name",
-                        text: $templateName
-                    )
-                }
+                MovefullyPageHeader(
+                    title: "Template Basics",
+                    subtitle: "Update the fundamental details of your template"
+                )
                 
-                MovefullyFormField(title: "Description") {
-                    MovefullyTextField(
-                        placeholder: "Brief description of the workout",
-                        text: $templateDescription
-                    )
-                }
-                
-                MovefullyFormField(title: "Difficulty Level") {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: MovefullyTheme.Layout.paddingS) {
-                            ForEach(WorkoutDifficulty.allCases, id: \.self) { difficulty in
-                                MovefullyPill(
-                                    title: difficulty.rawValue,
-                                    isSelected: selectedDifficulty == difficulty,
-                                    style: .filter
-                                ) {
-                                    selectedDifficulty = difficulty
+                VStack(spacing: MovefullyTheme.Layout.paddingM) {
+                    MovefullyFormField(title: "Template Name", isRequired: true) {
+                        MovefullyTextField(
+                            placeholder: "e.g., Core Strength Essentials",
+                            text: $templateName
+                        )
+                    }
+                    
+                    MovefullyFormField(title: "Description", isRequired: true) {
+                        MovefullyTextEditor(
+                            placeholder: "Describe what this template focuses on...",
+                            text: $templateDescription,
+                            minLines: 3,
+                            maxLines: 5
+                        )
+                    }
+                    
+                    MovefullyFormField(title: "Difficulty Level") {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: MovefullyTheme.Layout.paddingS) {
+                                ForEach(WorkoutDifficulty.allCases, id: \.self) { difficulty in
+                                    MovefullyPill(
+                                        title: difficulty.rawValue,
+                                        isSelected: selectedDifficulty == difficulty,
+                                        style: .filter
+                                    ) {
+                                        selectedDifficulty = difficulty
+                                    }
                                 }
                             }
+                            .padding(.horizontal, MovefullyTheme.Layout.paddingXS)
                         }
-                        .padding(.horizontal, MovefullyTheme.Layout.paddingS)
                     }
-                }
-                
-                MovefullyFormField(title: "Estimated Duration") {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: MovefullyTheme.Layout.paddingS) {
-                            ForEach([15, 30, 45, 60, 90], id: \.self) { duration in
-                                MovefullyPill(
-                                    title: "\(duration) min",
-                                    isSelected: estimatedDuration == duration,
-                                    style: .filter
-                                ) {
-                                    estimatedDuration = duration
+                    
+                    MovefullyFormField(title: "Estimated Duration (minutes)") {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: MovefullyTheme.Layout.paddingM) {
+                                ForEach([15, 30, 45, 60, 90], id: \.self) { duration in
+                                    MovefullyPill(
+                                        title: "\(duration) min",
+                                        isSelected: estimatedDuration == duration,
+                                        style: .filter
+                                    ) {
+                                        estimatedDuration = duration
+                                    }
                                 }
                             }
+                            .padding(.horizontal, MovefullyTheme.Layout.paddingS)
                         }
-                        .padding(.horizontal, MovefullyTheme.Layout.paddingS)
                     }
-                }
-                
-                MovefullyFormField(title: "Template Icon") {
-                    MovefullyIconSelector(selectedIcon: $selectedIcon)
                 }
             }
         }
@@ -1951,42 +1982,47 @@ struct EditTemplateView: View {
         }
     }
     
-    private var templateCreationNavigationFooter: some View {
-        VStack(spacing: 0) {
-            Divider()
-                .background(MovefullyTheme.Colors.divider)
-            
-            HStack(spacing: MovefullyTheme.Layout.paddingM) {
-                if currentStep > 1 {
-                    Button("Previous") {
-                        withAnimation(.easeInOut(duration: 0.3)) {
-                            currentStep -= 1
-                        }
+    // MARK: - Navigation Buttons
+    private var navigationButtons: some View {
+        HStack(spacing: MovefullyTheme.Layout.paddingM) {
+            if currentStep > 1 {
+                Button("Previous") {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        currentStep -= 1
                     }
-                    .movefullyButtonStyle(.secondary)
                 }
-                
-                Spacer()
-                
-                if currentStep < totalSteps {
-                    Button("Next") {
-                        withAnimation(.easeInOut(duration: 0.3)) {
-                            currentStep += 1
-                        }
-                    }
-                    .movefullyButtonStyle(.primary)
-                    .disabled(!canProceedToNextStep)
-                } else {
-                    Button(isLoading ? "Updating..." : "Update Template") {
-                        updateTemplate()
-                    }
-                    .movefullyButtonStyle(.primary)
-                    .disabled(isLoading || !canProceedToNextStep)
-                }
+                .movefullyButtonStyle(.tertiary)
             }
-            .padding(MovefullyTheme.Layout.paddingL)
+            
+            Spacer()
+            
+            if currentStep < totalSteps {
+                Button("Next") {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        currentStep += 1
+                    }
+                }
+                .movefullyButtonStyle(.primary)
+                .disabled(!canProceedToNextStep)
+            } else {
+                Button("Update Template") {
+                    updateTemplate()
+                }
+                .movefullyButtonStyle(.primary)
+                .disabled(isLoading || !canProceedToNextStep)
+            }
         }
-        .background(MovefullyTheme.Colors.backgroundPrimary)
+        .padding(.bottom, MovefullyTheme.Layout.paddingXL)
+    }
+    
+    private var hasUnsavedChanges: Bool {
+        templateName != template.name ||
+        templateDescription != template.description ||
+        selectedDifficulty != template.difficulty ||
+        estimatedDuration != template.estimatedDuration ||
+        selectedTags != Set(template.tags) ||
+        selectedExercises.map { $0.exercise.id } != template.exercises.map { $0.id } ||
+        coachingNotes != (template.coachingNotes ?? "")
     }
     
     private var canProceedToNextStep: Bool {
@@ -2008,13 +2044,14 @@ struct EditTemplateView: View {
         isLoading = true
         
         let updatedTemplate = WorkoutTemplate(
+            id: template.id, // ✅ PRESERVE ORIGINAL ID!
             name: templateName,
             description: templateDescription,
             difficulty: selectedDifficulty,
             estimatedDuration: estimatedDuration,
             exercises: selectedExercises.map(\.exercise),
             tags: Array(selectedTags).sorted(),
-            icon: selectedIcon,
+            icon: "doc.text.fill", // Default icon, will be derived from tags
             coachingNotes: coachingNotes.isEmpty ? nil : coachingNotes,
             usageCount: template.usageCount,
             createdDate: template.createdDate,

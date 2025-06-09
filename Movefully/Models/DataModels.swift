@@ -262,6 +262,7 @@ struct ClientInvitation: Identifiable, Codable {
     let goal: String?
     let injuries: String?
     let preferredCoachingStyle: CoachingStyle?
+    let personalNote: String?
     let status: InvitationStatus
     let createdAt: Date
     let expiresAt: Date
@@ -274,6 +275,7 @@ struct ClientInvitation: Identifiable, Codable {
          goal: String? = nil,
          injuries: String? = nil,
          preferredCoachingStyle: CoachingStyle? = nil,
+         personalNote: String? = nil,
          status: InvitationStatus = .pending,
          createdAt: Date = Date(),
          expiresAt: Date) {
@@ -285,6 +287,7 @@ struct ClientInvitation: Identifiable, Codable {
         self.goal = goal
         self.injuries = injuries
         self.preferredCoachingStyle = preferredCoachingStyle
+        self.personalNote = personalNote
         self.status = status
         self.createdAt = createdAt
         self.expiresAt = expiresAt
@@ -2040,7 +2043,7 @@ struct TrainerProfile: Identifiable, Codable {
 
 // MARK: - Workout Template Model (New)
 struct WorkoutTemplate: Identifiable, Codable {
-    let id = UUID()
+    var id: UUID // Changed from let id = UUID() to var id: UUID
     let name: String
     let description: String
     let difficulty: WorkoutDifficulty
@@ -2052,6 +2055,38 @@ struct WorkoutTemplate: Identifiable, Codable {
     let usageCount: Int // How many times this template has been used
     let createdDate: Date
     let updatedDate: Date
+    
+    // Default initializer for new templates
+    init(name: String, description: String, difficulty: WorkoutDifficulty, estimatedDuration: Int, exercises: [Exercise], tags: [String], icon: String, coachingNotes: String? = nil, usageCount: Int = 0, createdDate: Date = Date(), updatedDate: Date = Date()) {
+        self.id = UUID()
+        self.name = name
+        self.description = description
+        self.difficulty = difficulty
+        self.estimatedDuration = estimatedDuration
+        self.exercises = exercises
+        self.tags = tags
+        self.icon = icon
+        self.coachingNotes = coachingNotes
+        self.usageCount = usageCount
+        self.createdDate = createdDate
+        self.updatedDate = updatedDate
+    }
+    
+    // Firestore initializer with existing ID
+    init(id: UUID, name: String, description: String, difficulty: WorkoutDifficulty, estimatedDuration: Int, exercises: [Exercise], tags: [String], icon: String, coachingNotes: String? = nil, usageCount: Int, createdDate: Date, updatedDate: Date) {
+        self.id = id
+        self.name = name
+        self.description = description
+        self.difficulty = difficulty
+        self.estimatedDuration = estimatedDuration
+        self.exercises = exercises
+        self.tags = tags
+        self.icon = icon
+        self.coachingNotes = coachingNotes
+        self.usageCount = usageCount
+        self.createdDate = createdDate
+        self.updatedDate = updatedDate
+    }
     
     static let sampleTemplates = [
         WorkoutTemplate(
@@ -2127,19 +2162,19 @@ struct WorkoutTemplate: Identifiable, Codable {
 
 // MARK: - Program Model (New)
 struct Program: Identifiable, Codable {
-    let id = UUID()
-    let name: String
-    let description: String
-    let duration: Int // in days  
-    let difficulty: WorkoutDifficulty
-    let scheduledWorkouts: [ScheduledWorkout] // Calendar of workouts for the program
-    let tags: [String]
-    let usageCount: Int // How many times this program has been assigned
-    let createdDate: Date
-    let lastModified: Date
-    let isDraft: Bool // Whether this is a saved draft or completed plan
-    let icon: String // SF Symbol name for the plan icon
-    let coachingNotes: String? // Optional coaching notes for trainers
+    var id = UUID()
+    var name: String
+    var description: String
+    var duration: Int // in days  
+    var difficulty: WorkoutDifficulty
+    var scheduledWorkouts: [ScheduledWorkout] // Calendar of workouts for the program
+    var tags: [String]
+    var usageCount: Int // How many times this program has been assigned
+    var createdDate: Date
+    var lastModified: Date
+    var isDraft: Bool // Whether this is a saved draft or completed plan
+    var icon: String // SF Symbol name for the plan icon
+    var coachingNotes: String? // Optional coaching notes for trainers
     
     var durationText: String {
         let weeks = duration / 7
@@ -2265,14 +2300,14 @@ struct Program: Identifiable, Codable {
 
 // MARK: - Scheduled Workout Model (New)
 struct ScheduledWorkout: Identifiable, Codable {
-    let id: UUID
-    let scheduledDate: Date
-    let workoutTemplate: WorkoutTemplate? // Can be nil if created from scratch
-    let customWorkout: CustomWorkout? // If not using a template
-    let isCompleted: Bool
-    let completedDate: Date?
-    let clientNotes: String? // Client's notes after completion
-    let trainerNotes: String? // Trainer's notes/modifications
+    var id: UUID
+    var scheduledDate: Date
+    var workoutTemplate: WorkoutTemplate? // Can be nil if created from scratch
+    var customWorkout: CustomWorkout? // If not using a template
+    var isCompleted: Bool
+    var completedDate: Date?
+    var clientNotes: String? // Client's notes after completion
+    var trainerNotes: String? // Trainer's notes/modifications
     
     var date: Date { scheduledDate }
     
@@ -2321,13 +2356,13 @@ struct ScheduledWorkout: Identifiable, Codable {
 
 // MARK: - Custom Workout Model (New)
 struct CustomWorkout: Identifiable, Codable {
-    let id = UUID()
-    let name: String
-    let description: String
-    let exercises: [Exercise]
-    let estimatedDuration: Int
-    let difficulty: WorkoutDifficulty
-    let createdDate: Date
+    var id = UUID()
+    var name: String
+    var description: String
+    var exercises: [Exercise]
+    var estimatedDuration: Int
+    var difficulty: WorkoutDifficulty
+    var createdDate: Date
 }
 
 

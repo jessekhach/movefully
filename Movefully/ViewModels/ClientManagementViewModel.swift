@@ -58,8 +58,13 @@ class ClientManagementViewModel: ObservableObject {
     @Published var showingInviteSheet = false
     @Published var showInviteClientSheet: Bool = false
     @Published var newClientEmail: String = ""
+    @Published var generatedInviteLink: String = ""
     
     private let db = Firestore.firestore()
+    private let invitationService = InvitationService()
+    private let clientDataService = ClientDataService()
+    private let activityService = ClientActivityService()
+    private let statusService = ClientStatusService()
     private var currentFilter: ClientStatus? = nil
     private var currentSort: ClientSortOption = .name
     private var currentSearchText: String = ""
@@ -69,89 +74,51 @@ class ClientManagementViewModel: ObservableObject {
     }
     
     init() {
-        loadSampleData()
-        filterClients()
+        loadClients()
     }
     
-    private func loadSampleData() {
-        // Use sample data from DataModels
-        clients = [
-            Client(
-                id: "1",
-                name: "Sarah Johnson",
-                email: "sarah.johnson@example.com",
-                trainerId: "trainer1",
-                status: .active,
-                joinedDate: Calendar.current.date(byAdding: .day, value: -30, to: Date()),
-                height: "5'6\"",
-                weight: "145 lbs",
-                goal: "Improve overall flexibility and build core strength",
-                injuries: "Previous knee injury (2019) - cleared by PT",
-                preferredCoachingStyle: .hybrid,
-                lastWorkoutDate: Calendar.current.date(byAdding: .day, value: -2, to: Date()),
-                lastActivityDate: Calendar.current.date(byAdding: .day, value: -1, to: Date()),
-                currentPlanId: "plan1",
-                totalWorkoutsCompleted: 24
-            ),
-            Client(
-                id: "2",
-                name: "Marcus Chen",
-                email: "marcus.chen@example.com",
-                trainerId: "trainer1",
-                status: .needsAttention,
-                joinedDate: Calendar.current.date(byAdding: .day, value: -45, to: Date()),
-                height: "5'10\"",
-                weight: "180 lbs",
-                goal: "Train for upcoming marathon while maintaining strength",
-                preferredCoachingStyle: .asynchronous,
-                lastWorkoutDate: Calendar.current.date(byAdding: .day, value: -8, to: Date()),
-                lastActivityDate: Calendar.current.date(byAdding: .day, value: -8, to: Date()),
-                currentPlanId: "plan2",
-                totalWorkoutsCompleted: 18
-            ),
-            Client(
-                id: "3",
-                name: "Emma Rodriguez",
-                email: "emma.rodriguez@example.com",
-                trainerId: "trainer1",
-                status: .new,
-                joinedDate: Calendar.current.date(byAdding: .day, value: -3, to: Date()),
-                height: "5'4\"",
-                weight: "130 lbs",
-                goal: "Get back into fitness after having a baby",
-                injuries: "Diastasis recti - working with pelvic floor PT",
-                preferredCoachingStyle: .synchronous,
-                lastActivityDate: Calendar.current.date(byAdding: .day, value: -1, to: Date()),
-                totalWorkoutsCompleted: 2
-            ),
-            Client(
-                id: "4",
-                name: "David Kim",
-                email: "david.kim@example.com",
-                trainerId: "trainer1",
-                status: .paused,
-                joinedDate: Calendar.current.date(byAdding: .day, value: -60, to: Date()),
-                height: "5'8\"",
-                weight: "165 lbs",
-                goal: "Build functional strength for outdoor activities",
-                preferredCoachingStyle: .hybrid,
-                lastWorkoutDate: Calendar.current.date(byAdding: .day, value: -15, to: Date()),
-                lastActivityDate: Calendar.current.date(byAdding: .day, value: -15, to: Date()),
-                currentPlanId: "plan3",
-                totalWorkoutsCompleted: 35
-            ),
-            Client(
-                id: "5",
-                name: "Alex Thompson",
-                email: "alex.thompson@example.com",
-                trainerId: "trainer1",
-                status: .pending,
-                joinedDate: nil,
-                goal: "General wellness and stress relief through movement",
-                preferredCoachingStyle: .hybrid,
-                totalWorkoutsCompleted: 0
-            )
-        ]
+    // MARK: - Data Loading Methods
+    
+    func loadClients() {
+        guard let currentUser = Auth.auth().currentUser else {
+            errorMessage = "Authentication required"
+            return
+        }
+        
+        isLoading = true
+        errorMessage = ""
+        
+        // Set up real-time listener for clients
+        clientDataService.listenForClientUpdates(currentUser.uid) { [weak self] (updatedClients: [Client]) in
+            Task { @MainActor in
+                self?.clients = updatedClients
+                self?.isLoading = false
+                self?.filterClients()
+            }
+        }
+        
+        // Also perform periodic automatic status updates
+        Task {
+            do {
+                try await statusService.performAutomaticStatusUpdates(currentUser.uid)
+            } catch {
+                print("Error updating automatic statuses: \(error)")
+            }
+        }
+    }
+    
+    func refreshClients() async {
+        guard let currentUser = Auth.auth().currentUser else { return }
+        
+        do {
+            isLoading = true
+            let fetchedClients = try await clientDataService.fetchTrainerClients(currentUser.uid)
+            clients = fetchedClients
+            filterClients()
+        } catch {
+            errorMessage = "Failed to refresh clients: \(error.localizedDescription)"
+        }
+        isLoading = false
     }
     
     func filterClients() {
@@ -205,72 +172,38 @@ class ClientManagementViewModel: ObservableObject {
         }
     }
     
-    func inviteClient() {
-        guard !newClientEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            errorMessage = "Please enter a valid email address"
-            return
-        }
-        
-        guard isValidEmail(newClientEmail) else {
-            errorMessage = "Please enter a valid email format"
-            return
-        }
-        
-        guard Auth.auth().currentUser != nil else {
-            errorMessage = "Authentication error. Please try again."
-            return
-        }
-        
+    func createInviteLink(clientName: String, clientEmail: String, personalNote: String = "") async {
         isLoading = true
         errorMessage = ""
         
-        print("📧 Inviting client: \(newClientEmail)")
-        
-        // For now, just simulate the invitation process
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            self.isLoading = false
-            self.successMessage = "Invitation sent to \(self.newClientEmail)!"
-            self.newClientEmail = ""
-            self.showInviteClientSheet = false
+        do {
+            let result = try await invitationService.createInviteLink(
+                clientName: clientName,
+                clientEmail: clientEmail,
+                personalNote: personalNote.isEmpty ? nil : personalNote
+            )
             
-            // Clear success message after 3 seconds
-            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { [self] in
-                successMessage = ""
+            successMessage = result.message
+            generatedInviteLink = result.inviteLink
+            
+            // Add to invited clients list
+            invitedClients.append(result.invitation)
+            
+            // Copy link to clipboard automatically
+            UIPasteboard.general.string = result.inviteLink
+            
+            // Don't close the sheet - let user see the link and copy it again if needed
+            
+            // Clear success message after 5 seconds (longer so user can see it)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
+                self.successMessage = ""
             }
             
-            print("✅ Invitation sent successfully")
+        } catch {
+            errorMessage = error.localizedDescription
         }
         
-        /*
-        // Real implementation would create an invitation document
-        let invitationData: [String: Any] = [
-            "trainerId": currentUser.uid,
-            "trainerName": currentUser.displayName ?? "Your Trainer",
-            "clientEmail": newClientEmail.trimmingCharacters(in: .whitespacesAndNewlines),
-            "status": "pending",
-            "createdAt": Timestamp(),
-            "expiresAt": Timestamp(date: Date().addingTimeInterval(7 * 24 * 60 * 60)) // 7 days
-        ]
-        
-        db.collection("invitations").addDocument(data: invitationData) { [weak self] error in
-            DispatchQueue.main.async {
-                self?.isLoading = false
-                
-                if let error = error {
-                    print("❌ Error sending invitation: \(error.localizedDescription)")
-                    self?.errorMessage = "Failed to send invitation"
-                } else {
-                    print("✅ Invitation sent successfully")
-                    self?.successMessage = "Invitation sent to \(self?.newClientEmail ?? "")!"
-                    self?.newClientEmail = ""
-                    self?.showInviteClientSheet = false
-                    
-                    // Here you would also trigger an email/notification to the client
-                    // This could be done via Cloud Functions
-                }
-            }
-        }
-        */
+        isLoading = false
     }
     
     func inviteClientWithDetails(_ invitation: ClientInvitation) {

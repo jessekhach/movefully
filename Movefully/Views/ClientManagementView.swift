@@ -16,11 +16,13 @@ struct ClientManagementView: View {
                 accessibilityLabel: "Invite Client"
             )
         ) {
-            // Search field with tighter spacing for trainer views
-            MovefullySearchField(
-                placeholder: "Search clients...",
-                text: $searchText
-            )
+            // Search field - only show when there are clients to search
+            if !viewModel.clients.isEmpty {
+                MovefullySearchField(
+                    placeholder: "Search clients...",
+                    text: $searchText
+                )
+            }
             
             // Clients content
             clientsContent
@@ -318,74 +320,279 @@ struct EmptyStateView: View {
     }
 }
 
-// MARK: - Simple Invite Sheet
+// MARK: - Redesigned Invite Sheet
 struct InviteClientSheet: View {
     @EnvironmentObject var viewModel: ClientManagementViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var clientName = ""
     @State private var clientEmail = ""
+    @State private var clientPhone = ""
     @State private var note = ""
+    @State private var showingCopyConfirmation = false
+    @State private var showingLinkView = false
+    
+    private var isFormValid: Bool {
+        !clientName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
     
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: MovefullyTheme.Layout.paddingXL) {
-                    VStack(spacing: MovefullyTheme.Layout.paddingM) {
-                        Text("Invite Client")
-                            .font(MovefullyTheme.Typography.title2)
+            if showingLinkView && !viewModel.generatedInviteLink.isEmpty {
+                // Link Generated View
+                linkGeneratedView
+            } else {
+                // Form Input View
+                formInputView
+            }
+        }
+        .alert("Link Copied!", isPresented: $showingCopyConfirmation) {
+            Button("OK") { }
+        } message: {
+            Text("The invitation link has been copied to your clipboard.")
+        }
+        .onChange(of: viewModel.showInviteClientSheet) { newValue in
+            if !newValue {
+                // Reset form when sheet is dismissed
+                clientName = ""
+                clientEmail = ""
+                clientPhone = ""
+                note = ""
+                showingLinkView = false
+                viewModel.errorMessage = ""
+                viewModel.generatedInviteLink = ""
+            }
+        }
+    }
+    
+    // MARK: - Form Input View
+    private var formInputView: some View {
+        ScrollView {
+            VStack(spacing: MovefullyTheme.Layout.paddingXL) {
+                VStack(spacing: MovefullyTheme.Layout.paddingM) {
+                    Text("Invite Client")
+                        .font(MovefullyTheme.Typography.title2)
+                        .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                    
+                    Text("Create a personalized invitation link for your client")
+                        .font(MovefullyTheme.Typography.body)
+                        .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                        .multilineTextAlignment(.center)
+                }
+                .padding(.top, MovefullyTheme.Layout.paddingL)
+                
+                // Show error message if present
+                if !viewModel.errorMessage.isEmpty {
+                    Text(viewModel.errorMessage)
+                        .font(MovefullyTheme.Typography.body)
+                        .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                        .padding(MovefullyTheme.Layout.paddingM)
+                        .background(MovefullyTheme.Colors.textSecondary.opacity(0.1))
+                        .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusS))
+                }
+                
+                VStack(spacing: MovefullyTheme.Layout.paddingL) {
+                    FormField(title: "Name", text: $clientName, placeholder: "Client's full name", isRequired: true)
+                    FormField(title: "Email", text: $clientEmail, placeholder: "client@example.com", isRequired: false)
+                    FormField(title: "Phone", text: $clientPhone, placeholder: "(555) 123-4567", isRequired: false)
+                    
+                    VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingS) {
+                        Text("Personal Note (Optional)")
+                            .font(MovefullyTheme.Typography.bodyMedium)
                             .foregroundColor(MovefullyTheme.Colors.textPrimary)
                         
-                        Text("Send an invitation to start their wellness journey.")
+                        TextField("Add a personal message...", text: $note, axis: .vertical)
                             .font(MovefullyTheme.Typography.body)
-                            .foregroundColor(MovefullyTheme.Colors.textSecondary)
-                            .multilineTextAlignment(.center)
+                            .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                            .lineLimit(3...6)
+                            .padding(MovefullyTheme.Layout.paddingM)
+                            .background(MovefullyTheme.Colors.cardBackground)
+                            .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
                     }
-                    .padding(.top, MovefullyTheme.Layout.paddingL)
-                    
-                    VStack(spacing: MovefullyTheme.Layout.paddingL) {
-                        FormField(title: "Name", text: $clientName, placeholder: "Client's full name")
-                        FormField(title: "Email", text: $clientEmail, placeholder: "client@example.com")
-                        
-                        VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingS) {
-                            Text("Personal Note (Optional)")
-                                .font(MovefullyTheme.Typography.bodyMedium)
-                                .foregroundColor(MovefullyTheme.Colors.textPrimary)
-                            
-                            TextField("Add a personal message...", text: $note, axis: .vertical)
-                                .font(MovefullyTheme.Typography.body)
-                                .foregroundColor(MovefullyTheme.Colors.textPrimary)
-                                .lineLimit(3...6)
-                                .padding(MovefullyTheme.Layout.paddingM)
-                                .background(MovefullyTheme.Colors.cardBackground)
-                                .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
+                }
+                
+                Button {
+                    Task {
+                        await viewModel.createInviteLink(
+                            clientName: clientName.trimmingCharacters(in: .whitespacesAndNewlines),
+                            clientEmail: clientEmail.trimmingCharacters(in: .whitespacesAndNewlines),
+                            personalNote: note
+                        )
+                        if !viewModel.generatedInviteLink.isEmpty {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                showingLinkView = true
+                            }
                         }
                     }
-                    
-                    Button("Send Invitation") {
-                        // Send invitation logic
-                        dismiss()
+                } label: {
+                    HStack {
+                        if viewModel.isLoading {
+                            ProgressView()
+                                .scaleEffect(0.9)
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        } else {
+                            Image(systemName: "link")
+                                .font(.system(size: 16, weight: .medium))
+                        }
+                        
+                        Text(viewModel.isLoading ? "Creating Link..." : "Create Invite Link")
+                            .font(MovefullyTheme.Typography.buttonMedium)
                     }
-                    .font(MovefullyTheme.Typography.buttonMedium)
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, MovefullyTheme.Layout.paddingL)
                     .background(MovefullyTheme.Colors.primaryTeal)
                     .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusL))
-                    .disabled(clientName.isEmpty || clientEmail.isEmpty)
-                    .opacity(clientName.isEmpty || clientEmail.isEmpty ? 0.6 : 1.0)
                 }
-                .padding(.horizontal, MovefullyTheme.Layout.paddingXL)
-                .padding(.bottom, MovefullyTheme.Layout.paddingXXL)
+                .disabled(!isFormValid || viewModel.isLoading)
+                .opacity(!isFormValid || viewModel.isLoading ? 0.6 : 1.0)
+                
+                Spacer()
             }
-            .background(MovefullyTheme.Colors.backgroundPrimary)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
+            .padding(.horizontal, MovefullyTheme.Layout.paddingXL)
+            .padding(.bottom, MovefullyTheme.Layout.paddingXXL)
+        }
+        .background(MovefullyTheme.Colors.backgroundPrimary)
+        .navigationTitle("Invite Client")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button("Cancel") { dismiss() }
                     .foregroundColor(MovefullyTheme.Colors.textSecondary)
+            }
+        }
+    }
+    
+    // MARK: - Link Generated View
+    private var linkGeneratedView: some View {
+        VStack(spacing: MovefullyTheme.Layout.paddingXL) {
+            Spacer()
+            
+            // Success Icon and Message
+            VStack(spacing: MovefullyTheme.Layout.paddingL) {
+                ZStack {
+                    Circle()
+                        .fill(MovefullyTheme.Colors.success.opacity(0.15))
+                        .frame(width: 80, height: 80)
+                    
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 40, weight: .medium))
+                        .foregroundColor(MovefullyTheme.Colors.success)
                 }
+                
+                VStack(spacing: MovefullyTheme.Layout.paddingS) {
+                    Text("Invitation Link Created!")
+                        .font(MovefullyTheme.Typography.title2)
+                        .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                    
+                    Text("Share this link with \(clientName)")
+                        .font(MovefullyTheme.Typography.body)
+                        .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                        .multilineTextAlignment(.center)
+                }
+            }
+            
+            // Link Display
+            VStack(spacing: MovefullyTheme.Layout.paddingM) {
+                HStack {
+                    Text(viewModel.generatedInviteLink)
+                        .font(MovefullyTheme.Typography.body)
+                        .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+                        .lineLimit(3)
+                        .multilineTextAlignment(.leading)
+                        .textSelection(.enabled)
+                    
+                    Spacer()
+                }
+                .padding(MovefullyTheme.Layout.paddingL)
+                .background(MovefullyTheme.Colors.primaryTeal.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusL))
+                .overlay(
+                    RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusL)
+                        .stroke(MovefullyTheme.Colors.primaryTeal.opacity(0.3), lineWidth: 1)
+                )
+                
+                // Action Buttons
+                HStack(spacing: MovefullyTheme.Layout.paddingM) {
+                    // Copy Button
+                    Button {
+                        UIPasteboard.general.string = viewModel.generatedInviteLink
+                        showingCopyConfirmation = true
+                    } label: {
+                        HStack {
+                            Image(systemName: "doc.on.doc")
+                                .font(.system(size: 16, weight: .medium))
+                            Text("Copy")
+                        }
+                        .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, MovefullyTheme.Layout.paddingM)
+                        .background(MovefullyTheme.Colors.primaryTeal.opacity(0.1))
+                        .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusL))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusL)
+                                .stroke(MovefullyTheme.Colors.primaryTeal, lineWidth: 1)
+                        )
+                    }
+                    
+                    // Share Button
+                    ShareLink(
+                        item: viewModel.generatedInviteLink,
+                        subject: Text("Movefully Invitation"),
+                        message: Text("Hi \(clientName)! I've created your personalized Movefully invitation. Click the link below to get started with your wellness journey.")
+                    ) {
+                        HStack {
+                            Image(systemName: "square.and.arrow.up")
+                                .font(.system(size: 16, weight: .medium))
+                            Text("Share")
+                        }
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, MovefullyTheme.Layout.paddingM)
+                        .background(MovefullyTheme.Colors.primaryTeal)
+                        .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusL))
+                    }
+                }
+            }
+            
+            // Expiration Notice
+            HStack {
+                Image(systemName: "clock")
+                    .font(.system(size: 14))
+                    .foregroundColor(MovefullyTheme.Colors.textTertiary)
+                
+                Text("Link expires in 7 days")
+                    .font(MovefullyTheme.Typography.caption)
+                    .foregroundColor(MovefullyTheme.Colors.textTertiary)
+            }
+            .padding(.horizontal, MovefullyTheme.Layout.paddingM)
+            .padding(.vertical, MovefullyTheme.Layout.paddingS)
+            .background(MovefullyTheme.Colors.backgroundSecondary)
+            .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
+            
+            Spacer()
+            
+            // Done Button
+            Button("Done") {
+                dismiss()
+            }
+            .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, MovefullyTheme.Layout.paddingM)
+            .background(MovefullyTheme.Colors.primaryTeal.opacity(0.1))
+            .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusL))
+            .overlay(
+                RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusL)
+                    .stroke(MovefullyTheme.Colors.primaryTeal, lineWidth: 1)
+            )
+        }
+        .padding(.horizontal, MovefullyTheme.Layout.paddingXL)
+        .background(MovefullyTheme.Colors.backgroundPrimary)
+        .navigationTitle("Invitation Ready")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button("Done") { dismiss() }
+                    .foregroundColor(MovefullyTheme.Colors.primaryTeal)
             }
         }
     }
@@ -396,12 +603,30 @@ struct FormField: View {
     let title: String
     @Binding var text: String
     let placeholder: String
+    let isRequired: Bool
+    
+    init(title: String, text: Binding<String>, placeholder: String, isRequired: Bool = false) {
+        self.title = title
+        self._text = text
+        self.placeholder = placeholder
+        self.isRequired = isRequired
+    }
     
     var body: some View {
         VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingS) {
-            Text(title)
-                .font(MovefullyTheme.Typography.bodyMedium)
-                .foregroundColor(MovefullyTheme.Colors.textPrimary)
+            HStack {
+                Text(title)
+                    .font(MovefullyTheme.Typography.bodyMedium)
+                    .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                
+                if !isRequired {
+                    Text("(Optional)")
+                        .font(MovefullyTheme.Typography.caption)
+                        .foregroundColor(MovefullyTheme.Colors.textTertiary)
+                }
+                
+                Spacer()
+            }
             
             TextField(placeholder, text: $text)
                 .font(MovefullyTheme.Typography.body)
@@ -409,6 +634,8 @@ struct FormField: View {
                 .padding(MovefullyTheme.Layout.paddingM)
                 .background(MovefullyTheme.Colors.cardBackground)
                 .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
+                .keyboardType(title == "Phone" ? .phonePad : (title == "Email" ? .emailAddress : .default))
+                .autocapitalization(title == "Email" ? .none : .words)
         }
     }
 } 

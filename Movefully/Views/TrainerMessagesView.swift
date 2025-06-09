@@ -9,11 +9,13 @@ struct TrainerMessagesView: View {
             title: "Conversations",
             showProfileButton: false
         ) {
-            // Search field with tighter spacing for trainer views
-            MovefullySearchField(
-                placeholder: "Search conversations...",
-                text: $viewModel.searchText
-            )
+            // Search field - only show when there are conversations to search
+            if !viewModel.conversations.isEmpty {
+                MovefullySearchField(
+                    placeholder: "Search conversations...",
+                    text: $viewModel.searchText
+                )
+            }
             
             // Messages content
             messagesContent

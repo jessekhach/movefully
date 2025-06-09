@@ -31,13 +31,15 @@ struct ClientPlansManagementView: View {
                     .padding(.horizontal, MovefullyTheme.Layout.paddingL)
                     .padding(.bottom, MovefullyTheme.Layout.paddingL)
                     
-                    // Search Bar
-                    MovefullySearchField(
-                        placeholder: "Search plans...",
-                        text: $searchText
-                    )
-                    .padding(.horizontal, MovefullyTheme.Layout.paddingL)
-                    .padding(.bottom, MovefullyTheme.Layout.paddingM)
+                    // Search Bar - only show when there are plans to search
+                    if !viewModel.programs.isEmpty {
+                        MovefullySearchField(
+                            placeholder: "Search plans...",
+                            text: $searchText
+                        )
+                        .padding(.horizontal, MovefullyTheme.Layout.paddingL)
+                        .padding(.bottom, MovefullyTheme.Layout.paddingM)
+                    }
                     
                     // Content
                     ScrollView(.vertical, showsIndicators: false) {
