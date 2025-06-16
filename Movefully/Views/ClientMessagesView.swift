@@ -6,6 +6,9 @@ struct ClientMessagesView: View {
     @ObservedObject private var themeManager = ThemeManager.shared
     @State private var messageText = ""
     @State private var showingTrainerProfile = false
+    @State private var previousMessageCount = 0
+    @State private var isLoadingMoreMessages = false
+    @State private var scrollAnchorMessageId: String? = nil
     @FocusState private var isMessageFieldFocused: Bool
     
     var body: some View {
@@ -18,6 +21,50 @@ struct ClientMessagesView: View {
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(spacing: MovefullyTheme.Layout.paddingM) {
+                            // Load More button at the top
+                            if viewModel.clientMessagesService.hasMoreMessages && !viewModel.messages.isEmpty {
+                                Button(action: {
+                                    print("🔄 CLIENT LOAD MORE: Starting load more process")
+                                    print("🔄 CLIENT LOAD MORE: Current message count: \(viewModel.messages.count)")
+                                    
+                                    // Find a stable anchor message (not the first one, but one that's more likely to stay visible)
+                                    if viewModel.messages.count > 5 {
+                                        scrollAnchorMessageId = viewModel.messages[5].id // Use 6th message as anchor
+                                        print("🔄 CLIENT LOAD MORE: Using anchor message: \(scrollAnchorMessageId!)")
+                                    } else if let firstMessage = viewModel.messages.first {
+                                        scrollAnchorMessageId = firstMessage.id
+                                        print("🔄 CLIENT LOAD MORE: Using first message as anchor: \(scrollAnchorMessageId!)")
+                                    }
+                                    
+                                    isLoadingMoreMessages = true
+                                    print("🔄 CLIENT LOAD MORE: Calling viewModel.loadMoreMessages()")
+                                    viewModel.loadMoreMessages()
+                                }) {
+                                    HStack(spacing: MovefullyTheme.Layout.paddingS) {
+                                        if viewModel.clientMessagesService.isLoadingMore {
+                                            ProgressView()
+                                                .scaleEffect(0.8)
+                                                .tint(MovefullyTheme.Colors.primaryTeal)
+                                        } else {
+                                            Image(systemName: "arrow.up.circle")
+                                                .font(.system(size: 16, weight: .medium))
+                                                .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+                                        }
+                                        
+                                        Text(viewModel.clientMessagesService.isLoadingMore ? "Loading..." : "Load More Messages")
+                                            .font(MovefullyTheme.Typography.body)
+                                            .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+                                    }
+                                    .padding(.horizontal, MovefullyTheme.Layout.paddingL)
+                                    .padding(.vertical, MovefullyTheme.Layout.paddingM)
+                                    .background(MovefullyTheme.Colors.cardBackground)
+                                    .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
+                                    .shadow(color: MovefullyTheme.Effects.cardShadow.opacity(0.3), radius: 4, x: 0, y: 2)
+                                }
+                                .disabled(viewModel.clientMessagesService.isLoadingMore)
+                                .padding(.bottom, MovefullyTheme.Layout.paddingM)
+                            }
+                            
                             ForEach(viewModel.messages) { message in
                                 MessageBubble(
                                     message: message,
@@ -25,6 +72,11 @@ struct ClientMessagesView: View {
                                 )
                                 .id(message.id)
                             }
+                            
+                            // Invisible spacer at the very bottom for scroll targeting
+                            Color.clear
+                                .frame(height: 1)
+                                .id("bottom")
                         }
                         .padding(.horizontal, MovefullyTheme.Layout.paddingL)
                         .padding(.vertical, MovefullyTheme.Layout.paddingM)
@@ -33,12 +85,55 @@ struct ClientMessagesView: View {
                         // Dismiss keyboard when tapping outside of text field
                         isMessageFieldFocused = false
                     }
-                    .onChange(of: viewModel.messages.count) { _ in
-                        // Auto-scroll to bottom when new message is added
-                        if let lastMessage = viewModel.messages.last {
-                            withAnimation(.easeInOut(duration: 0.3)) {
-                                proxy.scrollTo(lastMessage.id, anchor: .bottom)
+                    .onAppear {
+                        // Auto-scroll to bottom when view first appears
+                        if !viewModel.messages.isEmpty {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                withAnimation(.easeInOut(duration: 0.3)) {
+                                    proxy.scrollTo("bottom", anchor: .bottom)
+                                }
                             }
+                        }
+                        previousMessageCount = viewModel.messages.count
+                    }
+                    .onChange(of: viewModel.messages.count) {
+                        // Handle message count changes with immediate scroll preservation
+                        let newMessageCount = viewModel.messages.count
+                        
+                        print("📊 CLIENT MESSAGE COUNT CHANGE: \(previousMessageCount) -> \(newMessageCount)")
+                        print("📊 CLIENT MESSAGE COUNT CHANGE: isLoadingMoreMessages = \(isLoadingMoreMessages)")
+                        
+                        if isLoadingMoreMessages {
+                            // We're loading more messages - immediately scroll to anchor without animation
+                            print("📊 CLIENT MESSAGE COUNT CHANGE: Loading more messages - restoring to anchor")
+                            
+                            if let anchorId = scrollAnchorMessageId {
+                                print("🔄 CLIENT LOAD MORE: Immediately scrolling to anchor: \(anchorId)")
+                                
+                                // Scroll immediately without animation to prevent visible jump
+                                proxy.scrollTo(anchorId, anchor: .center)
+                                print("🔄 CLIENT LOAD MORE: Instant scroll command executed")
+                            }
+                            
+                            // Reset flags
+                            isLoadingMoreMessages = false
+                            scrollAnchorMessageId = nil
+                            previousMessageCount = newMessageCount
+                            
+                            print("📊 CLIENT MESSAGE COUNT CHANGE: Flags reset, instant scroll restoration complete")
+                            
+                        } else if newMessageCount > previousMessageCount {
+                            // New messages were added (not loaded from history), auto-scroll to bottom
+                            print("📊 CLIENT MESSAGE COUNT CHANGE: New messages detected - auto-scrolling to bottom")
+                            if !viewModel.messages.isEmpty {
+                                withAnimation(.easeInOut(duration: 0.3)) {
+                                    proxy.scrollTo("bottom", anchor: .bottom)
+                                }
+                            }
+                            previousMessageCount = newMessageCount
+                        } else {
+                            print("📊 CLIENT MESSAGE COUNT CHANGE: Message count decreased or stayed same - no action")
+                            previousMessageCount = newMessageCount
                         }
                     }
                 }
@@ -51,7 +146,20 @@ struct ClientMessagesView: View {
             .navigationBarTitleDisplayMode(.inline)
         }
         .sheet(isPresented: $showingTrainerProfile) {
-            ClientViewTrainerProfileView(trainer: sampleTrainer)
+            if let trainer = viewModel.clientMessagesService.trainerProfile {
+                ClientViewTrainerProfileView(trainer: trainer)
+            } else {
+                // Fallback view while trainer profile is loading
+                VStack(spacing: MovefullyTheme.Layout.paddingL) {
+                    ProgressView()
+                        .scaleEffect(1.2)
+                    Text("Loading trainer profile...")
+                        .font(MovefullyTheme.Typography.body)
+                        .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(MovefullyTheme.Colors.backgroundPrimary)
+            }
         }
     }
     
@@ -65,33 +173,51 @@ struct ClientMessagesView: View {
             }) {
                 HStack(spacing: MovefullyTheme.Layout.paddingM) {
                     // Trainer avatar
-                    AsyncImage(url: URL(string: sampleTrainer.profileImageUrl ?? "")) { image in
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                    } placeholder: {
-                        Image(systemName: "person.circle.fill")
-                            .foregroundColor(MovefullyTheme.Colors.primaryTeal)
-                    }
-                    .frame(width: 50, height: 50)
-                    .clipShape(Circle())
-                    .overlay(
+                    if let trainer = viewModel.clientMessagesService.trainerProfile {
+                        AsyncImage(url: URL(string: trainer.profileImageUrl ?? "")) { image in
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                        } placeholder: {
+                            // Show trainer initials if no profile image
+                            ZStack {
+                                Circle()
+                                    .fill(MovefullyTheme.Colors.primaryTeal.opacity(0.8))
+                                
+                                Text(trainerInitials(for: trainer.name))
+                                    .font(.system(size: 18, weight: .semibold, design: .rounded))
+                                    .foregroundColor(.white)
+                            }
+                        }
+                        .frame(width: 50, height: 50)
+                        .clipShape(Circle())
+                        .overlay(
+                            Circle()
+                                .stroke(MovefullyTheme.Colors.primaryTeal.opacity(0.2), lineWidth: 2)
+                        )
+                    } else {
+                        // Loading placeholder
                         Circle()
-                            .stroke(MovefullyTheme.Colors.primaryTeal.opacity(0.2), lineWidth: 2)
-                    )
+                            .fill(MovefullyTheme.Colors.backgroundSecondary)
+                            .frame(width: 50, height: 50)
+                            .overlay(
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                            )
+                    }
                     
                     // Trainer info
                     VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingXS) {
-                        Text(sampleTrainer.name)
+                        Text(viewModel.clientMessagesService.trainerProfile?.name ?? "Loading...")
                             .font(MovefullyTheme.Typography.bodyMedium)
                             .foregroundColor(MovefullyTheme.Colors.textPrimary)
                         
                         HStack(spacing: MovefullyTheme.Layout.paddingXS) {
-                            Circle()
-                                .fill(MovefullyTheme.Colors.softGreen)
-                                .frame(width: 8, height: 8)
+                            Image(systemName: "location.circle.fill")
+                                .font(.system(size: 10))
+                                .foregroundColor(MovefullyTheme.Colors.primaryTeal)
                             
-                            Text("Online")
+                            Text(viewModel.clientMessagesService.trainerProfile?.location ?? "Loading location...")
                                 .font(MovefullyTheme.Typography.caption)
                                 .foregroundColor(MovefullyTheme.Colors.textSecondary)
                         }
@@ -160,17 +286,13 @@ struct ClientMessagesView: View {
         isMessageFieldFocused = false
     }
     
-    // MARK: - Sample Data
-    private var sampleTrainer: TrainerProfile {
-        TrainerProfile(
-            id: "trainer1",
-            name: "Alex Martinez",
-            email: "alex@movefully.com",
-            bio: "Certified movement coach specializing in mindful fitness and injury recovery. I believe every body is capable of beautiful movement.",
-            profileImageUrl: nil,
-            specialties: ["Mobility", "Recovery", "Mindful Movement"],
-            yearsOfExperience: 8
-        )
+    // MARK: - Helper Functions
+    
+    /// Generates initials from trainer name
+    private func trainerInitials(for name: String) -> String {
+        let components = name.split(separator: " ")
+        let initials = components.compactMap { $0.first }.map { String($0) }
+        return initials.prefix(2).joined().uppercased()
     }
 }
 

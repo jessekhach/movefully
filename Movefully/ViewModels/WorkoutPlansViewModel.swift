@@ -12,6 +12,10 @@ class ProgramsViewModel: ObservableObject {
     @Published var errorMessage = ""
     @Published var successMessage = ""
     
+    // Live usage counts
+    @Published var programAssignedCounts: [UUID: Int] = [:]
+    @Published var templateUsageCounts: [UUID: Int] = [:]
+    
     // Firebase Services
     private let templateService = TemplateDataService()
     private let exerciseService = ExerciseDataService()
@@ -27,7 +31,11 @@ class ProgramsViewModel: ObservableObject {
         // Subscribe to template updates
         templateService.$templates
             .receive(on: DispatchQueue.main)
-            .assign(to: \.workoutTemplates, on: self)
+            .sink { [weak self] templates in
+                self?.workoutTemplates = templates
+                // Update usage counts when templates change
+                self?.refreshTemplateUsageCounts()
+            }
             .store(in: &cancellables)
         
         // Subscribe to exercise updates
@@ -43,7 +51,11 @@ class ProgramsViewModel: ObservableObject {
         // Subscribe to program updates
         programService.$programs
             .receive(on: DispatchQueue.main)
-            .assign(to: \.programs, on: self)
+            .sink { [weak self] programs in
+                self?.programs = programs
+                // Update assigned counts when programs change
+                self?.refreshProgramAssignedCounts()
+            }
             .store(in: &cancellables)
         
         // Subscribe to loading states
@@ -86,10 +98,10 @@ class ProgramsViewModel: ObservableObject {
     }
     
     // MARK: - Template Management
-    func createTemplate(_ template: WorkoutTemplate) {
+    func createTemplate(_ template: WorkoutTemplate, exercisesWithPrescription: [ExerciseWithSetsReps]? = nil) {
         Task {
             do {
-                try await templateService.createTemplate(template)
+                try await templateService.createTemplate(template, exercisesWithPrescription: exercisesWithPrescription)
                 await MainActor.run {
                     self.successMessage = "Template created successfully!"
                     DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
@@ -108,11 +120,11 @@ class ProgramsViewModel: ObservableObject {
         }
     }
     
-    func updateTemplate(_ template: WorkoutTemplate) {
+    func updateTemplate(_ template: WorkoutTemplate, exercisesWithPrescription: [ExerciseWithSetsReps]? = nil) {
         print("✅ ProgramsViewModel: Starting template update for '\(template.name)'")
         Task {
             do {
-                try await templateService.updateTemplate(template)
+                try await templateService.updateTemplate(template, exercisesWithPrescription: exercisesWithPrescription)
                 await MainActor.run {
                     print("✅ ProgramsViewModel: Template update successful for '\\(template.name)'")
                     self.successMessage = "Template updated successfully!"
@@ -314,6 +326,74 @@ class ProgramsViewModel: ObservableObject {
     func clearMessages() {
         errorMessage = ""
         successMessage = ""
+    }
+    
+    // MARK: - Live Usage Count Management
+    
+    /// Refreshes the assigned client counts for all programs
+    func refreshProgramAssignedCounts() {
+        Task {
+            var newCounts: [UUID: Int] = [:]
+            
+            for program in programs {
+                do {
+                    let count = try await programService.getAssignedClientCount(for: program.id)
+                    newCounts[program.id] = count
+                } catch {
+                    print("❌ ProgramsViewModel: Failed to get assigned count for program \(program.name): \(error)")
+                    newCounts[program.id] = 0
+                }
+            }
+            
+            await MainActor.run {
+                self.programAssignedCounts = newCounts
+            }
+        }
+    }
+    
+    /// Refreshes the usage counts for all templates
+    func refreshTemplateUsageCounts() {
+        Task {
+            var newCounts: [UUID: Int] = [:]
+            
+            for template in workoutTemplates {
+                do {
+                    let count = try await templateService.getLiveUsageCount(for: template.id)
+                    newCounts[template.id] = count
+                } catch {
+                    print("❌ ProgramsViewModel: Failed to get usage count for template \(template.name): \(error)")
+                    newCounts[template.id] = 0
+                }
+            }
+            
+            await MainActor.run {
+                self.templateUsageCounts = newCounts
+            }
+        }
+    }
+    
+    /// Gets the live assigned count for a specific program
+    func getAssignedCount(for programId: UUID) -> Int {
+        return programAssignedCounts[programId] ?? 0
+    }
+    
+    /// Gets the live usage count for a specific template
+    func getUsageCount(for templateId: UUID) -> Int {
+        return templateUsageCounts[templateId] ?? 0
+    }
+    
+    // MARK: - Template Prescription Data
+    func loadTemplatePrescriptionData(for templateId: UUID) async -> [ExerciseWithSetsReps] {
+        do {
+            return try await templateService.getTemplatePrescriptionData(for: templateId)
+        } catch {
+            print("❌ ProgramsViewModel: Failed to load template prescription data: \(error)")
+            // Return default prescription data based on template exercises
+            if let template = workoutTemplates.first(where: { $0.id == templateId }) {
+                return template.exercises.map { ExerciseWithSetsReps(exercise: $0) }
+            }
+            return []
+        }
     }
 }
 

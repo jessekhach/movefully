@@ -79,7 +79,7 @@ class InvitationService: ObservableObject {
             name: invitation.clientName ?? currentUser.displayName ?? "Client",
             email: invitation.clientEmail,
             trainerId: invitation.trainerId,
-            status: .new,
+            status: .active,
             joinedDate: Date(),
             goal: invitation.goal,
             injuries: invitation.injuries,
@@ -88,6 +88,9 @@ class InvitationService: ObservableObject {
         
         // Save client to Firestore
         try await saveClient(client)
+        
+        // Update user role in users collection so AuthenticationViewModel recognizes the client role
+        try await updateUserRole(userId: currentUser.uid, role: "client", name: client.name, email: client.email)
         
         // Update invitation status
         try await updateInvitationStatus(invitationId: invitationId, status: .accepted)
@@ -107,6 +110,11 @@ class InvitationService: ObservableObject {
         }
     }
     
+    /// Gets invitation details by ID for invitation acceptance
+    func getInvitationDetails(invitationId: String) async throws -> ClientInvitation {
+        return try await getInvitation(invitationId: invitationId)
+    }
+    
     // MARK: - Private Methods
     
     private func saveInvitation(_ invitation: ClientInvitation) async throws {
@@ -114,7 +122,19 @@ class InvitationService: ObservableObject {
     }
     
     private func saveClient(_ client: Client) async throws {
+        print("🔧 InvitationService: Saving client to main collection - ID: \(client.id), TrainerID: \(client.trainerId)")
+        // Save to main clients collection
         try db.collection("clients").document(client.id).setData(from: client)
+        print("✅ InvitationService: Successfully saved to main clients collection")
+        
+        print("🔧 InvitationService: Saving client to trainer's subcollection - TrainerID: \(client.trainerId)")
+        // Also save to trainer's clients subcollection so trainer dashboard can find it
+        try await db.collection("trainers")
+            .document(client.trainerId)
+            .collection("clients")
+            .document(client.id)
+            .setData(from: client)
+        print("✅ InvitationService: Successfully saved to trainer's clients subcollection")
     }
     
     private func getInvitation(invitationId: String) async throws -> ClientInvitation {
@@ -137,7 +157,13 @@ class InvitationService: ObservableObject {
         return "https://movefully.app/invite/\(invitationId)"
     }
     
-
+    private func updateUserRole(userId: String, role: String, name: String, email: String) async throws {
+        try await db.collection("users").document(userId).setData([
+            "role": role,
+            "name": name,
+            "email": email
+        ], merge: true)
+    }
     
     private func isValidEmail(_ email: String) -> Bool {
         let emailRegex = #"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"#

@@ -7,8 +7,20 @@ struct ClientScheduleView: View {
     @State private var selectedWeekOffset = 0
     @State private var selectedDate: Date?
     @State private var showingWorkoutDetail = false
-    @State private var showingWorkoutSession = false
     @State private var showingProfile = false
+    
+    // Animation states
+    @State private var weekTransitionDirection: TransitionDirection = .none
+    @State private var isWeekChanging = false
+    @State private var contentTransitionId = UUID()
+    
+    // Week navigation limits
+    private let maxWeekOffset = 4  // 4 weeks forward
+    private let minWeekOffset = -2 // 2 weeks back
+    
+    enum TransitionDirection {
+        case forward, backward, none
+    }
     
     var body: some View {
         NavigationStack {
@@ -19,15 +31,34 @@ struct ClientScheduleView: View {
                 // Main scrollable content
                 ScrollView {
                     VStack(spacing: MovefullyTheme.Layout.paddingXL) {
-                        // Week calendar
+                        // Week calendar with transition
                         weekCalendarSection
+                            .id(contentTransitionId)
+                            .transition(.asymmetric(
+                                insertion: .move(edge: weekTransitionDirection == .forward ? .trailing : .leading)
+                                    .combined(with: .opacity),
+                                removal: .move(edge: weekTransitionDirection == .forward ? .leading : .trailing)
+                                    .combined(with: .opacity)
+                            ))
                         
-                        // Selected day details
-                        if let selectedDate = selectedDate {
-                            selectedDayDetailsSection(for: selectedDate)
-                        } else {
-                            todayOverviewSection
+                        // Selected day details or no plan state with smooth transitions
+                        Group {
+                            if viewModel.hasNoPlan {
+                                ScheduleNoPlanCard()
+                                    .transition(.scale.combined(with: .opacity))
+                            } else if let selectedDate = selectedDate {
+                                selectedDayDetailsSection(for: selectedDate)
+                                    .transition(.asymmetric(
+                                        insertion: .scale(scale: 0.95).combined(with: .opacity),
+                                        removal: .scale(scale: 1.05).combined(with: .opacity)
+                                    ))
+                            } else {
+                                todayOverviewSection
+                                    .transition(.scale.combined(with: .opacity))
+                            }
                         }
+                        .animation(.easeInOut(duration: 0.25), value: selectedDate)
+                        .animation(.easeInOut(duration: 0.25), value: viewModel.hasNoPlan)
                         
                         Spacer(minLength: MovefullyTheme.Layout.paddingXXL)
                     }
@@ -44,43 +75,85 @@ struct ClientScheduleView: View {
                 WorkoutDetailView(assignment: assignment, viewModel: viewModel, isReadOnly: true)
             }
         }
-        .sheet(isPresented: $showingWorkoutSession) {
-            if let selectedDate = selectedDate,
-               let assignment = getWorkoutAssignment(for: selectedDate) {
-                WorkoutSessionView(assignment: assignment, viewModel: viewModel)
-            }
-        }
         .sheet(isPresented: $showingProfile) {
             // ClientProfileView will be added when available
         }
         .onAppear {
             // Set today as initially selected
             selectedDate = Date()
+            // Load weekly workouts if not already loaded
+            if viewModel.weeklyAssignments.isEmpty && !viewModel.hasNoPlan {
+                viewModel.loadRealData()
+            }
+        }
+        .onChange(of: selectedWeekOffset) { _, newOffset in
+            // Update weekly assignments from the preloaded data
+            if let assignments = viewModel.assignmentsByWeek[newOffset] {
+                viewModel.weeklyAssignments = assignments
+            }
+            
+            // Update selected date to maintain the same day of week in the new week
+            if let currentSelectedDate = selectedDate {
+                let calendar = Calendar.current
+                let selectedWeekday = calendar.component(.weekday, from: currentSelectedDate)
+                
+                // Find the corresponding day in the new week
+                let newWeekDates = currentWeekDates
+                if let correspondingDate = newWeekDates.first(where: { date in
+                    calendar.component(.weekday, from: date) == selectedWeekday
+                }) {
+                    selectedDate = correspondingDate
+                }
+            }
         }
     }
     
     // MARK: - Week Selector Section
     private var weekSelectorSection: some View {
         HStack {
-            Button(action: { selectedWeekOffset -= 1 }) {
+            Button(action: { 
+                if selectedWeekOffset > minWeekOffset {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        weekTransitionDirection = .backward
+                        selectedWeekOffset -= 1
+                        contentTransitionId = UUID()
+                    }
+                }
+            }) {
                 Image(systemName: "chevron.left")
                     .font(MovefullyTheme.Typography.title3)
-                    .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+                    .foregroundColor(selectedWeekOffset > minWeekOffset ? MovefullyTheme.Colors.primaryTeal : MovefullyTheme.Colors.textTertiary)
+                    .scaleEffect(selectedWeekOffset > minWeekOffset ? 1.0 : 0.8)
+                    .animation(.easeInOut(duration: 0.2), value: selectedWeekOffset > minWeekOffset)
             }
+            .disabled(selectedWeekOffset <= minWeekOffset)
             
             Spacer()
             
             Text(weekDisplayString)
                 .font(MovefullyTheme.Typography.bodyMedium)
                 .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                .contentTransition(.numericText())
+                .animation(.easeInOut(duration: 0.3), value: weekDisplayString)
             
             Spacer()
             
-            Button(action: { selectedWeekOffset += 1 }) {
+            Button(action: { 
+                if selectedWeekOffset < maxWeekOffset {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        weekTransitionDirection = .forward
+                        selectedWeekOffset += 1
+                        contentTransitionId = UUID()
+                    }
+                }
+            }) {
                 Image(systemName: "chevron.right")
                     .font(MovefullyTheme.Typography.title3)
-                    .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+                    .foregroundColor(selectedWeekOffset < maxWeekOffset ? MovefullyTheme.Colors.primaryTeal : MovefullyTheme.Colors.textTertiary)
+                    .scaleEffect(selectedWeekOffset < maxWeekOffset ? 1.0 : 0.8)
+                    .animation(.easeInOut(duration: 0.2), value: selectedWeekOffset < maxWeekOffset)
             }
+            .disabled(selectedWeekOffset >= maxWeekOffset)
         }
         .padding(.horizontal, MovefullyTheme.Layout.paddingL)
         .padding(.vertical, MovefullyTheme.Layout.paddingM)
@@ -211,8 +284,24 @@ struct ClientScheduleView: View {
                 
                 Spacer()
                 
-                Button("Clear Selection") {
-                    selectedDate = nil
+                Button("Go To Today") {
+                    // Haptic feedback
+                    let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+                    impactFeedback.impactOccurred()
+                    
+                    withAnimation(.easeInOut(duration: 0.4)) {
+                        // Navigate to today's date
+                        let today = Date()
+                        selectedDate = today
+                        
+                        // Calculate which week offset contains today
+                        let currentWeekOffset = calculateWeekOffset(for: today)
+                        if currentWeekOffset != selectedWeekOffset {
+                            weekTransitionDirection = currentWeekOffset > selectedWeekOffset ? .forward : .backward
+                            selectedWeekOffset = currentWeekOffset
+                            contentTransitionId = UUID()
+                        }
+                    }
                 }
                 .font(MovefullyTheme.Typography.callout)
                 .foregroundColor(MovefullyTheme.Colors.primaryTeal)
@@ -224,9 +313,6 @@ struct ClientScheduleView: View {
                     isToday: Calendar.current.isDate(date, inSameDayAs: Date()),
                     onViewDetails: {
                         showingWorkoutDetail = true
-                    },
-                    onStartWorkout: {
-                        showingWorkoutSession = true
                     }
                 )
             } else {
@@ -271,7 +357,9 @@ struct ClientScheduleView: View {
     }
     
     private func getWorkoutAssignment(for date: Date) -> WorkoutAssignment? {
-        return WorkoutAssignment.sampleAssignments.first { assignment in
+        // Use the correct week's assignments from the cache
+        let weekAssignments = viewModel.assignmentsByWeek[selectedWeekOffset] ?? []
+        return weekAssignments.first { assignment in
             Calendar.current.isDate(assignment.date, inSameDayAs: date)
         }
     }
@@ -280,6 +368,23 @@ struct ClientScheduleView: View {
         let formatter = DateFormatter()
         formatter.dateStyle = style
         return formatter.string(from: date)
+    }
+    
+    private func calculateWeekOffset(for date: Date) -> Int {
+        let calendar = Calendar.current
+        let today = Date()
+        
+        // Get the start of the week for both dates
+        guard let targetWeekStart = calendar.dateInterval(of: .weekOfYear, for: date)?.start,
+              let todayWeekStart = calendar.dateInterval(of: .weekOfYear, for: today)?.start else {
+            return 0
+        }
+        
+        // Calculate the difference in weeks
+        let weekDifference = calendar.dateComponents([.weekOfYear], from: todayWeekStart, to: targetWeekStart).weekOfYear ?? 0
+        
+        // Clamp to the allowed range
+        return max(minWeekOffset, min(maxWeekOffset, weekDifference))
     }
 }
 
@@ -291,30 +396,58 @@ struct CalendarDayView: View {
     let assignment: WorkoutAssignment?
     let action: () -> Void
     @ObservedObject private var themeManager = ThemeManager.shared
+    @State private var isPressed = false
     
     var body: some View {
-        Button(action: action) {
+        Button(action: {
+            // Haptic feedback for selection
+            let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+            impactFeedback.impactOccurred()
+            
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                action()
+            }
+        }) {
             VStack(spacing: MovefullyTheme.Layout.paddingS) {
                 // Day number
                 Text("\(Calendar.current.component(.day, from: date))")
                     .font(MovefullyTheme.Typography.bodyMedium)
                     .foregroundColor(textColor)
+                    .animation(.easeInOut(duration: 0.2), value: textColor)
                 
-                // Status indicator
+                // Status indicator with pulse animation
                 statusIndicator
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, MovefullyTheme.Layout.paddingM)
-            .background(backgroundColor)
+            .background(
+                ZStack {
+                    // Base background
+                    backgroundColor
+                    
+                    // Selection ripple effect
+                    if isSelected {
+                        RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM)
+                            .fill(MovefullyTheme.Colors.primaryTeal.opacity(0.3))
+                            .scaleEffect(isSelected ? 1.1 : 0)
+                            .animation(.easeOut(duration: 0.4), value: isSelected)
+                    }
+                }
+            )
             .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
             .overlay(
                 RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM)
                     .stroke(borderColor, lineWidth: isToday ? 2 : 0)
+                    .animation(.easeInOut(duration: 0.2), value: isToday)
             )
-            .scaleEffect(isSelected ? 1.05 : 1.0)
-            .animation(.easeInOut(duration: 0.2), value: isSelected)
+            .scaleEffect(isSelected ? 1.05 : (isPressed ? 0.95 : 1.0))
+            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
+            .animation(.easeInOut(duration: 0.1), value: isPressed)
         }
         .buttonStyle(PlainButtonStyle())
+        .onLongPressGesture(minimumDuration: 0, maximumDistance: .infinity, pressing: { pressing in
+            isPressed = pressing
+        }, perform: {})
     }
     
     private var textColor: Color {
@@ -344,13 +477,30 @@ struct CalendarDayView: View {
     @ViewBuilder
     private var statusIndicator: some View {
         if let assignment = assignment {
-            Circle()
-                .fill(assignment.status.color)
-                .frame(width: 8, height: 8)
+            ZStack {
+                // Pulse effect for pending workouts
+                if assignment.status == .pending && isToday {
+                    Circle()
+                        .fill(assignment.status.color.opacity(0.3))
+                        .frame(width: 12, height: 12)
+                        .scaleEffect(1.5)
+                        .opacity(0.7)
+                        .animation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true), value: UUID())
+                }
+                
+                // Main status indicator
+                Circle()
+                    .fill(assignment.status.color)
+                    .frame(width: 8, height: 8)
+                    .scaleEffect(isSelected ? 1.2 : 1.0)
+                    .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isSelected)
+            }
         } else {
             Circle()
                 .fill(MovefullyTheme.Colors.divider)
                 .frame(width: 6, height: 6)
+                .scaleEffect(isSelected ? 1.2 : 1.0)
+                .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isSelected)
         }
     }
 }
@@ -360,17 +510,16 @@ struct WorkoutAssignmentCard: View {
     let assignment: WorkoutAssignment
     let isToday: Bool
     let onViewDetails: () -> Void
-    let onStartWorkout: () -> Void
     @ObservedObject private var themeManager = ThemeManager.shared
     
     var body: some View {
         MovefullyCard {
-            VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingM) {
+            VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingL) {
                 // Header
                 HStack {
                     VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingS) {
                         Text(assignment.title)
-                            .font(MovefullyTheme.Typography.bodyMedium)
+                            .font(MovefullyTheme.Typography.title2)
                             .foregroundColor(MovefullyTheme.Colors.textPrimary)
                         
                         Text(formatDate(assignment.date))
@@ -381,12 +530,12 @@ struct WorkoutAssignmentCard: View {
                     Spacer()
                     
                     Image(systemName: assignment.status.icon)
-                        .font(MovefullyTheme.Typography.title3)
+                        .font(MovefullyTheme.Typography.title2)
                         .foregroundColor(assignment.status.color)
                 }
                 
-                // Status and duration
-                HStack {
+                // Status and duration badges
+                HStack(spacing: MovefullyTheme.Layout.paddingS) {
                     MovefullyStatusBadge(
                         text: assignment.status.rawValue,
                         color: assignment.status.color,
@@ -408,41 +557,101 @@ struct WorkoutAssignmentCard: View {
                     Spacer()
                 }
                 
-                // Trainer notes
-                if let notes = assignment.trainerNotes {
+                // Trainer notes (if present)
+                if let notes = assignment.trainerNotes, !notes.isEmpty {
                     Text(notes)
                         .font(MovefullyTheme.Typography.body)
                         .foregroundColor(MovefullyTheme.Colors.textSecondary)
                         .lineLimit(3)
                         .padding(MovefullyTheme.Layout.paddingM)
-                        .background(MovefullyTheme.Colors.primaryTeal.opacity(0.05))
-                        .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusS))
+                        .background(MovefullyTheme.Colors.primaryTeal.opacity(0.08))
+                        .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
                 }
                 
-                // Action buttons
-                HStack(spacing: MovefullyTheme.Layout.paddingM) {
-                    Button("View Details") {
-                        onViewDetails()
-                    }
-                    .font(MovefullyTheme.Typography.buttonMedium)
-                    .foregroundColor(MovefullyTheme.Colors.primaryTeal)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, MovefullyTheme.Layout.paddingM)
-                    .background(MovefullyTheme.Colors.primaryTeal.opacity(0.15))
-                    .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
-                    
-                    if isToday {
-                        Button("Start Workout") {
-                            onStartWorkout()
+                // Exercise overview - compact list
+                if !assignment.exercises.isEmpty {
+                    VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingM) {
+                        Text("Exercises")
+                            .font(MovefullyTheme.Typography.bodyMedium)
+                            .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                        
+                        VStack(spacing: MovefullyTheme.Layout.paddingS) {
+                            ForEach(Array(assignment.exercises.prefix(3).enumerated()), id: \.element.id) { index, exercise in
+                                HStack(spacing: MovefullyTheme.Layout.paddingM) {
+                                    // Exercise number
+                                    Text("\(index + 1)")
+                                        .font(MovefullyTheme.Typography.caption)
+                                        .foregroundColor(.white)
+                                        .frame(width: 24, height: 24)
+                                        .background(MovefullyTheme.Colors.primaryTeal)
+                                        .clipShape(Circle())
+                                    
+                                    // Exercise name
+                                    Text(exercise.title)
+                                        .font(MovefullyTheme.Typography.callout)
+                                        .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                                        .lineLimit(1)
+                                    
+                                    Spacer()
+                                    
+                                    // Sets and reps/duration
+                                    HStack(spacing: MovefullyTheme.Layout.paddingXS) {
+                                        if let sets = exercise.sets {
+                                            Text("\(sets) sets")
+                                                .font(MovefullyTheme.Typography.caption)
+                                                .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                                        }
+                                        
+                                        switch exercise.exerciseType {
+                                        case .reps:
+                                            if let reps = exercise.reps {
+                                                Text("\(reps) reps")
+                                                    .font(MovefullyTheme.Typography.caption)
+                                                    .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                                            }
+                                        case .duration:
+                                            if let duration = exercise.duration {
+                                                Text("\(duration)s")
+                                                    .font(MovefullyTheme.Typography.caption)
+                                                    .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            // Show "and X more" if there are more than 3 exercises
+                            if assignment.exercises.count > 3 {
+                                HStack {
+                                    Text("• +\(assignment.exercises.count - 3) more exercises")
+                                        .font(MovefullyTheme.Typography.caption)
+                                        .foregroundColor(MovefullyTheme.Colors.textTertiary)
+                                        .italic()
+                                    Spacer()
+                                }
+                                .padding(.leading, MovefullyTheme.Layout.paddingXL)
+                            }
                         }
-                        .font(MovefullyTheme.Typography.buttonMedium)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, MovefullyTheme.Layout.paddingM)
-                        .background(MovefullyTheme.Colors.primaryTeal)
+                        .padding(MovefullyTheme.Layout.paddingM)
+                        .background(MovefullyTheme.Colors.cardBackground.opacity(0.3))
                         .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM)
+                                .stroke(MovefullyTheme.Colors.primaryTeal.opacity(0.1), lineWidth: 1)
+                        )
                     }
                 }
+                
+                // Action button
+                Button("View Details") {
+                    onViewDetails()
+                }
+                .font(MovefullyTheme.Typography.buttonMedium)
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, MovefullyTheme.Layout.paddingM)
+                .background(MovefullyTheme.Colors.primaryTeal)
+                .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
             }
         }
     }
@@ -509,6 +718,69 @@ struct RestDayCard: View {
         let formatter = DateFormatter()
         formatter.dateStyle = .full
         return formatter.string(from: date)
+    }
+}
+
+// MARK: - Schedule No Plan Card
+struct ScheduleNoPlanCard: View {
+    @ObservedObject private var themeManager = ThemeManager.shared
+    
+    var body: some View {
+        MovefullyCard {
+            VStack(spacing: MovefullyTheme.Layout.paddingL) {
+                Image(systemName: "calendar.badge.exclamationmark")
+                    .font(MovefullyTheme.Typography.largeTitle)
+                    .foregroundColor(MovefullyTheme.Colors.warmOrange)
+                
+                VStack(spacing: MovefullyTheme.Layout.paddingM) {
+                    Text("No Plan Assigned")
+                        .font(MovefullyTheme.Typography.title2)
+                        .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                    
+                    Text("You don't have a workout plan assigned yet. Your trainer will create a personalized plan for you soon!")
+                        .font(MovefullyTheme.Typography.body)
+                        .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(nil)
+                }
+                
+                // Gentle suggestions
+                VStack(spacing: MovefullyTheme.Layout.paddingM) {
+                    Text("In the meantime, you can:")
+                        .font(MovefullyTheme.Typography.bodyMedium)
+                        .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                    
+                    HStack(spacing: MovefullyTheme.Layout.paddingL) {
+                        VStack(spacing: MovefullyTheme.Layout.paddingS) {
+                            Text("💪")
+                                .font(MovefullyTheme.Typography.title3)
+                            Text("Browse\nexercises")
+                                .font(MovefullyTheme.Typography.caption)
+                                .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                                .multilineTextAlignment(.center)
+                        }
+                        
+                        VStack(spacing: MovefullyTheme.Layout.paddingS) {
+                            Text("📱")
+                                .font(MovefullyTheme.Typography.title3)
+                            Text("Message\ntrainer")
+                                .font(MovefullyTheme.Typography.caption)
+                                .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                                .multilineTextAlignment(.center)
+                        }
+                        
+                        VStack(spacing: MovefullyTheme.Layout.paddingS) {
+                            Text("🎯")
+                                .font(MovefullyTheme.Typography.title3)
+                            Text("Review\ngoals")
+                                .font(MovefullyTheme.Typography.caption)
+                                .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                                .multilineTextAlignment(.center)
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 

@@ -137,7 +137,7 @@ struct ExerciseLibraryCard: View {
                     Text(exercise.title)
                         .font(MovefullyTheme.Typography.bodyMedium)
                         .foregroundColor(MovefullyTheme.Colors.textPrimary)
-                        .lineLimit(2)
+                        .lineLimit(1)
                         .multilineTextAlignment(.leading)
                     
                     if let description = exercise.description {

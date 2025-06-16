@@ -1,4 +1,6 @@
 import SwiftUI
+import FirebaseAuth
+import FirebaseFirestore
 
 struct ProgramsManagementView: View {
     @StateObject private var viewModel = ProgramsViewModel()
@@ -49,7 +51,7 @@ struct ProgramsManagementView: View {
         } else {
             ForEach(filteredPrograms) { program in
             NavigationLink(destination: PlansDetailView(program: program).environmentObject(viewModel)) {
-                ProgramCard(program: program)
+                ProgramCard(program: program, viewModel: viewModel)
                 }
             .buttonStyle(PlainButtonStyle())
             }
@@ -80,10 +82,12 @@ struct ProgramsManagementView: View {
 // MARK: - Program Card
 struct ProgramCard: View {
     let program: Program
+    let viewModel: ProgramsViewModel
     let onTap: (() -> Void)?
     
-    init(program: Program, onTap: (() -> Void)? = nil) {
+    init(program: Program, viewModel: ProgramsViewModel, onTap: (() -> Void)? = nil) {
         self.program = program
+        self.viewModel = viewModel
         self.onTap = onTap
     }
     
@@ -138,7 +142,7 @@ struct ProgramCard: View {
                     
                     ProgramStatView(
                         icon: "person.2",
-                        value: "\(program.usageCount)",
+                        value: "\(viewModel.getAssignedCount(for: program.id))",
                         label: "assigned"
                     )
                     
@@ -149,8 +153,16 @@ struct ProgramCard: View {
                         .foregroundColor(MovefullyTheme.Colors.textTertiary)
                 }
                 
-                // Tags (if any)
-                if !program.tags.isEmpty {
+                // Tags section (always present)
+                if program.tags.isEmpty {
+                    HStack {
+                        Text("No tags assigned")
+                            .font(MovefullyTheme.Typography.caption)
+                            .foregroundColor(MovefullyTheme.Colors.textTertiary)
+                            .italic()
+                        Spacer()
+                    }
+                } else {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: MovefullyTheme.Layout.paddingS) {
                             ForEach(program.tags, id: \.self) { tag in
@@ -489,7 +501,48 @@ struct CreatePlanView: View {
     
     // MARK: - Step 4: Review and Save
     private var reviewAndSaveStep: some View {
-        MovefullyCard {
+        let basicInfoSection = PlanReviewSection(title: "Basic Information") {
+            VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingS) {
+                ReviewItem(label: "Name", value: planName)
+                ReviewItem(label: "Description", value: planDescription)
+                ReviewItem(label: "Duration", value: "\(selectedDuration) \(selectedDuration == 1 ? "week" : "weeks")")
+                ReviewItem(label: "Difficulty", value: selectedDifficulty.rawValue)
+                
+                if !selectedTags.isEmpty {
+                    ReviewItem(label: "Tags", value: Array(selectedTags).joined(separator: ", "))
+                }
+            }
+        }
+        
+        let workoutScheduleSection = PlanReviewSection(title: "Workout Schedule") {
+            VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingS) {
+                ReviewItem(label: "Total Days", value: "\(selectedDuration * 7) days")
+                ReviewItem(label: "Workout Days", value: "\(scheduledWorkouts.count)")
+                ReviewItem(label: "Rest Days", value: "\((selectedDuration * 7) - scheduledWorkouts.count)")
+                
+                if !scheduledWorkouts.isEmpty {
+                    VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingXS) {
+                        ForEach(scheduledWorkouts.keys.sorted(), id: \.self) { dayIndex in
+                            if let workout = scheduledWorkouts[dayIndex] {
+                                HStack {
+                                    Text("• Day \(dayIndex + 1): \(workout.title)")
+                                        .font(MovefullyTheme.Typography.caption)
+                                        .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                                    
+                                    Spacer()
+                                    
+                                    Text("-- min")
+                                        .font(MovefullyTheme.Typography.caption)
+                                        .foregroundColor(MovefullyTheme.Colors.textTertiary)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        return MovefullyCard {
             VStack(spacing: MovefullyTheme.Layout.paddingL) {
                 MovefullyPageHeader(
                     title: "Review Plan",
@@ -497,46 +550,8 @@ struct CreatePlanView: View {
                 )
                 
                 VStack(spacing: MovefullyTheme.Layout.paddingM) {
-                    PlanReviewSection(title: "Basic Information") {
-                        VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingS) {
-                            ReviewItem(label: "Name", value: planName)
-                            ReviewItem(label: "Description", value: planDescription)
-                            ReviewItem(label: "Duration", value: "\(selectedDuration) \(selectedDuration == 1 ? "week" : "weeks")")
-                            ReviewItem(label: "Difficulty", value: selectedDifficulty.rawValue)
-                            
-                            if !selectedTags.isEmpty {
-                                ReviewItem(label: "Tags", value: Array(selectedTags).joined(separator: ", "))
-                            }
-                        }
-                    }
-                    
-                    PlanReviewSection(title: "Workout Schedule") {
-                        VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingS) {
-                            ReviewItem(label: "Total Days", value: "\(selectedDuration * 7) days")
-                            ReviewItem(label: "Workout Days", value: "\(scheduledWorkouts.count)")
-                            ReviewItem(label: "Rest Days", value: "\((selectedDuration * 7) - scheduledWorkouts.count)")
-                            
-                            if !scheduledWorkouts.isEmpty {
-                                VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingXS) {
-                                    ForEach(scheduledWorkouts.keys.sorted(), id: \.self) { dayIndex in
-                                        if let workout = scheduledWorkouts[dayIndex] {
-                                            HStack {
-                                                Text("• Day \(dayIndex + 1): \(workout.title)")
-                                                    .font(MovefullyTheme.Typography.caption)
-                                                    .foregroundColor(MovefullyTheme.Colors.textSecondary)
-                                                
-                                                Spacer()
-                                                
-                                                Text("\(workout.estimatedDuration) min")
-                                                    .font(MovefullyTheme.Typography.caption)
-                                                    .foregroundColor(MovefullyTheme.Colors.textTertiary)
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    basicInfoSection
+                    workoutScheduleSection
                 }
             }
         }
@@ -610,6 +625,8 @@ struct CreatePlanView: View {
         let durationInDays = selectedDuration * 7
         let workouts = scheduledWorkouts.values.map { $0 }
         
+        // Debug output removed for cleaner logs
+        
                  return Program(
              name: planName,
              description: planDescription,
@@ -664,6 +681,8 @@ struct PlanSchedulingView: View {
     @State private var selectedWeekIndex = 0
     @State private var showingWorkoutSelector = false
     @State private var selectedDayIndex: Int?
+    @State private var lastTapTime: Date = Date.distantPast
+    @State private var isProcessingTap = false
     
     private var totalDays: Int { duration * 7 }
     private var currentWeekDays: [Int] {
@@ -693,6 +712,13 @@ struct PlanSchedulingView: View {
                     scheduledWorkouts: $scheduledWorkouts,
                     viewModel: viewModel
                 )
+            } else {
+                // Fallback in case of race condition
+                Text("Loading...")
+                    .onAppear {
+                        print("⚠️ Sheet presented with nil selectedDayIndex, dismissing...")
+                        showingWorkoutSelector = false
+                    }
             }
         }
     }
@@ -764,11 +790,39 @@ struct PlanSchedulingView: View {
                 ForEach(currentWeekDays, id: \.self) { dayIndex in
                     PlanCalendarDayView(
                         dayIndex: dayIndex,
-                        workout: scheduledWorkouts[dayIndex]
-                    ) {
-                        selectedDayIndex = dayIndex
-                        showingWorkoutSelector = true
-                    }
+                        workout: scheduledWorkouts[dayIndex],
+                        isProcessing: isProcessingTap && selectedDayIndex == dayIndex,
+                        onTap: {
+                            // Improved UX-friendly debounce with visual feedback
+                            let now = Date()
+                            let timeSinceLastTap = now.timeIntervalSince(lastTapTime)
+                            
+                            print("📅 Tapping day \(dayIndex + 1) (time since last: \(String(format: "%.2f", timeSinceLastTap))s)")
+                            
+                            // Much shorter debounce for better UX (0.15s instead of 0.5s)
+                            guard timeSinceLastTap > 0.15 && !isProcessingTap else {
+                                print("⚠️ Ignoring rapid tap on day \(dayIndex + 1) (processing: \(isProcessingTap))")
+                                return
+                            }
+                            
+                            lastTapTime = now
+                            
+                            // Visual feedback - show processing state
+                            isProcessingTap = true
+                            selectedDayIndex = dayIndex
+                            
+                            // Brief delay for smoother UX, then present sheet
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                                print("📅 Presenting WorkoutSelector for day \(dayIndex + 1)")
+                                showingWorkoutSelector = true
+                                
+                                // Reset processing state after a moment
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                    isProcessingTap = false
+                                }
+                            }
+                        }
+                    )
                 }
             }
         }
@@ -781,6 +835,7 @@ struct PlanSchedulingView: View {
 struct PlanCalendarDayView: View {
     let dayIndex: Int
     let workout: ScheduledWorkout?
+    let isProcessing: Bool
     let onTap: () -> Void
     
     private var dayNumber: Int {
@@ -794,7 +849,12 @@ struct PlanCalendarDayView: View {
                     .font(MovefullyTheme.Typography.caption)
                     .foregroundColor(MovefullyTheme.Colors.textSecondary)
                 
-                if let workout = workout {
+                if isProcessing {
+                    // Show loading state during processing
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: MovefullyTheme.Colors.primaryTeal))
+                        .scaleEffect(0.8)
+                } else if let workout = workout {
                     VStack(spacing: 4) {
                         Image(systemName: "dumbbell.fill")
                             .font(.system(size: 16))
@@ -823,14 +883,24 @@ struct PlanCalendarDayView: View {
             .frame(maxWidth: .infinity)
             .frame(height: 100)
             .padding(MovefullyTheme.Layout.paddingS)
-            .background(workout != nil ? MovefullyTheme.Colors.primaryTeal.opacity(0.1) : MovefullyTheme.Colors.cardBackground)
+            .background(
+                isProcessing ? MovefullyTheme.Colors.primaryTeal.opacity(0.2) :
+                workout != nil ? MovefullyTheme.Colors.primaryTeal.opacity(0.1) : MovefullyTheme.Colors.cardBackground
+            )
             .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
             .overlay(
                 RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM)
-                    .stroke(workout != nil ? MovefullyTheme.Colors.primaryTeal.opacity(0.3) : MovefullyTheme.Colors.divider, lineWidth: 1)
+                    .stroke(
+                        isProcessing ? MovefullyTheme.Colors.primaryTeal.opacity(0.5) :
+                        workout != nil ? MovefullyTheme.Colors.primaryTeal.opacity(0.3) : MovefullyTheme.Colors.divider, 
+                        lineWidth: isProcessing ? 2 : 1
+                    )
             )
+            .scaleEffect(isProcessing ? 0.95 : 1.0)
+            .animation(.easeInOut(duration: 0.1), value: isProcessing)
         }
         .buttonStyle(PlainButtonStyle())
+        .disabled(isProcessing)
     }
 }
 
@@ -845,13 +915,7 @@ struct WorkoutSelectorView: View {
     @State private var showingCustomWorkoutCreator = false
     
     private func currentWorkoutName(_ workout: ScheduledWorkout) -> String {
-        if let template = workout.workoutTemplate {
-            return template.name
-        } else if let customWorkout = workout.customWorkout {
-            return customWorkout.name
-        } else {
-            return "Unknown workout"
-        }
+        return workout.workoutTemplateName
     }
     
     var body: some View {
@@ -880,11 +944,14 @@ struct WorkoutSelectorView: View {
                 VStack(spacing: MovefullyTheme.Layout.paddingM) {
                     if scheduledWorkouts[dayIndex] == nil {
                         // Show add options when no workout is scheduled
+                        let _ = print("📱 Showing ADD options for day \(dayIndex + 1)")
+                        
                         WorkoutOptionCard(
                             icon: "list.clipboard.fill",
                             title: "Choose Template",
                             description: "Select from your existing workout templates"
                         ) {
+                            print("📱 Choose Template tapped for day \(dayIndex + 1)")
                             showingTemplateSelector = true
                         }
                         
@@ -893,15 +960,19 @@ struct WorkoutSelectorView: View {
                             title: "Create Custom Workout",
                             description: "Build a workout from scratch using exercises"
                         ) {
+                            print("📱 Create Custom Workout tapped for day \(dayIndex + 1)")
                             showingCustomWorkoutCreator = true
                         }
                     } else {
                         // Show modify options when workout is scheduled
+                        let _ = print("📱 Showing MODIFY options for day \(dayIndex + 1)")
+                        
                         WorkoutOptionCard(
                             icon: "list.clipboard.fill",
                             title: "Change Template",
                             description: "Replace with a different template"
                         ) {
+                            print("📱 Change Template tapped for day \(dayIndex + 1)")
                             showingTemplateSelector = true
                         }
                         
@@ -910,6 +981,7 @@ struct WorkoutSelectorView: View {
                             title: "Edit Custom Workout",
                             description: "Create a new custom workout instead"
                         ) {
+                            print("📱 Edit Custom Workout tapped for day \(dayIndex + 1)")
                             showingCustomWorkoutCreator = true
                         }
                         
@@ -919,13 +991,17 @@ struct WorkoutSelectorView: View {
                             description: "Make this a rest day",
                             color: MovefullyTheme.Colors.warmOrange
                         ) {
+                            print("📱 Remove Workout tapped for day \(dayIndex + 1)")
                             scheduledWorkouts.removeValue(forKey: dayIndex)
-                    dismiss()
-                }
+                            dismiss()
+                        }
                     }
                 }
                 
                 Spacer()
+            }
+            .onAppear {
+                print("📅 WorkoutSelectorView appeared for day \(dayIndex + 1), has workout: \(scheduledWorkouts[dayIndex] != nil)")
             }
             .padding(MovefullyTheme.Layout.paddingL)
             .navigationTitle("Add Workout")
@@ -1058,16 +1134,55 @@ struct TemplatePickerView: View {
                 .padding(.horizontal, MovefullyTheme.Layout.paddingL)
                 .padding(.bottom, MovefullyTheme.Layout.paddingM)
                 
-                ScrollView {
-                    LazyVStack(spacing: MovefullyTheme.Layout.paddingM) {
-                        ForEach(filteredTemplates) { template in
-                            TemplateSelectionCard(template: template) {
-                                selectTemplate(template)
-                            }
-                        }
+                if viewModel.isLoading {
+                    // Show loading state while templates are being fetched
+                    VStack(spacing: MovefullyTheme.Layout.paddingL) {
+                        Spacer()
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: MovefullyTheme.Colors.primaryTeal))
+                            .scaleEffect(1.2)
+                        
+                        Text("Loading templates...")
+                            .font(MovefullyTheme.Typography.body)
+                            .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                        Spacer()
+                    }
+                } else if filteredTemplates.isEmpty {
+                    // Show empty state when no templates found
+                    VStack(spacing: MovefullyTheme.Layout.paddingL) {
+                        Spacer()
+                        
+                        Image(systemName: searchText.isEmpty ? "doc.text.fill" : "magnifyingglass")
+                            .font(.system(size: 48))
+                            .foregroundColor(MovefullyTheme.Colors.textTertiary)
+                        
+                        Text(searchText.isEmpty ? "No Templates Yet" : "No Templates Found")
+                            .font(MovefullyTheme.Typography.title3)
+                            .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                        
+                        Text(searchText.isEmpty ? 
+                             "Create workout templates to use in your programs." : 
+                             "Try adjusting your search terms.")
+                            .font(MovefullyTheme.Typography.body)
+                            .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                            .multilineTextAlignment(.center)
+                        
+                        Spacer()
                     }
                     .padding(.horizontal, MovefullyTheme.Layout.paddingL)
-                    .padding(.bottom, MovefullyTheme.Layout.paddingXL)
+                } else {
+                    // Show templates list
+                    ScrollView {
+                        LazyVStack(spacing: MovefullyTheme.Layout.paddingM) {
+                            ForEach(filteredTemplates) { template in
+                                TemplateSelectionCard(template: template) {
+                                    selectTemplate(template)
+                                }
+                            }
+                        }
+                        .padding(.horizontal, MovefullyTheme.Layout.paddingL)
+                        .padding(.bottom, MovefullyTheme.Layout.paddingXL)
+                    }
                 }
             }
             .navigationTitle("Choose Template")
@@ -1085,8 +1200,11 @@ struct TemplatePickerView: View {
         let scheduledDate = Calendar.current.date(byAdding: .day, value: dayIndex, to: Date()) ?? Date()
         let scheduledWorkout = ScheduledWorkout(
             date: scheduledDate,
-            workoutTemplate: template
+            workoutTemplateId: template.id,
+            workoutTemplateName: template.name,
+            programDay: dayIndex + 1 // Convert 0-based dayIndex to 1-based program day
         )
+        
         scheduledWorkouts[dayIndex] = scheduledWorkout
         dismiss()
         onTemplateSelected()
@@ -1190,7 +1308,7 @@ struct CustomWorkoutCreatorView: View {
                         )
                     }
                     
-                    MovefullyFormField(title: "Description (Optional)") {
+                    MovefullyFormField(title: "Description") {
                         MovefullyTextField(
                             placeholder: "Brief description...",
                             text: $workoutDescription
@@ -1279,34 +1397,56 @@ struct CustomWorkoutCreatorView: View {
                         saveCustomWorkout()
                     }
                     .foregroundColor(MovefullyTheme.Colors.primaryTeal)
-                    .disabled(workoutName.isEmpty || selectedExercises.isEmpty)
+                    .disabled(workoutName.isEmpty || workoutDescription.isEmpty || selectedExercises.isEmpty)
                 }
             }
         }
         .sheet(isPresented: $showingExerciseSelector) {
-            ExerciseSelectorView(selectedExercises: $selectedExercises)
+            ExerciseSelectorView(selectedExercises: $selectedExercises, viewModel: viewModel)
         }
     }
     
     private func saveCustomWorkout() {
-        let customWorkout = CustomWorkout(
-            name: workoutName,
-            description: workoutDescription,
-            exercises: selectedExercises.map { $0.exercise },
-            estimatedDuration: estimatedDuration,
-            difficulty: difficulty,
-            createdDate: Date()
-        )
-        
-        let scheduledDate = Calendar.current.date(byAdding: .day, value: dayIndex, to: Date()) ?? Date()
-        let scheduledWorkout = ScheduledWorkout(
-            date: scheduledDate,
-            customWorkout: customWorkout
-        )
-        
-        scheduledWorkouts[dayIndex] = scheduledWorkout
-        dismiss()
-        onWorkoutCreated()
+        Task {
+            do {
+                // Create a CustomWorkout object first
+                let customWorkout = CustomWorkout(
+                    name: workoutName,
+                    description: workoutDescription,
+                    exercisesWithPrescription: selectedExercises,
+                    estimatedDuration: estimatedDuration,
+                    difficulty: difficulty,
+                    createdDate: Date()
+                )
+                
+                // Convert the custom workout to a temporary template
+                let templateService = TemplateDataService()
+                let temporaryTemplate = try await templateService.createTemporaryTemplate(
+                    from: customWorkout,
+                    trainerId: Auth.auth().currentUser?.uid ?? ""
+                )
+                
+                // Create a scheduled workout that references the temporary template
+                let scheduledDate = Calendar.current.date(byAdding: .day, value: dayIndex, to: Date()) ?? Date()
+                let scheduledWorkout = ScheduledWorkout(
+                    date: scheduledDate,
+                    workoutTemplateId: temporaryTemplate.id,
+                    workoutTemplateName: temporaryTemplate.name,
+                    programDay: dayIndex + 1 // Convert 0-based dayIndex to 1-based program day
+                )
+                
+
+                scheduledWorkouts[dayIndex] = scheduledWorkout
+                
+                await MainActor.run {
+                    dismiss()
+                    onWorkoutCreated()
+                }
+            } catch {
+                print("❌ PlansManagementView: Error creating temporary template: \(error)")
+                // Handle error appropriately
+            }
+        }
     }
 }
 
@@ -1403,13 +1543,14 @@ struct CustomExerciseRow: View {
 // MARK: - Exercise Selector View
 struct ExerciseSelectorView: View {
     @Binding var selectedExercises: [ExerciseWithSetsReps]
+    let viewModel: ProgramsViewModel
     @Environment(\.dismiss) private var dismiss
     
     @State private var searchText = ""
     @State private var tempSelectedExercises: Set<String> = []
     
     private var availableExercises: [Exercise] {
-        return Exercise.sampleExercises
+        return viewModel.exercises
     }
     
     private var filteredExercises: [Exercise] {
@@ -1460,20 +1601,59 @@ struct ExerciseSelectorView: View {
                     .padding(.bottom, MovefullyTheme.Layout.paddingM)
                 }
                 
-                ScrollView {
-                    LazyVStack(spacing: MovefullyTheme.Layout.paddingS) {
-                        ForEach(filteredExercises) { exercise in
-                            ExerciseSelectionRow(
-                                exercise: exercise, 
-                                isSelected: isExerciseSelected(exercise)
-                            ) {
-                                toggleExerciseSelection(exercise)
-                            }
-                            .disabled(selectedExercises.contains { $0.exercise.id == exercise.id })
-                        }
+                if viewModel.isLoading {
+                    // Show loading state while exercises are being fetched
+                    VStack(spacing: MovefullyTheme.Layout.paddingL) {
+                        Spacer()
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: MovefullyTheme.Colors.primaryTeal))
+                            .scaleEffect(1.2)
+                        
+                        Text("Loading exercises...")
+                            .font(MovefullyTheme.Typography.body)
+                            .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                        Spacer()
+                    }
+                } else if filteredExercises.isEmpty {
+                    // Show empty state when no exercises found
+                    VStack(spacing: MovefullyTheme.Layout.paddingL) {
+                        Spacer()
+                        
+                        Image(systemName: searchText.isEmpty ? "dumbbell.fill" : "magnifyingglass")
+                            .font(.system(size: 48))
+                            .foregroundColor(MovefullyTheme.Colors.textTertiary)
+                        
+                        Text(searchText.isEmpty ? "No Exercises Available" : "No Exercises Found")
+                            .font(MovefullyTheme.Typography.title3)
+                            .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                        
+                        Text(searchText.isEmpty ? 
+                             "Exercise library is empty. Please check your connection." : 
+                             "Try adjusting your search terms.")
+                            .font(MovefullyTheme.Typography.body)
+                            .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                            .multilineTextAlignment(.center)
+                        
+                        Spacer()
                     }
                     .padding(.horizontal, MovefullyTheme.Layout.paddingL)
-                    .padding(.bottom, MovefullyTheme.Layout.paddingXL)
+                } else {
+                    // Show exercises list
+                    ScrollView {
+                        LazyVStack(spacing: MovefullyTheme.Layout.paddingS) {
+                            ForEach(filteredExercises) { exercise in
+                                ExerciseSelectionRow(
+                                    exercise: exercise, 
+                                    isSelected: isExerciseSelected(exercise)
+                                ) {
+                                    toggleExerciseSelection(exercise)
+                                }
+                                .disabled(selectedExercises.contains { $0.exercise.id == exercise.id })
+                            }
+                        }
+                        .padding(.horizontal, MovefullyTheme.Layout.paddingL)
+                        .padding(.bottom, MovefullyTheme.Layout.paddingXL)
+                    }
                 }
             }
             .navigationTitle("Add Exercises")
@@ -1799,8 +1979,8 @@ struct PlansDetailView: View {
                     HStack(spacing: MovefullyTheme.Layout.paddingM) {
                         PlansStatCard(
                             icon: "calendar",
-                            value: "\(program.duration)",
-                            label: program.duration == 1 ? "Week" : "Weeks",
+                            value: "\(program.duration / 7)",
+                            label: (program.duration / 7) == 1 ? "Week" : "Weeks",
                             color: MovefullyTheme.Colors.primaryTeal
                         )
                         
@@ -1815,7 +1995,7 @@ struct PlansDetailView: View {
                     HStack(spacing: MovefullyTheme.Layout.paddingM) {
                         PlansStatCard(
                             icon: "person.2.fill",
-                            value: "\(program.usageCount)",
+                            value: "\(viewModel.getAssignedCount(for: program.id))",
                             label: "Assigned",
                             color: MovefullyTheme.Colors.warmOrange
                         )
@@ -1850,12 +2030,12 @@ struct PlansDetailView: View {
                         .padding(.vertical, MovefullyTheme.Layout.paddingL)
                 } else {
                     VStack(spacing: MovefullyTheme.Layout.paddingS) {
-                        // Display actual scheduled workouts from the program
-                        ForEach(Array(program.scheduledWorkouts.enumerated()), id: \.offset) { index, workout in
+                        // Display actual scheduled workouts from the program, sorted by program day
+                        ForEach(program.scheduledWorkouts.sorted(by: { ($0.programDay ?? 0) < ($1.programDay ?? 0) }), id: \.id) { workout in
                             WorkoutScheduleRow(
-                                day: index + 1,
+                                day: workout.programDay ?? 1,
                                 workoutName: workout.title,
-                                duration: workout.estimatedDuration,
+                                duration: 30, // Default duration, will be fetched from template
                                 difficulty: program.difficulty
                             )
                         }
@@ -2042,6 +2222,8 @@ struct WorkoutScheduleRow: View {
                 Text(workoutName)
                     .font(MovefullyTheme.Typography.bodyMedium)
                     .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
                 
                 Text("\(duration) min")
                     .font(MovefullyTheme.Typography.caption)
@@ -2127,12 +2309,13 @@ struct EditPlanView: View {
         
         // Convert program's scheduled workouts to the [Int: ScheduledWorkout] format needed by the UI
         var workoutsDict: [Int: ScheduledWorkout] = [:]
-        let programStartDate = program.createdDate
         
         for workout in program.scheduledWorkouts {
-            let daysBetween = Calendar.current.dateComponents([.day], from: programStartDate, to: workout.scheduledDate).day ?? 0
-            if daysBetween >= 0 && daysBetween < program.duration {
-                workoutsDict[daysBetween] = workout
+            // Use programDay - 1 to convert from 1-based to 0-based indexing for the UI
+            if let programDay = workout.programDay, programDay >= 1 && programDay <= program.duration {
+                let dayIndex = programDay - 1 // Convert to 0-based index
+                workoutsDict[dayIndex] = workout
+
             }
         }
         
@@ -2488,7 +2671,7 @@ struct EditPlanView: View {
     private func updatePlan() {
         isLoading = true
         
-        let updatedProgram = Program(
+        var updatedProgram = Program(
             name: planName,
             description: planDescription,
             duration: selectedDuration * 7, // Convert weeks to days
@@ -2503,6 +2686,9 @@ struct EditPlanView: View {
             coachingNotes: coachingNotes.isEmpty ? nil : coachingNotes
         )
         
+        // Preserve the original program ID
+        updatedProgram.id = program.id
+        
         viewModel.updateProgram(updatedProgram)
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
@@ -2512,7 +2698,7 @@ struct EditPlanView: View {
     }
     
     private func saveDraft() {
-        let draftProgram = Program(
+        var draftProgram = Program(
             name: planName,
             description: planDescription,
             duration: selectedDuration * 7, // Convert weeks to days
@@ -2526,6 +2712,9 @@ struct EditPlanView: View {
             icon: dynamicIcon,
             coachingNotes: coachingNotes.isEmpty ? nil : coachingNotes
         )
+        
+        // Preserve the original program ID
+        draftProgram.id = program.id
         
         viewModel.updateProgram(draftProgram)
         dismiss()

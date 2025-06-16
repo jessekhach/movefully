@@ -164,7 +164,7 @@ class ClientStatusService: ObservableObject {
             return true
         case (.needsAttention, .active), (.needsAttention, .paused):
             return true
-        case (.new, .active):
+        case (.active, .active):
             return true
         default:
             return currentStatus != newStatus

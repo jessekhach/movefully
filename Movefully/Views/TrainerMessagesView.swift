@@ -34,7 +34,7 @@ struct TrainerMessagesView: View {
             )
             .frame(maxHeight: .infinity)
         } else {
-            ForEach(viewModel.conversations, id: \.id) { conversation in
+            ForEach(viewModel.filteredConversations, id: \.id) { conversation in
                 NavigationLink(destination: TrainerConversationDetailView(conversation: conversation)) {
                     ConversationRowView(conversation: conversation)
                 }
@@ -146,9 +146,22 @@ struct ConversationRowView: View {
 struct TrainerConversationDetailView: View {
     @Environment(\.dismiss) private var dismiss
     let conversation: Conversation
-    @State private var newMessage: String = ""
-    @State private var messages: [Message] = []
+    @StateObject private var viewModel: ConversationDetailViewModel
+    @StateObject private var clientDataService = ClientDataService()
     @FocusState private var isMessageFieldFocused: Bool
+    
+    // Real client data state
+    @State private var clientData: Client?
+    @State private var isLoadingClient = false
+    @State private var clientLoadError: String?
+    @State private var previousMessageCount = 0
+    @State private var isLoadingMoreMessages = false
+    @State private var scrollAnchorMessageId: String? = nil
+    
+    init(conversation: Conversation) {
+        self.conversation = conversation
+        self._viewModel = StateObject(wrappedValue: ConversationDetailViewModel(conversation: conversation))
+    }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -159,10 +172,59 @@ struct TrainerConversationDetailView: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(spacing: MovefullyTheme.Layout.paddingM) {
-                        ForEach(messages) { message in
+                        // Load More button at the top
+                        if viewModel.hasMoreMessages && !viewModel.messages.isEmpty {
+                            Button(action: {
+                                print("🔄 LOAD MORE: Starting load more process")
+                                print("🔄 LOAD MORE: Current message count: \(viewModel.messages.count)")
+                                
+                                // Find a stable anchor message (not the first one, but one that's more likely to stay visible)
+                                if viewModel.messages.count > 5 {
+                                    scrollAnchorMessageId = viewModel.messages[5].id // Use 6th message as anchor
+                                    print("🔄 LOAD MORE: Using anchor message: \(scrollAnchorMessageId!)")
+                                } else if let firstMessage = viewModel.messages.first {
+                                    scrollAnchorMessageId = firstMessage.id
+                                    print("🔄 LOAD MORE: Using first message as anchor: \(scrollAnchorMessageId!)")
+                                }
+                                
+                                isLoadingMoreMessages = true
+                                print("🔄 LOAD MORE: Calling viewModel.loadMoreMessages()")
+                                viewModel.loadMoreMessages()
+                            }) {
+                                HStack(spacing: MovefullyTheme.Layout.paddingS) {
+                                    if viewModel.isLoadingMore {
+                                        ProgressView()
+                                            .scaleEffect(0.8)
+                                            .tint(MovefullyTheme.Colors.primaryTeal)
+                                    } else {
+                                        Image(systemName: "arrow.up.circle")
+                                            .font(.system(size: 16, weight: .medium))
+                                            .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+                                    }
+                                    
+                                    Text(viewModel.isLoadingMore ? "Loading..." : "Load More Messages")
+                                        .font(MovefullyTheme.Typography.body)
+                                        .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+                                }
+                                .padding(.horizontal, MovefullyTheme.Layout.paddingL)
+                                .padding(.vertical, MovefullyTheme.Layout.paddingM)
+                                .background(MovefullyTheme.Colors.cardBackground)
+                                .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
+                                .shadow(color: MovefullyTheme.Effects.cardShadow.opacity(0.3), radius: 4, x: 0, y: 2)
+                            }
+                            .disabled(viewModel.isLoadingMore)
+                            .padding(.bottom, MovefullyTheme.Layout.paddingM)
+                        }
+                        
+                        ForEach(viewModel.messages) { message in
                             TrainerMessageBubbleView(message: message)
                                 .id(message.id)
                         }
+                        
+                        // Invisible spacer at the very bottom for scroll targeting
+                        Color.clear
+                            .frame(height: 1)
+                            .id("bottom")
                     }
                     .padding(.horizontal, MovefullyTheme.Layout.paddingL)
                     .padding(.vertical, MovefullyTheme.Layout.paddingL)
@@ -171,11 +233,55 @@ struct TrainerConversationDetailView: View {
                 .onTapGesture {
                     isMessageFieldFocused = false
                 }
-                .onChange(of: messages.count) { _ in
-                    if let lastMessage = messages.last {
-                        withAnimation(.easeInOut(duration: 0.3)) {
-                            proxy.scrollTo(lastMessage.id, anchor: .bottom)
+                .onAppear {
+                    // Auto-scroll to bottom when view first appears
+                    if !viewModel.messages.isEmpty {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                proxy.scrollTo("bottom", anchor: .bottom)
+                            }
                         }
+                    }
+                    previousMessageCount = viewModel.messages.count
+                }
+                .onChange(of: viewModel.messages.count) {
+                    // Handle message count changes with immediate scroll preservation
+                    let newMessageCount = viewModel.messages.count
+                    
+                    print("📊 MESSAGE COUNT CHANGE: \(previousMessageCount) -> \(newMessageCount)")
+                    print("📊 MESSAGE COUNT CHANGE: isLoadingMoreMessages = \(isLoadingMoreMessages)")
+                    
+                    if isLoadingMoreMessages {
+                        // We're loading more messages - immediately scroll to anchor without animation
+                        print("📊 MESSAGE COUNT CHANGE: Loading more messages - restoring to anchor")
+                        
+                        if let anchorId = scrollAnchorMessageId {
+                            print("🔄 LOAD MORE: Immediately scrolling to anchor: \(anchorId)")
+                            
+                            // Scroll immediately without animation to prevent visible jump
+                            proxy.scrollTo(anchorId, anchor: .center)
+                            print("🔄 LOAD MORE: Instant scroll command executed")
+                        }
+                        
+                        // Reset flags
+                        isLoadingMoreMessages = false
+                        scrollAnchorMessageId = nil
+                        previousMessageCount = newMessageCount
+                        
+                        print("📊 MESSAGE COUNT CHANGE: Flags reset, instant scroll restoration complete")
+                        
+                    } else if newMessageCount > previousMessageCount {
+                        // New messages were added (not loaded from history), auto-scroll to bottom
+                        print("📊 MESSAGE COUNT CHANGE: New messages detected - auto-scrolling to bottom")
+                        if !viewModel.messages.isEmpty {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                proxy.scrollTo("bottom", anchor: .bottom)
+                            }
+                        }
+                        previousMessageCount = newMessageCount
+                    } else {
+                        print("📊 MESSAGE COUNT CHANGE: Message count decreased or stayed same - no action")
+                        previousMessageCount = newMessageCount
                     }
                 }
             }
@@ -186,7 +292,8 @@ struct TrainerConversationDetailView: View {
         .background(MovefullyTheme.Colors.backgroundPrimary.ignoresSafeArea())
         .navigationBarHidden(true)
         .onAppear {
-            loadMessages()
+            viewModel.markAsRead()
+            loadClientData()
         }
     }
     
@@ -213,10 +320,10 @@ struct TrainerConversationDetailView: View {
                     // Status indicator
                     HStack(spacing: MovefullyTheme.Layout.paddingXS) {
                         Circle()
-                            .fill(MovefullyTheme.Colors.softGreen)
+                            .fill(clientData?.status == .active ? MovefullyTheme.Colors.softGreen : MovefullyTheme.Colors.mediumGray)
                             .frame(width: 6, height: 6)
                         
-                        Text("Active")
+                        Text(clientData?.status.rawValue.capitalized ?? "Loading...")
                             .font(MovefullyTheme.Typography.caption)
                             .foregroundColor(MovefullyTheme.Colors.textSecondary)
                     }
@@ -225,10 +332,20 @@ struct TrainerConversationDetailView: View {
                 Spacer()
                 
                 // Profile button
-                NavigationLink(destination: ReadOnlyClientProfileView(client: clientFromConversation)) {
-                    Image(systemName: "person.circle")
-                        .font(.system(size: 24, weight: .medium))
-                        .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+                if let client = clientData {
+                    NavigationLink(destination: ReadOnlyClientProfileView(client: client)) {
+                        Image(systemName: "person.circle")
+                            .font(.system(size: 24, weight: .medium))
+                            .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+                    }
+                } else {
+                    // Loading or error state - disabled button
+                    Button(action: { }) {
+                        Image(systemName: isLoadingClient ? "person.circle" : "person.circle.fill.badge.exclamationmark")
+                            .font(.system(size: 24, weight: .medium))
+                            .foregroundColor(isLoadingClient ? MovefullyTheme.Colors.textSecondary : MovefullyTheme.Colors.warmOrange)
+                    }
+                    .disabled(true)
                 }
             }
             .padding(.horizontal, MovefullyTheme.Layout.paddingL)
@@ -245,26 +362,29 @@ struct TrainerConversationDetailView: View {
         conversation.clientName.components(separatedBy: " ").first ?? conversation.clientName
     }
     
-    // Helper to create client object from conversation
-    private var clientFromConversation: Client {
-        return Client(
-            id: UUID().uuidString,
-            name: conversation.clientName,
-            email: "\(conversation.clientName.lowercased().replacingOccurrences(of: " ", with: "."))@example.com",
-            trainerId: "trainer1", // Mock trainer ID
-            status: .active,
-            joinedDate: Calendar.current.date(byAdding: .day, value: -30, to: Date()) ?? Date(),
-            profileImageUrl: nil,
-            height: "5'6\"", // Mock height data
-            weight: "145 lbs", // Mock weight data
-            goal: "Improve overall flexibility and build core strength for better posture at work", // Mock goal
-            injuries: "Previous knee injury (2019) - cleared by PT", // Mock injuries
-            preferredCoachingStyle: .hybrid,
-            lastWorkoutDate: Calendar.current.date(byAdding: .day, value: -2, to: Date()),
-            lastActivityDate: Date(),
-            currentPlanId: "plan1",
-            totalWorkoutsCompleted: 24
-        )
+    // MARK: - Client Data Loading
+    private func loadClientData() {
+        Task {
+            do {
+                isLoadingClient = true
+                clientLoadError = nil
+                print("🔍 TrainerConversationDetailView: Loading client data for ID: \(conversation.clientId)")
+                
+                let client = try await clientDataService.fetchClient(clientId: conversation.clientId)
+                
+                await MainActor.run {
+                    self.clientData = client
+                    self.isLoadingClient = false
+                    print("✅ TrainerConversationDetailView: Successfully loaded client: \(client.name)")
+                }
+            } catch {
+                await MainActor.run {
+                    self.clientLoadError = error.localizedDescription
+                    self.isLoadingClient = false
+                    print("❌ TrainerConversationDetailView: Failed to load client: \(error)")
+                }
+            }
+        }
     }
     
     // MARK: - Message Input Section
@@ -275,7 +395,7 @@ struct TrainerConversationDetailView: View {
             
             HStack(spacing: MovefullyTheme.Layout.paddingM) {
                 // Message text field
-                TextField("Type your message...", text: $newMessage, axis: .vertical)
+                TextField("Type your message...", text: $viewModel.newMessage, axis: .vertical)
                     .font(MovefullyTheme.Typography.body)
                     .foregroundColor(MovefullyTheme.Colors.textPrimary)
                     .padding(.horizontal, MovefullyTheme.Layout.paddingM)
@@ -286,7 +406,7 @@ struct TrainerConversationDetailView: View {
                     .focused($isMessageFieldFocused)
                 
                 // Send button
-                Button(action: sendMessage) {
+                Button(action: viewModel.sendMessage) {
                     Image(systemName: "arrow.up")
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundColor(.white)
@@ -294,15 +414,15 @@ struct TrainerConversationDetailView: View {
                         .background(
                             Circle()
                                 .fill(
-                                    newMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty 
+                                    viewModel.newMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty 
                                     ? MovefullyTheme.Colors.textSecondary.opacity(0.3)
                                     : MovefullyTheme.Colors.primaryTeal
                                 )
                         )
                 }
-                .disabled(newMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                .scaleEffect(newMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.9 : 1.0)
-                .animation(.spring(response: 0.3, dampingFraction: 0.6), value: newMessage.isEmpty)
+                .disabled(viewModel.newMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .scaleEffect(viewModel.newMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.9 : 1.0)
+                .animation(.spring(response: 0.3, dampingFraction: 0.6), value: viewModel.newMessage.isEmpty)
             }
             .padding(.horizontal, MovefullyTheme.Layout.paddingL)
             .padding(.vertical, MovefullyTheme.Layout.paddingM)
@@ -311,25 +431,7 @@ struct TrainerConversationDetailView: View {
     }
     
     // MARK: - Actions
-    private func loadMessages() {
-        messages = Message.sampleMessages
-    }
-    
-    private func sendMessage() {
-        let text = newMessage.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty else { return }
-        
-        let message = Message(
-            id: UUID().uuidString,
-            text: text,
-            isFromTrainer: true,
-            timestamp: Date()
-        )
-        
-        messages.append(message)
-        newMessage = ""
-        isMessageFieldFocused = false
-    }
+    // All message operations now handled by ConversationDetailViewModel
 }
 
 // MARK: - Message Bubble View

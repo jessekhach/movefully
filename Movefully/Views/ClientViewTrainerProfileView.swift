@@ -54,31 +54,33 @@ struct ClientViewTrainerProfileView: View {
                                     .font(MovefullyTheme.Typography.title1)
                                     .foregroundColor(MovefullyTheme.Colors.textPrimary)
                                 
-                                Text("Your Movement Coach")
+                                Text(trainer.title ?? trainer.bio ?? "Your Movement Coach")
                                     .font(MovefullyTheme.Typography.callout)
                                     .foregroundColor(MovefullyTheme.Colors.textSecondary)
                                     .multilineTextAlignment(.center)
                                 
-                                // Experience and certification display
+                                // Location and experience display
                                 HStack(spacing: MovefullyTheme.Layout.paddingL) {
-                                    if let experience = trainer.yearsOfExperience {
+                                    if let location = trainer.location {
                                         HStack(spacing: MovefullyTheme.Layout.paddingXS) {
-                                            Image(systemName: "star.fill")
+                                            Image(systemName: "location.fill")
                                                 .font(.system(size: 12, weight: .medium))
-                                                .foregroundColor(MovefullyTheme.Colors.softGreen)
-                                            Text("\(experience) years experience")
+                                                .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+                                            Text(location)
                                                 .font(MovefullyTheme.Typography.caption)
                                                 .foregroundColor(MovefullyTheme.Colors.textTertiary)
                                         }
                                     }
                                     
-                                    HStack(spacing: MovefullyTheme.Layout.paddingXS) {
-                                        Image(systemName: "checkmark.seal.fill")
-                                            .font(.system(size: 12, weight: .medium))
-                                            .foregroundColor(MovefullyTheme.Colors.softGreen)
-                                        Text("Certified Coach")
-                                            .font(MovefullyTheme.Typography.caption)
-                                            .foregroundColor(MovefullyTheme.Colors.textTertiary)
+                                    if let experience = trainer.yearsOfExperience {
+                                        HStack(spacing: MovefullyTheme.Layout.paddingXS) {
+                                            Image(systemName: "star.fill")
+                                                .font(.system(size: 12, weight: .medium))
+                                                .foregroundColor(MovefullyTheme.Colors.softGreen)
+                                            Text("\(experience)y experience")
+                                                .font(MovefullyTheme.Typography.caption)
+                                                .foregroundColor(MovefullyTheme.Colors.textTertiary)
+                                        }
                                     }
                                 }
                             }
@@ -109,11 +111,14 @@ struct ClientViewTrainerProfileView: View {
                         // About section (read-only)
                         if let bio = trainer.bio, !bio.isEmpty {
                             ClientViewTrainerSectionCard(title: "About Your Coach", icon: "person.circle") {
-                                Text(bio)
-                                    .font(MovefullyTheme.Typography.body)
-                                    .foregroundColor(MovefullyTheme.Colors.textSecondary)
-                                    .lineLimit(nil)
-                                    .multilineTextAlignment(.leading)
+                                HStack {
+                                    Text(bio)
+                                        .font(MovefullyTheme.Typography.body)
+                                        .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                                        .lineLimit(nil)
+                                        .multilineTextAlignment(.leading)
+                                    Spacer()
+                                }
                             }
                         }
                         
@@ -128,26 +133,45 @@ struct ClientViewTrainerProfileView: View {
                             }
                         }
                         
-                        // Contact info section
-                        ClientViewTrainerSectionCard(title: "Contact Information", icon: "envelope.circle") {
-                            VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingM) {
-                                HStack(spacing: MovefullyTheme.Layout.paddingM) {
-                                    Image(systemName: "envelope.fill")
-                                        .font(.system(size: 16, weight: .medium))
-                                        .foregroundColor(MovefullyTheme.Colors.primaryTeal)
-                                        .frame(width: 24)
+                        // Contact info section (only show if contact info exists)
+                        if hasContactInformation {
+                            ClientViewTrainerSectionCard(title: "Contact Information", icon: "envelope.circle") {
+                                VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingM) {
+                                    if !trainer.email.isEmpty {
+                                        HStack(spacing: MovefullyTheme.Layout.paddingM) {
+                                            Image(systemName: "envelope.fill")
+                                                .font(.system(size: 16, weight: .medium))
+                                                .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+                                                .frame(width: 24)
+                                            
+                                            Text(trainer.email)
+                                                .font(MovefullyTheme.Typography.body)
+                                                .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                                            
+                                            Spacer()
+                                        }
+                                    }
                                     
-                                    Text(trainer.email)
-                                        .font(MovefullyTheme.Typography.body)
-                                        .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                                    if let phoneNumber = trainer.phoneNumber, !phoneNumber.isEmpty {
+                                        HStack(spacing: MovefullyTheme.Layout.paddingM) {
+                                            Image(systemName: "phone.fill")
+                                                .font(.system(size: 16, weight: .medium))
+                                                .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+                                                .frame(width: 24)
+                                            
+                                            Text(phoneNumber)
+                                                .font(MovefullyTheme.Typography.body)
+                                                .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                                            
+                                            Spacer()
+                                        }
+                                    }
                                     
-                                    Spacer()
+                                    Text("You can reach out to your coach anytime through the Messages tab or using the contact information above.")
+                                        .font(MovefullyTheme.Typography.caption)
+                                        .foregroundColor(MovefullyTheme.Colors.textTertiary)
+                                        .multilineTextAlignment(.leading)
                                 }
-                                
-                                Text("You can reach out to your coach anytime through the Messages tab or by email.")
-                                    .font(MovefullyTheme.Typography.caption)
-                                    .foregroundColor(MovefullyTheme.Colors.textTertiary)
-                                    .multilineTextAlignment(.leading)
                             }
                         }
                     }
@@ -174,6 +198,12 @@ struct ClientViewTrainerProfileView: View {
         let components = trainer.name.components(separatedBy: " ")
         let initials = components.compactMap { $0.first }.map { String($0) }
         return initials.prefix(2).joined().uppercased()
+    }
+    
+    private var hasContactInformation: Bool {
+        let hasEmail = !trainer.email.isEmpty
+        let hasPhone = !(trainer.phoneNumber?.isEmpty ?? true)
+        return hasEmail || hasPhone
     }
 }
 
@@ -265,6 +295,7 @@ struct ClientViewSpecialtyTag: View {
         id: "trainer1",
         name: "Alex Martinez",
         email: "alex@movefully.com",
+        phoneNumber: "(555) 123-4567",
         bio: "Certified movement coach specializing in mindful fitness and injury recovery. I believe every body is capable of beautiful movement.",
         profileImageUrl: nil,
         specialties: ["Mobility", "Recovery", "Mindful Movement", "Strength Training"],

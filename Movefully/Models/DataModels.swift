@@ -3,16 +3,14 @@ import SwiftUI
 
 // MARK: - Client Status Enum
 enum ClientStatus: String, CaseIterable, Codable {
-    case new = "New"
     case active = "Active" 
     case needsAttention = "Needs Attention"
     case paused = "Paused"
     case pending = "Pending Invite"
+    case trainer_removed = "Trainer Removed"
     
     var color: String {
         switch self {
-        case .new:
-            return "primaryTeal"
         case .active:
             return "success"
         case .needsAttention:
@@ -21,13 +19,13 @@ enum ClientStatus: String, CaseIterable, Codable {
             return "textSecondary"
         case .pending:
             return "secondaryPeach"
+        case .trainer_removed:
+            return "warning"
         }
     }
     
     var icon: String {
         switch self {
-        case .new:
-            return "star.fill"
         case .active:
             return "checkmark.circle.fill"
         case .needsAttention:
@@ -36,6 +34,8 @@ enum ClientStatus: String, CaseIterable, Codable {
             return "pause.circle.fill"
         case .pending:
             return "clock.fill"
+        case .trainer_removed:
+            return "person.crop.circle.badge.minus"
         }
     }
 }
@@ -104,6 +104,13 @@ struct Client: Identifiable, Codable {
     var currentPlanId: String?
     var totalWorkoutsCompleted: Int
     
+    // Plan Assignment Queue
+    var currentPlanStartDate: Date?
+    var currentPlanEndDate: Date?
+    var nextPlanId: String?
+    var nextPlanStartDate: Date?
+    var nextPlanEndDate: Date?
+    
     // Timestamps
     var createdAt: Date
     var updatedAt: Date
@@ -123,7 +130,12 @@ struct Client: Identifiable, Codable {
          lastWorkoutDate: Date? = nil,
          lastActivityDate: Date? = nil,
          currentPlanId: String? = nil,
-         totalWorkoutsCompleted: Int = 0) {
+         totalWorkoutsCompleted: Int = 0,
+         currentPlanStartDate: Date? = nil,
+         currentPlanEndDate: Date? = nil,
+         nextPlanId: String? = nil,
+         nextPlanStartDate: Date? = nil,
+         nextPlanEndDate: Date? = nil) {
         
         self.id = id
         self.name = name
@@ -141,6 +153,11 @@ struct Client: Identifiable, Codable {
         self.lastActivityDate = lastActivityDate
         self.currentPlanId = currentPlanId
         self.totalWorkoutsCompleted = totalWorkoutsCompleted
+        self.currentPlanStartDate = currentPlanStartDate
+        self.currentPlanEndDate = currentPlanEndDate
+        self.nextPlanId = nextPlanId
+        self.nextPlanStartDate = nextPlanStartDate
+        self.nextPlanEndDate = nextPlanEndDate
         self.createdAt = Date()
         self.updatedAt = Date()
     }
@@ -169,6 +186,28 @@ struct Client: Identifiable, Codable {
             return true
         }
         return false
+    }
+    
+    // MARK: - Plan Queue Management
+    var hasCurrentPlan: Bool {
+        return currentPlanId != nil
+    }
+    
+    var hasNextPlan: Bool {
+        return nextPlanId != nil
+    }
+    
+    var canQueuePlan: Bool {
+        return hasCurrentPlan && !hasNextPlan
+    }
+    
+    var isCurrentPlanExpired: Bool {
+        guard let endDate = currentPlanEndDate else { return false }
+        return Date() > endDate
+    }
+    
+    var shouldPromoteNextPlan: Bool {
+        return isCurrentPlanExpired && hasNextPlan
     }
     
     // Sample clients for testing
@@ -211,7 +250,7 @@ struct Client: Identifiable, Codable {
             name: "Emma Rodriguez", 
             email: "emma.rodriguez@example.com", 
             trainerId: "trainer1",
-            status: .new,
+            status: .active,
             joinedDate: Calendar.current.date(byAdding: .day, value: -3, to: Date()),
             height: "5'4\"",
             weight: "130 lbs",
@@ -321,20 +360,17 @@ struct ClientNote: Identifiable, Codable {
     
     enum NoteType: String, Codable, CaseIterable {
         case trainerNote = "trainer_note"
-        case clientJournal = "client_journal"
-        case progressUpdate = "progress_update"
-        case injuryUpdate = "injury_update"
+        case clientNote = "client_note"
+        case profileUpdate = "profile_update"
         
         var displayName: String {
             switch self {
             case .trainerNote:
-                return "Trainer Note"
-            case .clientJournal:
-                return "Client Journal"
-            case .progressUpdate:
-                return "Progress Update"
-            case .injuryUpdate:
-                return "Injury Update"
+                return "Trainer Notes"
+            case .clientNote:
+                return "Client Notes"
+            case .profileUpdate:
+                return "Profile Updates"
             }
         }
         
@@ -342,12 +378,10 @@ struct ClientNote: Identifiable, Codable {
             switch self {
             case .trainerNote:
                 return "note.text"
-            case .clientJournal:
+            case .clientNote:
                 return "book.fill"
-            case .progressUpdate:
-                return "chart.line.uptrend.xyaxis"
-            case .injuryUpdate:
-                return "cross.case.fill"
+            case .profileUpdate:
+                return "person.crop.circle.badge.checkmark"
             }
         }
     }
@@ -367,7 +401,7 @@ struct ClientNote: Identifiable, Codable {
             clientId: "1",
             trainerId: "trainer1",
             content: "Feeling much stronger this week! The morning stretches are really helping with my back pain at work. Looking forward to adding some core work next week.",
-            type: .clientJournal,
+            type: .clientNote,
             createdAt: Calendar.current.date(byAdding: .day, value: -3, to: Date()) ?? Date(),
             updatedAt: Calendar.current.date(byAdding: .day, value: -3, to: Date()) ?? Date()
         )
@@ -376,11 +410,39 @@ struct ClientNote: Identifiable, Codable {
 
 // MARK: - Conversation Model
 struct Conversation: Identifiable, Codable {
-    let id = UUID()
+    var id = UUID().uuidString
+    var trainerId: String
+    var clientId: String
     let clientName: String
     let lastMessage: String
     let lastMessageTime: Date
     let unreadCount: Int
+    
+    // Firebase-compatible initializer
+    init(id: String? = nil, trainerId: String, clientId: String, clientName: String, lastMessage: String, lastMessageTime: Date, unreadCount: Int) {
+        if let id = id {
+            self.id = id
+        } else {
+            self.id = UUID().uuidString
+        }
+        self.trainerId = trainerId
+        self.clientId = clientId
+        self.clientName = clientName
+        self.lastMessage = lastMessage
+        self.lastMessageTime = lastMessageTime
+        self.unreadCount = unreadCount
+    }
+    
+    // Original initializer for UI compatibility (deprecated - use full initializer)
+    init(clientName: String, lastMessage: String, lastMessageTime: Date, unreadCount: Int) {
+        self.id = UUID().uuidString
+        self.trainerId = "" // Will need to be set separately
+        self.clientId = "" // Will need to be set separately
+        self.clientName = clientName
+        self.lastMessage = lastMessage
+        self.lastMessageTime = lastMessageTime
+        self.unreadCount = unreadCount
+    }
     
     static let sampleConversations = [
         Conversation(clientName: "Sarah Johnson", lastMessage: "Thanks for the workout plan! I'm excited to get started.", lastMessageTime: Date().addingTimeInterval(-3600), unreadCount: 2),
@@ -461,10 +523,9 @@ struct Exercise: Identifiable, Codable {
     var description: String?
     var mediaUrl: String? // For GIF/video later
     var category: ExerciseCategory?
-    var duration: Int? // in minutes
     var difficulty: DifficultyLevel?
     var createdByTrainerId: String? // If trainers can add their own
-    var exerciseType: ExerciseType // New property to distinguish duration vs reps based
+    var exerciseType: ExerciseType // Distinguishes duration vs reps based
     
     // New detailed instruction fields
     var howToPerform: [String]? // Step-by-step instructions
@@ -484,10 +545,9 @@ struct Exercise: Identifiable, Codable {
             description: "Classic upper body exercise for building chest, shoulder, and tricep strength",
             mediaUrl: nil,
             category: .strength,
-            duration: 15,
             difficulty: .beginner,
             createdByTrainerId: nil,
-            exerciseType: .duration,
+            exerciseType: .reps,
             howToPerform: [
                 "Start in a plank position with hands placed slightly wider than shoulder-width apart",
                 "Keep your body in a straight line from head to heels, engaging your core",
@@ -525,10 +585,9 @@ struct Exercise: Identifiable, Codable {
             description: "Fundamental lower body movement for leg and glute strength",
             mediaUrl: nil,
             category: .strength,
-            duration: 20,
             difficulty: .beginner,
             createdByTrainerId: nil,
-            exerciseType: .duration,
+            exerciseType: .reps,
             howToPerform: [
                 "Stand with feet shoulder-width apart, toes slightly turned out",
                 "Keep your chest up and shoulders back, core engaged",
@@ -567,7 +626,6 @@ struct Exercise: Identifiable, Codable {
             description: "Core strengthening exercise for stability and endurance",
             mediaUrl: nil,
             category: .strength,
-            duration: 10,
             difficulty: .beginner,
             createdByTrainerId: nil,
             exerciseType: .duration,
@@ -609,7 +667,6 @@ struct Exercise: Identifiable, Codable {
             description: "Single-leg strengthening exercise for legs and core stability",
             mediaUrl: nil,
             category: .strength,
-            duration: 15,
             difficulty: .beginner,
             createdByTrainerId: nil,
             exerciseType: .reps,
@@ -651,7 +708,6 @@ struct Exercise: Identifiable, Codable {
             description: "Core stability exercise that strengthens deep abdominal muscles",
             mediaUrl: nil,
             category: .strength,
-            duration: 12,
             difficulty: .beginner,
             createdByTrainerId: nil,
             exerciseType: .duration,
@@ -693,7 +749,6 @@ struct Exercise: Identifiable, Codable {
             description: "Hip strengthening exercise targeting glutes and hamstrings",
             mediaUrl: nil,
             category: .strength,
-            duration: 15,
             difficulty: .beginner,
             createdByTrainerId: nil,
             exerciseType: .reps,
@@ -735,7 +790,6 @@ struct Exercise: Identifiable, Codable {
             description: "Modified push-up for beginners or those with limited mobility",
             mediaUrl: nil,
             category: .strength,
-            duration: 10,
             difficulty: .beginner,
             createdByTrainerId: nil,
             exerciseType: .reps,
@@ -777,7 +831,6 @@ struct Exercise: Identifiable, Codable {
             description: "Core stability exercise that improves balance and coordination",
             mediaUrl: nil,
             category: .strength,
-            duration: 10,
             difficulty: .intermediate,
             createdByTrainerId: nil,
             exerciseType: .duration,
@@ -819,7 +872,6 @@ struct Exercise: Identifiable, Codable {
             description: "Lateral core strengthening exercise for obliques",
             mediaUrl: nil,
             category: .strength,
-            duration: 8,
             difficulty: .intermediate,
             createdByTrainerId: nil,
             exerciseType: .duration,
@@ -861,7 +913,6 @@ struct Exercise: Identifiable, Codable {
             description: "Balance and posterior chain strengthening exercise",
             mediaUrl: nil,
             category: .strength,
-            duration: 12,
             difficulty: .intermediate,
             createdByTrainerId: nil,
             exerciseType: .reps,
@@ -906,7 +957,6 @@ struct Exercise: Identifiable, Codable {
             description: "Full body cardio exercise to elevate heart rate",
             mediaUrl: nil,
             category: .cardio,
-            duration: 5,
             difficulty: .beginner,
             createdByTrainerId: nil,
             exerciseType: .duration,
@@ -948,7 +998,6 @@ struct Exercise: Identifiable, Codable {
             description: "Dynamic cardio exercise combining core and cardio work",
             mediaUrl: nil,
             category: .cardio,
-            duration: 8,
             difficulty: .intermediate,
             createdByTrainerId: nil,
             exerciseType: .duration,
@@ -990,7 +1039,6 @@ struct Exercise: Identifiable, Codable {
             description: "Low-impact cardio movement to warm up or maintain fitness",
             mediaUrl: nil,
             category: .cardio,
-            duration: 5,
             difficulty: .beginner,
             createdByTrainerId: nil,
             exerciseType: .duration,
@@ -1032,7 +1080,6 @@ struct Exercise: Identifiable, Codable {
             description: "Functional cardio exercise using stairs or platform",
             mediaUrl: nil,
             category: .cardio,
-            duration: 10,
             difficulty: .beginner,
             createdByTrainerId: nil,
             exerciseType: .duration,
@@ -1074,7 +1121,6 @@ struct Exercise: Identifiable, Codable {
             description: "Dynamic cardio movement for warming up and heart rate elevation",
             mediaUrl: nil,
             category: .cardio,
-            duration: 5,
             difficulty: .beginner,
             createdByTrainerId: nil,
             exerciseType: .duration,
@@ -1116,7 +1162,6 @@ struct Exercise: Identifiable, Codable {
             description: "High-intensity full-body exercise combining strength and cardio",
             mediaUrl: nil,
             category: .cardio,
-            duration: 8,
             difficulty: .advanced,
             createdByTrainerId: nil,
             exerciseType: .reps,
@@ -1158,7 +1203,6 @@ struct Exercise: Identifiable, Codable {
             description: "Cardio exercise to improve coordination and elevate heart rate",
             mediaUrl: nil,
             category: .cardio,
-            duration: 5,
             difficulty: .beginner,
             createdByTrainerId: nil,
             exerciseType: .duration,
@@ -1200,7 +1244,6 @@ struct Exercise: Identifiable, Codable {
             description: "Plyometric exercise combining strength and cardio",
             mediaUrl: nil,
             category: .cardio,
-            duration: 8,
             difficulty: .intermediate,
             createdByTrainerId: nil,
             exerciseType: .reps,
@@ -1244,7 +1287,6 @@ struct Exercise: Identifiable, Codable {
             description: "Gentle yoga stretch for relaxation and flexibility",
             mediaUrl: nil,
             category: .flexibility,
-            duration: 5,
             difficulty: .beginner,
             createdByTrainerId: nil,
             exerciseType: .duration,
@@ -1286,7 +1328,6 @@ struct Exercise: Identifiable, Codable {
             description: "Spinal mobility exercise that helps warm up your back",
             mediaUrl: nil,
             category: .flexibility,
-            duration: 5,
             difficulty: .beginner,
             createdByTrainerId: nil,
             exerciseType: .duration,
@@ -1328,7 +1369,6 @@ struct Exercise: Identifiable, Codable {
             description: "Yoga pose that stretches hamstrings, calves, and shoulders",
             mediaUrl: nil,
             category: .flexibility,
-            duration: 8,
             difficulty: .beginner,
             createdByTrainerId: nil,
             exerciseType: .duration,
@@ -1370,7 +1410,6 @@ struct Exercise: Identifiable, Codable {
             description: "Dynamic mobility exercise for hip joint health",
             mediaUrl: nil,
             category: .flexibility,
-            duration: 5,
             difficulty: .beginner,
             createdByTrainerId: nil,
             exerciseType: .duration,
@@ -1412,7 +1451,6 @@ struct Exercise: Identifiable, Codable {
             description: "Gentle mobility exercise for shoulder and neck tension",
             mediaUrl: nil,
             category: .flexibility,
-            duration: 3,
             difficulty: .beginner,
             createdByTrainerId: nil,
             exerciseType: .duration,
@@ -1454,7 +1492,6 @@ struct Exercise: Identifiable, Codable {
             description: "Gentle spinal rotation to improve mobility and reduce tension",
             mediaUrl: nil,
             category: .flexibility,
-            duration: 8,
             difficulty: .beginner,
             createdByTrainerId: nil,
             exerciseType: .duration,
@@ -1496,7 +1533,6 @@ struct Exercise: Identifiable, Codable {
             description: "Deep hip flexor stretch for improved mobility",
             mediaUrl: nil,
             category: .flexibility,
-            duration: 10,
             difficulty: .intermediate,
             createdByTrainerId: nil,
             exerciseType: .duration,
@@ -1538,7 +1574,6 @@ struct Exercise: Identifiable, Codable {
             description: "Backbend that opens the chest and strengthens the spine",
             mediaUrl: nil,
             category: .flexibility,
-            duration: 5,
             difficulty: .beginner,
             createdByTrainerId: nil,
             exerciseType: .duration,
@@ -1582,7 +1617,6 @@ struct Exercise: Identifiable, Codable {
             description: "Balance exercise to improve stability and focus",
             mediaUrl: nil,
             category: .balance,
-            duration: 10,
             difficulty: .intermediate,
             createdByTrainerId: nil,
             exerciseType: .duration,
@@ -1624,7 +1658,6 @@ struct Exercise: Identifiable, Codable {
             description: "Simple balance exercise for proprioception and stability",
             mediaUrl: nil,
             category: .balance,
-            duration: 5,
             difficulty: .beginner,
             createdByTrainerId: nil,
             exerciseType: .duration,
@@ -1666,7 +1699,6 @@ struct Exercise: Identifiable, Codable {
             description: "Balance and coordination exercise along a straight line",
             mediaUrl: nil,
             category: .balance,
-            duration: 5,
             difficulty: .beginner,
             createdByTrainerId: nil,
             exerciseType: .duration,
@@ -1708,7 +1740,6 @@ struct Exercise: Identifiable, Codable {
             description: "Challenging yoga balance pose that strengthens legs and core",
             mediaUrl: nil,
             category: .balance,
-            duration: 8,
             difficulty: .advanced,
             createdByTrainerId: nil,
             exerciseType: .duration,
@@ -1752,7 +1783,6 @@ struct Exercise: Identifiable, Codable {
             description: "Mindfulness exercise for stress relief and mental clarity",
             mediaUrl: nil,
             category: .mindfulness,
-            duration: 5,
             difficulty: .beginner,
             createdByTrainerId: nil,
             exerciseType: .duration,
@@ -1795,7 +1825,6 @@ struct Exercise: Identifiable, Codable {
             description: "Mindful awareness practice to connect with your body",
             mediaUrl: nil,
             category: .mindfulness,
-            duration: 10,
             difficulty: .beginner,
             createdByTrainerId: nil,
             exerciseType: .duration,
@@ -1838,7 +1867,6 @@ struct Exercise: Identifiable, Codable {
             description: "Moving meditation focusing on each step and breath",
             mediaUrl: nil,
             category: .mindfulness,
-            duration: 15,
             difficulty: .beginner,
             createdByTrainerId: nil,
             exerciseType: .duration,
@@ -1881,7 +1909,6 @@ struct Exercise: Identifiable, Codable {
             description: "Mindfulness exercise focusing on appreciation and positivity",
             mediaUrl: nil,
             category: .mindfulness,
-            duration: 5,
             difficulty: .beginner,
             createdByTrainerId: nil,
             exerciseType: .duration,
@@ -1924,7 +1951,6 @@ struct Exercise: Identifiable, Codable {
             description: "Systematic tension and relaxation of muscle groups",
             mediaUrl: nil,
             category: .mindfulness,
-            duration: 15,
             difficulty: .beginner,
             createdByTrainerId: nil,
             exerciseType: .duration,
@@ -2033,59 +2059,91 @@ struct TrainerProfile: Identifiable, Codable {
     var id: String
     var name: String
     var email: String
+    var phoneNumber: String? // Optional phone number for contact
+    var title: String? // Professional title like "Wellness Coach & Movement Specialist"
     var bio: String?
     var profileImageUrl: String?
+    var location: String?
+    var website: String?
     var specialties: [String]?
     var yearsOfExperience: Int?
     var createdAt: Date?
     var updatedAt: Date?
 }
 
-// MARK: - Workout Template Model (New)
+// MARK: - Workout Template Model (Enhanced)
 struct WorkoutTemplate: Identifiable, Codable {
-    var id: UUID // Changed from let id = UUID() to var id: UUID
+    var id: UUID
     let name: String
     let description: String
     let difficulty: WorkoutDifficulty
     let estimatedDuration: Int // in minutes
     let exercises: [Exercise]
+    let exercisesWithPrescription: [ExerciseWithSetsReps]? // Store prescription data
     let tags: [String]
     let icon: String // SF Symbol name for the template icon
     let coachingNotes: String? // Optional coaching notes for trainers
     let usageCount: Int // How many times this template has been used
     let createdDate: Date
     let updatedDate: Date
+    let isTemporary: Bool // True for templates created from custom workouts
+    let createdByTrainerId: String? // Track who created this template
     
-    // Default initializer for new templates
-    init(name: String, description: String, difficulty: WorkoutDifficulty, estimatedDuration: Int, exercises: [Exercise], tags: [String], icon: String, coachingNotes: String? = nil, usageCount: Int = 0, createdDate: Date = Date(), updatedDate: Date = Date()) {
+    // Default initializer for new reusable templates
+    init(name: String, description: String, difficulty: WorkoutDifficulty, estimatedDuration: Int, exercises: [Exercise], tags: [String], icon: String, coachingNotes: String? = nil, usageCount: Int = 0, createdDate: Date = Date(), updatedDate: Date = Date(), isTemporary: Bool = false, createdByTrainerId: String? = nil) {
         self.id = UUID()
         self.name = name
         self.description = description
         self.difficulty = difficulty
         self.estimatedDuration = estimatedDuration
         self.exercises = exercises
+        self.exercisesWithPrescription = nil
         self.tags = tags
         self.icon = icon
         self.coachingNotes = coachingNotes
         self.usageCount = usageCount
         self.createdDate = createdDate
         self.updatedDate = updatedDate
+        self.isTemporary = isTemporary
+        self.createdByTrainerId = createdByTrainerId
+    }
+    
+    // Initializer for templates with prescription data (from custom workouts)
+    init(name: String, description: String, difficulty: WorkoutDifficulty, estimatedDuration: Int, exercisesWithPrescription: [ExerciseWithSetsReps], tags: [String], icon: String, coachingNotes: String? = nil, usageCount: Int = 0, createdDate: Date = Date(), updatedDate: Date = Date(), isTemporary: Bool = false, createdByTrainerId: String? = nil) {
+        self.id = UUID()
+        self.name = name
+        self.description = description
+        self.difficulty = difficulty
+        self.estimatedDuration = estimatedDuration
+        self.exercises = exercisesWithPrescription.map { $0.exercise }
+        self.exercisesWithPrescription = exercisesWithPrescription
+        self.tags = tags
+        self.icon = icon
+        self.coachingNotes = coachingNotes
+        self.usageCount = usageCount
+        self.createdDate = createdDate
+        self.updatedDate = updatedDate
+        self.isTemporary = isTemporary
+        self.createdByTrainerId = createdByTrainerId
     }
     
     // Firestore initializer with existing ID
-    init(id: UUID, name: String, description: String, difficulty: WorkoutDifficulty, estimatedDuration: Int, exercises: [Exercise], tags: [String], icon: String, coachingNotes: String? = nil, usageCount: Int, createdDate: Date, updatedDate: Date) {
+    init(id: UUID, name: String, description: String, difficulty: WorkoutDifficulty, estimatedDuration: Int, exercises: [Exercise], exercisesWithPrescription: [ExerciseWithSetsReps]? = nil, tags: [String], icon: String, coachingNotes: String? = nil, usageCount: Int, createdDate: Date, updatedDate: Date, isTemporary: Bool = false, createdByTrainerId: String? = nil) {
         self.id = id
         self.name = name
         self.description = description
         self.difficulty = difficulty
         self.estimatedDuration = estimatedDuration
         self.exercises = exercises
+        self.exercisesWithPrescription = exercisesWithPrescription
         self.tags = tags
         self.icon = icon
         self.coachingNotes = coachingNotes
         self.usageCount = usageCount
         self.createdDate = createdDate
         self.updatedDate = updatedDate
+        self.isTemporary = isTemporary
+        self.createdByTrainerId = createdByTrainerId
     }
     
     static let sampleTemplates = [
@@ -2095,9 +2153,9 @@ struct WorkoutTemplate: Identifiable, Codable {
             difficulty: .beginner,
             estimatedDuration: 25,
             exercises: [
-                Exercise(id: "3", title: "Plank", description: "Core strengthening exercise", mediaUrl: nil, category: .strength, duration: 10, difficulty: .beginner, exerciseType: .duration),
-                Exercise(id: "4", title: "Dead Bug", description: "Core stability exercise", mediaUrl: nil, category: .strength, duration: 8, difficulty: .beginner, exerciseType: .reps),
-                Exercise(id: "5", title: "Bird Dog", description: "Core and balance exercise", mediaUrl: nil, category: .strength, duration: 10, difficulty: .beginner, exerciseType: .duration)
+                Exercise(id: "3", title: "Plank", description: "Core strengthening exercise", mediaUrl: nil, category: .strength, difficulty: .beginner, exerciseType: .duration),
+                Exercise(id: "4", title: "Dead Bug", description: "Core stability exercise", mediaUrl: nil, category: .strength, difficulty: .beginner, exerciseType: .reps),
+                Exercise(id: "5", title: "Bird Dog", description: "Core and balance exercise", mediaUrl: nil, category: .strength, difficulty: .beginner, exerciseType: .duration)
             ],
             tags: ["Core", "Strength", "Beginner", "No Equipment"],
             icon: "target",
@@ -2112,9 +2170,9 @@ struct WorkoutTemplate: Identifiable, Codable {
             difficulty: .intermediate,
             estimatedDuration: 35,
             exercises: [
-                Exercise(id: "6", title: "Burpees", description: "Full body explosive exercise", mediaUrl: nil, category: .cardio, duration: 12, difficulty: .intermediate, exerciseType: .reps),
-                Exercise(id: "7", title: "Mountain Climbers", description: "Cardio and core exercise", mediaUrl: nil, category: .cardio, duration: 10, difficulty: .intermediate, exerciseType: .reps),
-                Exercise(id: "8", title: "Jump Squats", description: "Explosive lower body exercise", mediaUrl: nil, category: .cardio, duration: 8, difficulty: .intermediate, exerciseType: .reps)
+                Exercise(id: "6", title: "Burpees", description: "Full body explosive exercise", mediaUrl: nil, category: .cardio, difficulty: .intermediate, exerciseType: .reps),
+                Exercise(id: "7", title: "Mountain Climbers", description: "Cardio and core exercise", mediaUrl: nil, category: .cardio, difficulty: .intermediate, exerciseType: .reps),
+                Exercise(id: "8", title: "Jump Squats", description: "Explosive lower body exercise", mediaUrl: nil, category: .cardio, difficulty: .intermediate, exerciseType: .reps)
             ],
             tags: ["HIIT", "Cardio", "Intermediate", "No Equipment"],
             icon: "flame.fill",
@@ -2129,9 +2187,9 @@ struct WorkoutTemplate: Identifiable, Codable {
             difficulty: .beginner,
             estimatedDuration: 20,
             exercises: [
-                Exercise(id: "9", title: "Cat-Cow Stretch", description: "Spinal mobility exercise", mediaUrl: nil, category: .flexibility, duration: 5, difficulty: .beginner, exerciseType: .duration),
-                Exercise(id: "10", title: "Hip Circles", description: "Hip mobility exercise", mediaUrl: nil, category: .flexibility, duration: 8, difficulty: .beginner, exerciseType: .reps),
-                Exercise(id: "11", title: "Shoulder Rolls", description: "Shoulder mobility exercise", mediaUrl: nil, category: .flexibility, duration: 5, difficulty: .beginner, exerciseType: .reps)
+                Exercise(id: "9", title: "Cat-Cow Stretch", description: "Spinal mobility exercise", mediaUrl: nil, category: .flexibility, difficulty: .beginner, exerciseType: .duration),
+                Exercise(id: "10", title: "Hip Circles", description: "Hip mobility exercise", mediaUrl: nil, category: .flexibility, difficulty: .beginner, exerciseType: .reps),
+                Exercise(id: "11", title: "Shoulder Rolls", description: "Shoulder mobility exercise", mediaUrl: nil, category: .flexibility, difficulty: .beginner, exerciseType: .reps)
             ],
             tags: ["Flexibility", "Recovery", "Beginner", "Yoga"],
             icon: "leaf.fill",
@@ -2146,9 +2204,9 @@ struct WorkoutTemplate: Identifiable, Codable {
             difficulty: .advanced,
             estimatedDuration: 45,
             exercises: [
-                Exercise(id: "1", title: "Push-ups", description: "Upper body exercise", mediaUrl: nil, category: .strength, duration: 15, difficulty: .beginner, exerciseType: .reps),
-                Exercise(id: "12", title: "Pike Push-ups", description: "Shoulder-focused push-up variation", mediaUrl: nil, category: .strength, duration: 12, difficulty: .advanced, exerciseType: .reps),
-                Exercise(id: "13", title: "Diamond Push-ups", description: "Tricep-focused push-up variation", mediaUrl: nil, category: .strength, duration: 10, difficulty: .advanced, exerciseType: .reps)
+                Exercise(id: "1", title: "Push-ups", description: "Upper body exercise", mediaUrl: nil, category: .strength, difficulty: .beginner, exerciseType: .reps),
+                Exercise(id: "12", title: "Pike Push-ups", description: "Shoulder-focused push-up variation", mediaUrl: nil, category: .strength, difficulty: .advanced, exerciseType: .reps),
+                Exercise(id: "13", title: "Diamond Push-ups", description: "Tricep-focused push-up variation", mediaUrl: nil, category: .strength, difficulty: .advanced, exerciseType: .reps)
             ],
             tags: ["Strength", "Upper Body", "Advanced", "Bodyweight"],
             icon: "dumbbell.fill",
@@ -2195,14 +2253,16 @@ struct Program: Identifiable, Codable {
                 ScheduledWorkout(
                     id: UUID(),
                     date: Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date(),
-                    workoutTemplate: WorkoutTemplate.sampleTemplates[0],
+                    workoutTemplateId: UUID(), // Will be replaced with actual template IDs
+                    workoutTemplateName: "Core Strength Essentials",
                     isCompleted: false,
                     completedDate: nil
                 ),
                 ScheduledWorkout(
                     id: UUID(),
                     date: Calendar.current.date(byAdding: .day, value: 3, to: Date()) ?? Date(),
-                    workoutTemplate: WorkoutTemplate.sampleTemplates[2],
+                    workoutTemplateId: UUID(), // Will be replaced with actual template IDs
+                    workoutTemplateName: "Flexibility Flow",
                     isCompleted: false,
                     completedDate: nil
                 )
@@ -2224,7 +2284,8 @@ struct Program: Identifiable, Codable {
                 ScheduledWorkout(
                     id: UUID(),
                     date: Calendar.current.date(byAdding: .day, value: 2, to: Date()) ?? Date(),
-                    workoutTemplate: WorkoutTemplate.sampleTemplates[1],
+                    workoutTemplateId: UUID(), // Will be replaced with actual template IDs
+                    workoutTemplateName: "HIIT Cardio Blast",
                     isCompleted: false,
                     completedDate: nil
                 )
@@ -2260,7 +2321,8 @@ struct Program: Identifiable, Codable {
                 ScheduledWorkout(
                     id: UUID(),
                     date: Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date(),
-                    workoutTemplate: WorkoutTemplate.sampleTemplates[3],
+                    workoutTemplateId: UUID(), // Will be replaced with actual template IDs
+                    workoutTemplateName: "Upper Body Power",
                     isCompleted: false,
                     completedDate: nil
                 )
@@ -2282,7 +2344,8 @@ struct Program: Identifiable, Codable {
                 ScheduledWorkout(
                     id: UUID(),
                     date: Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date(),
-                    workoutTemplate: WorkoutTemplate.sampleTemplates[0],
+                    workoutTemplateId: UUID(), // Will be replaced with actual template IDs
+                    workoutTemplateName: "Core Strength Essentials",
                     isCompleted: false,
                     completedDate: nil
                 )
@@ -2298,12 +2361,13 @@ struct Program: Identifiable, Codable {
     ]
 }
 
-// MARK: - Scheduled Workout Model (New)
+// MARK: - Scheduled Workout Model (Simplified)
 struct ScheduledWorkout: Identifiable, Codable {
     var id: UUID
     var scheduledDate: Date
-    var workoutTemplate: WorkoutTemplate? // Can be nil if created from scratch
-    var customWorkout: CustomWorkout? // If not using a template
+    var programDay: Int? // Which day of the program this workout is scheduled for (1-indexed)
+    var workoutTemplateId: UUID // Always reference a template (temporary or permanent)
+    var workoutTemplateName: String // Cache template name for display
     var isCompleted: Bool
     var completedDate: Date?
     var clientNotes: String? // Client's notes after completion
@@ -2312,41 +2376,17 @@ struct ScheduledWorkout: Identifiable, Codable {
     var date: Date { scheduledDate }
     
     var title: String {
-        if let template = workoutTemplate {
-            return template.name
-        } else if let custom = customWorkout {
-            return custom.name
-        } else {
-            return "Workout"
-        }
+        return workoutTemplateName
     }
     
-    var estimatedDuration: Int {
-        if let template = workoutTemplate {
-            return template.estimatedDuration
-        } else if let custom = customWorkout {
-            return custom.estimatedDuration
-        } else {
-            return 30
-        }
-    }
+    // Estimated duration will be fetched from the template when needed
     
-    init(id: UUID = UUID(), date: Date, workoutTemplate: WorkoutTemplate?, isCompleted: Bool = false, completedDate: Date? = nil, clientNotes: String? = nil, trainerNotes: String? = nil) {
+    init(id: UUID = UUID(), date: Date, workoutTemplateId: UUID, workoutTemplateName: String, programDay: Int? = nil, isCompleted: Bool = false, completedDate: Date? = nil, clientNotes: String? = nil, trainerNotes: String? = nil) {
         self.id = id
         self.scheduledDate = date
-        self.workoutTemplate = workoutTemplate
-        self.customWorkout = nil
-        self.isCompleted = isCompleted
-        self.completedDate = completedDate
-        self.clientNotes = clientNotes
-        self.trainerNotes = trainerNotes
-    }
-    
-    init(id: UUID = UUID(), date: Date, customWorkout: CustomWorkout?, isCompleted: Bool = false, completedDate: Date? = nil, clientNotes: String? = nil, trainerNotes: String? = nil) {
-        self.id = id
-        self.scheduledDate = date
-        self.workoutTemplate = nil
-        self.customWorkout = customWorkout
+        self.programDay = programDay
+        self.workoutTemplateId = workoutTemplateId
+        self.workoutTemplateName = workoutTemplateName
         self.isCompleted = isCompleted
         self.completedDate = completedDate
         self.clientNotes = clientNotes
@@ -2360,9 +2400,34 @@ struct CustomWorkout: Identifiable, Codable {
     var name: String
     var description: String
     var exercises: [Exercise]
+    var exercisesWithPrescription: [ExerciseWithSetsReps]? // Store prescription data
     var estimatedDuration: Int
     var difficulty: WorkoutDifficulty
     var createdDate: Date
+    
+    // Convenience initializer that creates both exercises and prescription data
+    init(name: String, description: String, exercisesWithPrescription: [ExerciseWithSetsReps], estimatedDuration: Int, difficulty: WorkoutDifficulty, createdDate: Date = Date()) {
+        self.id = UUID()
+        self.name = name
+        self.description = description
+        self.exercises = exercisesWithPrescription.map { $0.exercise }
+        self.exercisesWithPrescription = exercisesWithPrescription
+        self.estimatedDuration = estimatedDuration
+        self.difficulty = difficulty
+        self.createdDate = createdDate
+    }
+    
+    // Legacy initializer for backward compatibility
+    init(id: UUID = UUID(), name: String, description: String, exercises: [Exercise], estimatedDuration: Int, difficulty: WorkoutDifficulty, createdDate: Date) {
+        self.id = id
+        self.name = name
+        self.description = description
+        self.exercises = exercises
+        self.exercisesWithPrescription = nil // Will be nil for legacy data
+        self.estimatedDuration = estimatedDuration
+        self.difficulty = difficulty
+        self.createdDate = createdDate
+    }
 }
 
 
@@ -2389,5 +2454,254 @@ enum ClientProgramStatus: String, CaseIterable, Codable {
         case .completed:
             return .green
         }
+    }
+}
+
+// MARK: - Progress History Models
+
+struct ProgressEntry: Identifiable, Codable {
+    let id: String
+    let clientId: String
+    let field: ProgressField
+    let oldValue: String?
+    let newValue: String
+    let changedBy: String // trainerId or "client"
+    let changedByName: String // trainer name or "Client"
+    let timestamp: Date
+    let note: String?
+    let sessionId: String? // if recorded during a session
+    
+    init(id: String = UUID().uuidString, clientId: String, field: ProgressField, oldValue: String?, newValue: String, changedBy: String, changedByName: String, timestamp: Date = Date(), note: String? = nil, sessionId: String? = nil) {
+        self.id = id
+        self.clientId = clientId
+        self.field = field
+        self.oldValue = oldValue
+        self.newValue = newValue
+        self.changedBy = changedBy
+        self.changedByName = changedByName
+        self.timestamp = timestamp
+        self.note = note
+        self.sessionId = sessionId
+    }
+}
+
+enum ProgressField: String, CaseIterable, Codable {
+    case weight = "weight"
+    case bodyFatPercentage = "bodyFatPercentage"
+    case muscleMass = "muscleMass"
+    case waist = "waist"
+    case chest = "chest"
+    case arms = "arms"
+    case thighs = "thighs"
+    
+    var displayName: String {
+        switch self {
+        case .weight: return "Weight"
+        case .bodyFatPercentage: return "Body Fat %"
+        case .muscleMass: return "Muscle Mass"
+        case .waist: return "Waist"
+        case .chest: return "Chest"
+        case .arms: return "Arms"
+        case .thighs: return "Thighs"
+        }
+    }
+    
+    var icon: String {
+        switch self {
+        case .weight: return "scalemass"
+        case .bodyFatPercentage: return "chart.pie"
+        case .muscleMass: return "figure.strengthtraining.traditional"
+        case .waist, .chest, .arms, .thighs: return "ruler.fill"
+        }
+    }
+    
+    var unit: String {
+        switch self {
+        case .weight: return "lbs"
+        case .bodyFatPercentage: return "%"
+        case .muscleMass: return "lbs"
+        case .waist, .chest, .arms, .thighs: return "in"
+        }
+    }
+    
+    var isNumeric: Bool {
+        return true
+    }
+    
+    var category: ProgressCategory {
+        switch self {
+        case .weight, .bodyFatPercentage, .muscleMass: return .weight
+        case .waist, .chest, .arms, .thighs: return .measurements
+        }
+    }
+}
+
+enum ProgressCategory: String, CaseIterable {
+    case weight = "weight"
+    case measurements = "measurements"
+    
+    var displayName: String {
+        switch self {
+        case .weight: return "Weight & Body Composition"
+        case .measurements: return "Body Measurements"
+        }
+    }
+    
+    var icon: String {
+        switch self {
+        case .weight: return "scalemass"
+        case .measurements: return "ruler.fill"
+        }
+    }
+}
+
+struct Milestone: Identifiable, Codable {
+    let id: String
+    let clientId: String
+    let title: String
+    let description: String?
+    let achievedDate: Date
+    let createdBy: String // trainerId or "client"
+    let createdByName: String
+    let category: MilestoneCategory
+    let isAutomatic: Bool // true for system-generated milestones
+    
+    init(id: String = UUID().uuidString, clientId: String, title: String, description: String? = nil, achievedDate: Date = Date(), createdBy: String, createdByName: String, category: MilestoneCategory, isAutomatic: Bool = false) {
+        self.id = id
+        self.clientId = clientId
+        self.title = title
+        self.description = description
+        self.achievedDate = achievedDate
+        self.createdBy = createdBy
+        self.createdByName = createdByName
+        self.category = category
+        self.isAutomatic = isAutomatic
+    }
+}
+
+enum MilestoneCategory: String, CaseIterable, Codable {
+    case weightLoss = "weightLoss"
+    case strength = "strength"
+    case endurance = "endurance"
+    case custom = "custom"
+    
+    var displayName: String {
+        switch self {
+        case .weightLoss: return "Weight Loss"
+        case .strength: return "Strength"
+        case .endurance: return "Endurance"
+        case .custom: return "Achievement"
+        }
+    }
+    
+    var icon: String {
+        switch self {
+        case .weightLoss: return "scalemass"
+        case .strength: return "dumbbell"
+        case .endurance: return "heart"
+        case .custom: return "trophy"
+        }
+    }
+    
+    var color: String {
+        switch self {
+        case .weightLoss: return "softGreen"
+        case .strength: return "primaryTeal"
+        case .endurance: return "gentleBlue"
+        case .custom: return "warmOrange"
+        }
+    }
+}
+
+// MARK: - Progress Analytics
+struct ProgressAnalytics {
+    let totalEntries: Int
+    let mostTrackedField: ProgressField?
+    let averageEntriesPerWeek: Double
+    let fieldBreakdown: [ProgressField: Int]
+    let weeklyActivity: [String: Int]
+}
+
+// MARK: - Progress Chart Data
+struct ProgressChartDataPoint: Identifiable {
+    let id = UUID()
+    let date: Date
+    let value: Double
+    let field: ProgressField
+    let note: String?
+}
+
+// MARK: - Export Models
+enum ExportFormat {
+    case csv
+    case json
+}
+
+struct ProgressExportData: Codable {
+    let exportDate: Date
+    let progressEntries: [ProgressExportEntry]
+    let milestones: [MilestoneExportEntry]
+}
+
+struct ProgressExportEntry: Codable {
+    let date: Date
+    let field: String
+    let oldValue: String?
+    let newValue: String
+    let changedBy: String
+    let note: String?
+}
+
+struct MilestoneExportEntry: Codable {
+    let date: Date
+    let title: String
+    let description: String?
+    let category: String
+    let createdBy: String
+}
+
+// MARK: - DateFormatter Extensions
+extension DateFormatter {
+    static let shortDate: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .short
+        return formatter
+    }()
+}
+
+// MARK: - Exercise with Workout Prescription
+struct ExerciseWithSetsReps: Identifiable, Codable {
+    let id = UUID()
+    let exercise: Exercise
+    var sets: Int = 3
+    var reps: String = "10" // Can be "12", "10-15", "30 sec", etc.
+    
+    init(exercise: Exercise) {
+        self.exercise = exercise
+        // Set default values based on exercise type
+        if exercise.exerciseType == .duration {
+            self.reps = "30" // Default duration for duration-based exercises
+        } else {
+            self.reps = "10" // Default reps for new exercises
+        }
+    }
+    
+    // Custom Codable implementation to handle UUID
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.exercise = try container.decode(Exercise.self, forKey: .exercise)
+        self.sets = try container.decode(Int.self, forKey: .sets)
+        self.reps = try container.decode(String.self, forKey: .reps)
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(exercise, forKey: .exercise)
+        try container.encode(sets, forKey: .sets)
+        try container.encode(reps, forKey: .reps)
+    }
+    
+    private enum CodingKeys: String, CodingKey {
+        case exercise, sets, reps
     }
 }

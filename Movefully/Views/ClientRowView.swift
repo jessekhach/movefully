@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ClientRowView: View {
     let client: Client
+    @ObservedObject private var smartAlertService = SmartAlertService.shared
     
     var body: some View {
         HStack(spacing: MovefullyTheme.Layout.paddingM) {
@@ -103,14 +104,14 @@ struct ClientStatusBadge: View {
         switch status {
         case .active:
             return "Active"
-        case .new:
-            return "New"
         case .needsAttention:
             return "Alert"
         case .paused:
             return "Paused"
         case .pending:
             return "Pending"
+        case .trainer_removed:
+            return "Removed"
         }
     }
     
@@ -118,14 +119,14 @@ struct ClientStatusBadge: View {
         switch status {
         case .active:
             return MovefullyTheme.Colors.softGreen
-        case .new:
-            return MovefullyTheme.Colors.gentleBlue
         case .needsAttention:
             return MovefullyTheme.Colors.warmOrange
         case .paused:
             return MovefullyTheme.Colors.mediumGray
         case .pending:
             return MovefullyTheme.Colors.lavender
+        case .trainer_removed:
+            return MovefullyTheme.Colors.warning
         }
     }
 } 

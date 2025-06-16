@@ -75,7 +75,7 @@ class TemplateDataService: ObservableObject {
     
     // MARK: - Template Creation
     
-    func createTemplate(_ template: WorkoutTemplate) async throws {
+    func createTemplate(_ template: WorkoutTemplate, exercisesWithPrescription: [ExerciseWithSetsReps]? = nil) async throws {
         guard let trainerId = currentTrainerId else {
             print("❌ TemplateDataService: User not authenticated")
             throw TemplateError.notAuthenticated
@@ -91,16 +91,43 @@ class TemplateDataService: ObservableObject {
             "description": template.description,
             "difficulty": template.difficulty.rawValue,
             "estimatedDuration": template.estimatedDuration,
-            "exercises": template.exercises.map { exercise in
-                [
+            "exercises": template.exercises.enumerated().map { index, exercise in
+                var exerciseData: [String: Any] = [
                     "id": exercise.id,
                     "title": exercise.title,
                     "description": exercise.description ?? "",
                     "category": exercise.category?.rawValue ?? "",
-                    "duration": exercise.duration ?? 0,
                     "difficulty": exercise.difficulty?.rawValue ?? "",
-                    "exerciseType": exercise.exerciseType.rawValue
+                    "exerciseType": exercise.exerciseType.rawValue,
+                    "howToPerform": exercise.howToPerform ?? [],
+                    "trainerTips": exercise.trainerTips ?? [],
+                    "commonMistakes": exercise.commonMistakes ?? [],
+                    "modifications": exercise.modifications ?? [],
+                    "equipmentNeeded": exercise.equipmentNeeded ?? [],
+                    "targetMuscles": exercise.targetMuscles ?? [],
+                    "breathingCues": exercise.breathingCues ?? "",
+                    "mediaUrl": exercise.mediaUrl ?? "",
+                    "createdByTrainerId": exercise.createdByTrainerId ?? ""
                 ]
+                
+                // Add workout prescription data if available
+                if let exercisesWithPrescription = exercisesWithPrescription,
+                   index < exercisesWithPrescription.count {
+                    let exerciseWithSetsReps = exercisesWithPrescription[index]
+                    exerciseData["sets"] = exerciseWithSetsReps.sets
+                    
+                    // Handle reps vs duration based on exercise type
+                    if exercise.exerciseType == .reps {
+                        exerciseData["reps"] = exerciseWithSetsReps.reps
+                    } else {
+                        // For duration exercises, store the duration value
+                        if let durationInt = Int(exerciseWithSetsReps.reps) {
+                            exerciseData["duration"] = durationInt
+                        }
+                    }
+                }
+                
+                return exerciseData
             },
             "tags": template.tags,
             "icon": template.icon,
@@ -117,7 +144,7 @@ class TemplateDataService: ObservableObject {
     
     // MARK: - Template Updates
     
-    func updateTemplate(_ template: WorkoutTemplate) async throws {
+    func updateTemplate(_ template: WorkoutTemplate, exercisesWithPrescription: [ExerciseWithSetsReps]? = nil) async throws {
         guard let trainerId = currentTrainerId else {
             print("❌ TemplateDataService: User not authenticated for update")
             throw TemplateError.notAuthenticated
@@ -132,16 +159,43 @@ class TemplateDataService: ObservableObject {
             "description": template.description,
             "difficulty": template.difficulty.rawValue,
             "estimatedDuration": template.estimatedDuration,
-            "exercises": template.exercises.map { exercise in
-                [
+            "exercises": template.exercises.enumerated().map { index, exercise in
+                var exerciseData: [String: Any] = [
                     "id": exercise.id,
                     "title": exercise.title,
                     "description": exercise.description ?? "",
                     "category": exercise.category?.rawValue ?? "",
-                    "duration": exercise.duration ?? 0,
                     "difficulty": exercise.difficulty?.rawValue ?? "",
-                    "exerciseType": exercise.exerciseType.rawValue
+                    "exerciseType": exercise.exerciseType.rawValue,
+                    "howToPerform": exercise.howToPerform ?? [],
+                    "trainerTips": exercise.trainerTips ?? [],
+                    "commonMistakes": exercise.commonMistakes ?? [],
+                    "modifications": exercise.modifications ?? [],
+                    "equipmentNeeded": exercise.equipmentNeeded ?? [],
+                    "targetMuscles": exercise.targetMuscles ?? [],
+                    "breathingCues": exercise.breathingCues ?? "",
+                    "mediaUrl": exercise.mediaUrl ?? "",
+                    "createdByTrainerId": exercise.createdByTrainerId ?? ""
                 ]
+                
+                // Add workout prescription data if available
+                if let exercisesWithPrescription = exercisesWithPrescription,
+                   index < exercisesWithPrescription.count {
+                    let exerciseWithSetsReps = exercisesWithPrescription[index]
+                    exerciseData["sets"] = exerciseWithSetsReps.sets
+                    
+                    // Handle reps vs duration based on exercise type
+                    if exercise.exerciseType == .reps {
+                        exerciseData["reps"] = exerciseWithSetsReps.reps
+                    } else {
+                        // For duration exercises, store the duration value
+                        if let durationInt = Int(exerciseWithSetsReps.reps) {
+                            exerciseData["duration"] = durationInt
+                        }
+                    }
+                }
+                
+                return exerciseData
             },
             "tags": template.tags,
             "icon": template.icon,
@@ -179,6 +233,37 @@ class TemplateDataService: ObservableObject {
         try await documentRef.updateData([
             "usageCount": FieldValue.increment(Int64(1))
         ])
+    }
+    
+    /// Counts how many times this template is used across all programs
+    func getLiveUsageCount(for templateId: UUID) async throws -> Int {
+        guard let trainerId = currentTrainerId else {
+            throw TemplateError.notAuthenticated
+        }
+        
+        // Query all programs for this trainer
+        let programsSnapshot = try await db.collection("programs")
+            .whereField("trainerId", isEqualTo: trainerId)
+            .getDocuments()
+        
+        var usageCount = 0
+        let templateIdString = templateId.uuidString
+        
+        for document in programsSnapshot.documents {
+            let data = document.data()
+            
+            // Check if this template is used in any scheduled workouts
+            if let scheduledWorkouts = data["scheduledWorkouts"] as? [[String: Any]] {
+                for workout in scheduledWorkouts {
+                    if let workoutTemplateId = workout["workoutTemplateId"] as? String,
+                       workoutTemplateId == templateIdString {
+                        usageCount += 1
+                    }
+                }
+            }
+        }
+        
+        return usageCount
     }
     
     // MARK: - Template Search and Filtering
@@ -227,6 +312,241 @@ class TemplateDataService: ObservableObject {
             difficultyBreakdown: difficultyBreakdown,
             popularTags: Array(popularTags)
         )
+    }
+    
+    // MARK: - Template Prescription Data
+    
+    /// Retrieves the prescription data (sets, reps, restTime) for a specific template
+    func getTemplatePrescriptionData(for templateId: UUID) async throws -> [ExerciseWithSetsReps] {
+        guard let trainerId = currentTrainerId else {
+            throw TemplateError.notAuthenticated
+        }
+        
+        let document = try await db.collection("templates").document(templateId.uuidString).getDocument()
+        
+        guard document.exists,
+              let data = document.data(),
+              let exercisesData = data["exercises"] as? [[String: Any]] else {
+            throw TemplateError.templateNotFound
+        }
+        
+        // Parse exercises with prescription data
+        let exercisesWithPrescription = exercisesData.compactMap { exerciseData -> ExerciseWithSetsReps? in
+            guard let id = exerciseData["id"] as? String,
+                  let title = exerciseData["title"] as? String,
+                  let description = exerciseData["description"] as? String,
+                  let categoryRaw = exerciseData["category"] as? String,
+                  let category = ExerciseCategory(rawValue: categoryRaw),
+                  let exerciseTypeRaw = exerciseData["exerciseType"] as? String,
+                  let exerciseType = ExerciseType(rawValue: exerciseTypeRaw) else {
+                return nil
+            }
+            
+            let mediaUrl = exerciseData["mediaUrl"] as? String
+            let difficultyRaw = exerciseData["difficulty"] as? String
+            let difficulty = difficultyRaw != nil ? DifficultyLevel(rawValue: difficultyRaw!) : nil
+            let exercise = Exercise(id: id, title: title, description: description, mediaUrl: mediaUrl, category: category, difficulty: difficulty, exerciseType: exerciseType)
+            
+            let sets = exerciseData["sets"] as? Int ?? 3 // Default for existing templates
+            
+            // Handle reps vs duration based on exercise type
+            var reps: String = "10" // Default
+            if exercise.exerciseType == .reps {
+                if let repsString = exerciseData["reps"] as? String {
+                    reps = repsString
+                } else if let durationInt = exerciseData["duration"] as? Int {
+                    reps = "\(durationInt)" // Convert duration to reps string for reps-based exercises
+                }
+            } else {
+                // For duration exercises, use duration value or default
+                if let durationInt = exerciseData["duration"] as? Int {
+                    reps = "\(durationInt)"
+                } else {
+                    reps = "30" // Default duration
+                }
+            }
+            
+            var exerciseWithSetsReps = ExerciseWithSetsReps(exercise: exercise)
+            exerciseWithSetsReps.sets = sets
+            exerciseWithSetsReps.reps = reps
+            return exerciseWithSetsReps
+        }
+        
+        return exercisesWithPrescription
+    }
+    
+    /// Creates a temporary template from custom workout data
+    /// This enables the unified template-based architecture
+    func createTemporaryTemplate(from customWorkout: CustomWorkout, trainerId: String) async throws -> WorkoutTemplate {
+        print("🔄 TemplateDataService: Creating temporary template from custom workout: \(customWorkout.name)")
+        
+        // Create a temporary template with prescription data
+        let temporaryTemplate = WorkoutTemplate(
+            name: customWorkout.name,
+            description: customWorkout.description,
+            difficulty: customWorkout.difficulty,
+            estimatedDuration: customWorkout.estimatedDuration,
+            exercisesWithPrescription: customWorkout.exercisesWithPrescription ?? [],
+            tags: ["Custom", "Temporary"],
+            icon: "plus.circle.fill",
+            coachingNotes: nil,
+            usageCount: 0,
+            createdDate: customWorkout.createdDate,
+            updatedDate: Date(),
+            isTemporary: true,
+            createdByTrainerId: trainerId
+        )
+        
+        // Save the temporary template to Firestore
+        try await saveTemplate(temporaryTemplate)
+        
+        print("✅ TemplateDataService: Created temporary template with ID: \(temporaryTemplate.id)")
+        return temporaryTemplate
+    }
+    
+    /// Cleans up temporary templates when a program is deleted
+    func cleanupTemporaryTemplatesForProgram(_ program: Program) async throws {
+        print("🧹 TemplateDataService: Cleaning up temporary templates for program: \(program.name)")
+        
+        guard let trainerId = currentTrainerId else {
+            throw TemplateError.notAuthenticated
+        }
+        
+        // Get all template IDs used in this program
+        let templateIds = Set(program.scheduledWorkouts.map { $0.workoutTemplateId })
+        
+        // Check which ones are temporary templates created by this trainer
+        for templateId in templateIds {
+            do {
+                let templateDoc = try await db.collection("templates")
+                    .document(templateId.uuidString)
+                    .getDocument()
+                
+                if let data = templateDoc.data(),
+                   let isTemporary = data["isTemporary"] as? Bool,
+                   let createdByTrainerId = data["createdByTrainerId"] as? String,
+                   isTemporary && createdByTrainerId == trainerId {
+                    // Delete the temporary template
+                    try await templateDoc.reference.delete()
+                    print("✅ TemplateDataService: Deleted temporary template: \(templateId)")
+                }
+            } catch {
+                print("⚠️ TemplateDataService: Failed to check/delete template \(templateId): \(error)")
+            }
+        }
+    }
+    
+    /// Performs periodic cleanup of orphaned temporary templates
+    /// Call this periodically to clean up temporary templates that are no longer referenced
+    func cleanupOrphanedTemporaryTemplates() async throws {
+        print("🧹 TemplateDataService: Starting cleanup of orphaned temporary templates")
+        
+        guard let trainerId = currentTrainerId else {
+            throw TemplateError.notAuthenticated
+        }
+        
+        // Get all temporary templates created by this trainer
+        let temporaryTemplatesSnapshot = try await db.collection("templates")
+            .whereField("isTemporary", isEqualTo: true)
+            .whereField("createdByTrainerId", isEqualTo: trainerId)
+            .getDocuments()
+        
+        // Get all template IDs currently in use by programs
+        let programsSnapshot = try await db.collection("programs")
+            .whereField("trainerId", isEqualTo: trainerId)
+            .getDocuments()
+        
+        var usedTemplateIds = Set<String>()
+        for programDoc in programsSnapshot.documents {
+            if let scheduledWorkoutsData = programDoc.data()["scheduledWorkouts"] as? [[String: Any]] {
+                for workoutData in scheduledWorkoutsData {
+                    if let templateId = workoutData["workoutTemplateId"] as? String {
+                        usedTemplateIds.insert(templateId)
+                    }
+                }
+            }
+        }
+        
+        // Delete orphaned temporary templates
+        for templateDoc in temporaryTemplatesSnapshot.documents {
+            if !usedTemplateIds.contains(templateDoc.documentID) {
+                try await templateDoc.reference.delete()
+                print("✅ TemplateDataService: Deleted orphaned temporary template: \(templateDoc.documentID)")
+            }
+        }
+        
+        print("🧹 TemplateDataService: Cleanup completed")
+    }
+    
+    func saveTemplate(_ template: WorkoutTemplate) async throws {
+        guard let trainerId = currentTrainerId else {
+            print("❌ TemplateDataService: User not authenticated for save")
+            throw TemplateError.notAuthenticated
+        }
+        
+        print("✅ TemplateDataService: Saving template '\(template.name)' with ID: \(template.id.uuidString)")
+        isLoading = true
+        defer { isLoading = false }
+        
+        // Prepare exercises data with prescription information
+        let exercisesData = template.exercisesWithPrescription?.map { exerciseWithSetsReps in
+            let exercise = exerciseWithSetsReps.exercise
+            var exerciseData: [String: Any] = [
+                "id": exercise.id,
+                "title": exercise.title,
+                "description": exercise.description,
+                "mediaUrl": exercise.mediaUrl ?? "",
+                "category": exercise.category?.rawValue ?? "",
+                "difficulty": exercise.difficulty?.rawValue ?? "",
+                "exerciseType": exercise.exerciseType.rawValue,
+                "sets": exerciseWithSetsReps.sets
+            ]
+            
+            // Handle reps vs duration based on exercise type
+            if exercise.exerciseType == .reps {
+                exerciseData["reps"] = exerciseWithSetsReps.reps
+            } else {
+                // For duration exercises, store the duration value
+                if let durationInt = Int(exerciseWithSetsReps.reps) {
+                    exerciseData["duration"] = durationInt
+                }
+            }
+            
+            return exerciseData
+        } ?? template.exercises.map { exercise in
+            // Fallback for templates without prescription data
+            return [
+                "id": exercise.id,
+                "title": exercise.title,
+                "description": exercise.description,
+                "mediaUrl": exercise.mediaUrl ?? "",
+                "category": exercise.category?.rawValue ?? "",
+                "difficulty": exercise.difficulty?.rawValue ?? "",
+                "exerciseType": exercise.exerciseType.rawValue
+            ]
+        }
+        
+        let data: [String: Any] = [
+            "name": template.name,
+            "description": template.description,
+            "difficulty": template.difficulty.rawValue,
+            "estimatedDuration": template.estimatedDuration,
+            "exercises": exercisesData,
+            "tags": template.tags,
+            "icon": template.icon,
+            "coachingNotes": template.coachingNotes ?? "",
+            "usageCount": template.usageCount,
+            "createdDate": Timestamp(date: template.createdDate),
+            "updatedDate": Timestamp(date: template.updatedDate),
+            "isTemporary": template.isTemporary,
+            "createdByTrainerId": template.createdByTrainerId ?? trainerId
+        ]
+        
+        try await db.collection("templates")
+            .document(template.id.uuidString)
+            .setData(data)
+        
+        print("✅ TemplateDataService: Template saved successfully")
     }
 }
 
@@ -282,36 +602,65 @@ extension WorkoutTemplate {
             throw TemplateError.invalidData
         }
         
-        // Parse exercises
+        // Parse exercises with prescription data
         let exercises = exercisesData.compactMap { exerciseData -> Exercise? in
-            guard let exerciseId = exerciseData["id"] as? String,
+            guard let id = exerciseData["id"] as? String,
                   let title = exerciseData["title"] as? String,
+                  let description = exerciseData["description"] as? String,
+                  let categoryRaw = exerciseData["category"] as? String,
+                  let category = ExerciseCategory(rawValue: categoryRaw),
                   let exerciseTypeRaw = exerciseData["exerciseType"] as? String,
                   let exerciseType = ExerciseType(rawValue: exerciseTypeRaw) else {
                 return nil
             }
             
-            let description = exerciseData["description"] as? String
-            let categoryRaw = exerciseData["category"] as? String
-            let category = categoryRaw != nil ? ExerciseCategory(rawValue: categoryRaw!) : nil
-            let duration = exerciseData["duration"] as? Int
+            let mediaUrl = exerciseData["mediaUrl"] as? String
             let difficultyRaw = exerciseData["difficulty"] as? String
             let difficulty = difficultyRaw != nil ? DifficultyLevel(rawValue: difficultyRaw!) : nil
-            
-            return Exercise(
-                id: exerciseId,
-                title: title,
-                description: description,
-                mediaUrl: nil,
-                category: category,
-                duration: duration,
-                difficulty: difficulty,
-                createdByTrainerId: nil,
-                exerciseType: exerciseType
-            )
+            return Exercise(id: id, title: title, description: description, mediaUrl: mediaUrl, category: category, difficulty: difficulty, exerciseType: exerciseType)
         }
         
-        // Use the specialized initializer with existing ID
+        // Parse prescription data if available
+        let exercisesWithPrescription = exercisesData.compactMap { exerciseData -> ExerciseWithSetsReps? in
+            guard let id = exerciseData["id"] as? String,
+                  let title = exerciseData["title"] as? String,
+                  let description = exerciseData["description"] as? String,
+                  let categoryRaw = exerciseData["category"] as? String,
+                  let category = ExerciseCategory(rawValue: categoryRaw),
+                  let exerciseTypeRaw = exerciseData["exerciseType"] as? String,
+                  let exerciseType = ExerciseType(rawValue: exerciseTypeRaw) else {
+                return nil
+            }
+            
+            let mediaUrl = exerciseData["mediaUrl"] as? String
+            let difficultyRaw = exerciseData["difficulty"] as? String
+            let difficulty = difficultyRaw != nil ? DifficultyLevel(rawValue: difficultyRaw!) : nil
+            let exercise = Exercise(id: id, title: title, description: description, mediaUrl: mediaUrl, category: category, difficulty: difficulty, exerciseType: exerciseType)
+            
+            // Check if prescription data exists
+            let sets = exerciseData["sets"] as? Int ?? 3
+            
+            // Handle reps vs duration based on exercise type
+            var reps = "10" // Default
+            if exerciseType == .reps {
+                reps = exerciseData["reps"] as? String ?? "10"
+            } else {
+                if let duration = exerciseData["duration"] as? Int {
+                    reps = String(duration)
+                }
+            }
+            
+            var exerciseWithSetsReps = ExerciseWithSetsReps(exercise: exercise)
+            exerciseWithSetsReps.sets = sets
+            exerciseWithSetsReps.reps = reps
+            
+            return exerciseWithSetsReps
+        }
+        
+        let coachingNotes = data["coachingNotes"] as? String
+        let isTemporary = data["isTemporary"] as? Bool ?? false
+        let createdByTrainerId = data["createdByTrainerId"] as? String
+        
         self.init(
             id: id,
             name: name,
@@ -319,12 +668,15 @@ extension WorkoutTemplate {
             difficulty: difficulty,
             estimatedDuration: estimatedDuration,
             exercises: exercises,
+            exercisesWithPrescription: exercisesWithPrescription.isEmpty ? nil : exercisesWithPrescription,
             tags: tags,
             icon: icon,
-            coachingNotes: data["coachingNotes"] as? String,
+            coachingNotes: coachingNotes?.isEmpty == false ? coachingNotes : nil,
             usageCount: usageCount,
             createdDate: createdTimestamp.dateValue(),
-            updatedDate: updatedTimestamp.dateValue()
+            updatedDate: updatedTimestamp.dateValue(),
+            isTemporary: isTemporary,
+            createdByTrainerId: createdByTrainerId
         )
     }
 } 

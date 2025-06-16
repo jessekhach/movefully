@@ -86,13 +86,11 @@ class ExerciseDataService: ObservableObject {
             let sampleExercises = Exercise.sampleExercises
             
             for exercise in sampleExercises {
-                let data: [String: Any] = [
+                let exerciseData: [String: Any] = [
                     "id": exercise.id,
                     "title": exercise.title,
                     "description": exercise.description ?? "",
-                    "mediaUrl": exercise.mediaUrl ?? "",
                     "category": exercise.category?.rawValue ?? "",
-                    "duration": exercise.duration ?? 0,
                     "difficulty": exercise.difficulty?.rawValue ?? "",
                     "exerciseType": exercise.exerciseType.rawValue,
                     "howToPerform": exercise.howToPerform ?? [],
@@ -102,14 +100,15 @@ class ExerciseDataService: ObservableObject {
                     "equipmentNeeded": exercise.equipmentNeeded ?? [],
                     "targetMuscles": exercise.targetMuscles ?? [],
                     "breathingCues": exercise.breathingCues ?? "",
-                    "createdByTrainerId": NSNull(), // Global exercises have no trainer ID
+                    "mediaUrl": exercise.mediaUrl ?? "",
+                    "createdByTrainerId": exercise.createdByTrainerId ?? "",
                     "isGlobal": true,
                     "createdAt": Timestamp(date: Date()),
                     "updatedAt": Timestamp(date: Date())
                 ]
                 
                 let docRef = db.collection("exercises").document(exercise.id)
-                batch.setData(data, forDocument: docRef)
+                batch.setData(exerciseData, forDocument: docRef)
             }
             
             try await batch.commit()
@@ -175,7 +174,6 @@ class ExerciseDataService: ObservableObject {
             "description": exercise.description ?? "",
             "mediaUrl": exercise.mediaUrl ?? "",
             "category": exercise.category?.rawValue ?? "",
-            "duration": exercise.duration ?? 0,
             "difficulty": exercise.difficulty?.rawValue ?? "",
             "exerciseType": exercise.exerciseType.rawValue,
             "howToPerform": exercise.howToPerform ?? [],
@@ -214,7 +212,6 @@ class ExerciseDataService: ObservableObject {
             "description": exercise.description ?? "",
             "mediaUrl": exercise.mediaUrl ?? "",
             "category": exercise.category?.rawValue ?? "",
-            "duration": exercise.duration ?? 0,
             "difficulty": exercise.difficulty?.rawValue ?? "",
             "exerciseType": exercise.exerciseType.rawValue,
             "howToPerform": exercise.howToPerform ?? [],
@@ -347,7 +344,6 @@ class ExerciseDataService: ObservableObject {
                 "description": exercise.description ?? "",
                 "mediaUrl": exercise.mediaUrl ?? "",
                 "category": exercise.category?.rawValue ?? "",
-                "duration": exercise.duration ?? 0,
                 "difficulty": exercise.difficulty?.rawValue ?? "",
                 "exerciseType": exercise.exerciseType.rawValue,
                 "howToPerform": exercise.howToPerform ?? [],
@@ -421,7 +417,6 @@ extension Exercise {
         let mediaUrl = data["mediaUrl"] as? String
         let categoryRaw = data["category"] as? String
         let category = categoryRaw != nil ? ExerciseCategory(rawValue: categoryRaw!) : nil
-        let duration = data["duration"] as? Int
         let difficultyRaw = data["difficulty"] as? String
         let difficulty = difficultyRaw != nil ? DifficultyLevel(rawValue: difficultyRaw!) : nil
         let createdByTrainerId = data["createdByTrainerId"] as? String
@@ -439,7 +434,6 @@ extension Exercise {
             description: description,
             mediaUrl: mediaUrl,
             category: category,
-            duration: duration,
             difficulty: difficulty,
             createdByTrainerId: createdByTrainerId,
             exerciseType: exerciseType,

@@ -281,8 +281,8 @@ struct MovefullyEmptyState: View {
     }
     
     var body: some View {
-        VStack(spacing: MovefullyTheme.Layout.paddingXL) {
-            Spacer(minLength: 100)
+        VStack(spacing: MovefullyTheme.Layout.paddingL) {
+            Spacer(minLength: 24)
             
             Image(systemName: icon)
                 .font(MovefullyTheme.Typography.largeTitle)
@@ -321,7 +321,7 @@ struct MovefullyEmptyState: View {
                 .shadow(color: MovefullyTheme.Colors.primaryTeal.opacity(0.3), radius: 8, x: 0, y: 4)
             }
             
-            Spacer(minLength: 100)
+            Spacer(minLength: 24)
         }
         .frame(maxWidth: .infinity)
     }
@@ -1260,5 +1260,63 @@ struct MovefullyIconSelector: View {
             .animation(.easeInOut(duration: 0.15), value: selectedIcon)
         }
         .buttonStyle(PlainButtonStyle())
+    }
+}
+
+// MARK: - Smart Alert Card Component
+struct SmartAlertCard: View {
+    let alert: SmartAlert
+    let onDismiss: () -> Void
+    @State private var dragOffset: CGSize = .zero
+    
+    var body: some View {
+        HStack(alignment: .top, spacing: MovefullyTheme.Layout.paddingS) {
+            // Minimal alert indicator
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 14))
+                .foregroundColor(MovefullyTheme.Colors.warmOrange)
+                .padding(.top, 2) // Align with first line of text
+            
+            // Alert text - allow wrapping to 2 lines
+            Text(alert.title)
+                .font(MovefullyTheme.Typography.callout)
+                .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
+            
+            Spacer(minLength: 8)
+        }
+        .padding(.vertical, MovefullyTheme.Layout.paddingS)
+        .padding(.horizontal, MovefullyTheme.Layout.paddingM)
+        .background(MovefullyTheme.Colors.warmOrange.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusS))
+        .offset(x: dragOffset.width)
+        .gesture(
+            DragGesture()
+                .onChanged { gesture in
+                    // Only allow horizontal dragging to the left
+                    if gesture.translation.width < 0 {
+                        dragOffset = gesture.translation
+                    }
+                }
+                .onEnded { gesture in
+                    if gesture.translation.width < -100 { // Swipe left threshold
+                        // Animate dismiss
+                        withAnimation(.easeOut(duration: 0.3)) {
+                            dragOffset = CGSize(width: -UIScreen.main.bounds.width, height: 0)
+                        }
+                        // Call dismiss after animation
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            onDismiss()
+                        }
+                    } else {
+                        // Snap back
+                        withAnimation(.spring()) {
+                            dragOffset = .zero
+                        }
+                    }
+                }
+        )
     }
 }

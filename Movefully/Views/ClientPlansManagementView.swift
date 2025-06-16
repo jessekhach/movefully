@@ -77,7 +77,7 @@ struct ClientPlansManagementView: View {
             plansEmptyState
         } else {
             ForEach(filteredPlans) { plan in
-                PlanCard(plan: plan) {
+                PlanCard(plan: plan, viewModel: viewModel) {
                     // Handle plan selection
                 }
             }
@@ -104,6 +104,7 @@ struct ClientPlansManagementView: View {
 // MARK: - Plan Card
 struct PlanCard: View {
     let plan: Program
+    let viewModel: ProgramsViewModel
     let onTap: () -> Void
     
     var body: some View {
@@ -150,7 +151,7 @@ struct PlanCard: View {
                     
                     PlanStatView(
                         icon: "person.2",
-                        value: "\(plan.usageCount)",
+                        value: "\(viewModel.getAssignedCount(for: plan.id))",
                         label: "assigned"
                     )
                     
@@ -161,8 +162,16 @@ struct PlanCard: View {
                         .foregroundColor(MovefullyTheme.Colors.textTertiary)
                 }
                 
-                // Tags (if any)
-                if !plan.tags.isEmpty {
+                // Tags section (always present)
+                if plan.tags.isEmpty {
+                    HStack {
+                        Text("No tags assigned")
+                            .font(MovefullyTheme.Typography.caption)
+                            .foregroundColor(MovefullyTheme.Colors.textTertiary)
+                            .italic()
+                        Spacer()
+                    }
+                } else {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: MovefullyTheme.Layout.paddingS) {
                             ForEach(plan.tags, id: \.self) { tag in

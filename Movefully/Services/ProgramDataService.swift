@@ -92,32 +92,19 @@ class ProgramDataService: ObservableObject {
             "duration": program.duration,
             "difficulty": program.difficulty.rawValue,
             "scheduledWorkouts": program.scheduledWorkouts.map { workout in
-                [
-                    "id": workout.id.uuidString,
-                    "date": Timestamp(date: workout.date),
-                    "workoutTemplateId": workout.workoutTemplate?.id.uuidString ?? "",
-                    "customWorkout": workout.customWorkout != nil ? [
-                        "id": workout.customWorkout!.id.uuidString,
-                        "name": workout.customWorkout!.name,
-                        "description": workout.customWorkout!.description,
-                        "estimatedDuration": workout.customWorkout!.estimatedDuration,
-                        "difficulty": workout.customWorkout!.difficulty.rawValue,
-                        "exercises": workout.customWorkout!.exercises.map { exercise in
-                            [
-                                "id": exercise.id,
-                                "title": exercise.title,
-                                "description": exercise.description ?? "",
-                                "category": exercise.category?.rawValue ?? "",
-                                "duration": exercise.duration ?? 0,
-                                "difficulty": exercise.difficulty?.rawValue ?? "",
-                                "exerciseType": exercise.exerciseType.rawValue
-                            ]
-                        },
-                        "createdDate": Timestamp(date: workout.customWorkout!.createdDate)
-                    ] : NSNull(),
-                    "isCompleted": workout.isCompleted,
-                    "completedDate": workout.completedDate != nil ? Timestamp(date: workout.completedDate!) : NSNull()
-                ]
+                var workoutDict: [String: Any] = [:]
+                workoutDict["id"] = workout.id.uuidString
+                workoutDict["day"] = workout.programDay ?? 1
+                workoutDict["date"] = Timestamp(date: workout.date)
+                workoutDict["workoutTemplateId"] = workout.workoutTemplateId.uuidString
+                workoutDict["workoutTemplateName"] = workout.workoutTemplateName
+                workoutDict["isCompleted"] = workout.isCompleted
+                if let completedDate = workout.completedDate {
+                    workoutDict["completedDate"] = Timestamp(date: completedDate)
+                }
+                workoutDict["clientNotes"] = workout.clientNotes ?? ""
+                workoutDict["trainerNotes"] = workout.trainerNotes ?? ""
+                return workoutDict
             },
             "tags": program.tags,
             "usageCount": program.usageCount,
@@ -151,32 +138,19 @@ class ProgramDataService: ObservableObject {
             "duration": program.duration,
             "difficulty": program.difficulty.rawValue,
             "scheduledWorkouts": program.scheduledWorkouts.map { workout in
-                [
-                    "id": workout.id.uuidString,
-                    "date": Timestamp(date: workout.date),
-                    "workoutTemplateId": workout.workoutTemplate?.id.uuidString ?? "",
-                    "customWorkout": workout.customWorkout != nil ? [
-                        "id": workout.customWorkout!.id.uuidString,
-                        "name": workout.customWorkout!.name,
-                        "description": workout.customWorkout!.description,
-                        "estimatedDuration": workout.customWorkout!.estimatedDuration,
-                        "difficulty": workout.customWorkout!.difficulty.rawValue,
-                        "exercises": workout.customWorkout!.exercises.map { exercise in
-                            [
-                                "id": exercise.id,
-                                "title": exercise.title,
-                                "description": exercise.description ?? "",
-                                "category": exercise.category?.rawValue ?? "",
-                                "duration": exercise.duration ?? 0,
-                                "difficulty": exercise.difficulty?.rawValue ?? "",
-                                "exerciseType": exercise.exerciseType.rawValue
-                            ]
-                        },
-                        "createdDate": Timestamp(date: workout.customWorkout!.createdDate)
-                    ] : NSNull(),
-                    "isCompleted": workout.isCompleted,
-                    "completedDate": workout.completedDate != nil ? Timestamp(date: workout.completedDate!) : NSNull()
-                ]
+                var workoutDict: [String: Any] = [:]
+                workoutDict["id"] = workout.id.uuidString
+                workoutDict["day"] = workout.programDay ?? 1
+                workoutDict["date"] = Timestamp(date: workout.date)
+                workoutDict["workoutTemplateId"] = workout.workoutTemplateId.uuidString
+                workoutDict["workoutTemplateName"] = workout.workoutTemplateName
+                workoutDict["isCompleted"] = workout.isCompleted
+                if let completedDate = workout.completedDate {
+                    workoutDict["completedDate"] = Timestamp(date: completedDate)
+                }
+                workoutDict["clientNotes"] = workout.clientNotes ?? ""
+                workoutDict["trainerNotes"] = workout.trainerNotes ?? ""
+                return workoutDict
             },
             "tags": program.tags,
             "usageCount": program.usageCount,
@@ -194,16 +168,35 @@ class ProgramDataService: ObservableObject {
     // MARK: - Program Deletion
     
     func deleteProgram(_ program: Program) async throws {
-        guard currentTrainerId != nil else {
+        guard let trainerId = currentTrainerId else {
+            print("❌ ProgramDataService: User not authenticated for delete")
             throw ProgramError.notAuthenticated
         }
         
-        print("✅ ProgramDataService: Deleting program '\(program.name)' with ID: \(program.id.uuidString)")
+        print("🗑️ ProgramDataService: Deleting program '\\(program.name)' with ID: \\(program.id.uuidString)")
         isLoading = true
         defer { isLoading = false }
         
-        try await db.collection("programs").document(program.id.uuidString).delete()
-        print("✅ ProgramDataService: Program deleted successfully from Firestore")
+        // Clean up temporary templates first
+        let templateService = TemplateDataService()
+        do {
+            try await templateService.cleanupTemporaryTemplatesForProgram(program)
+        } catch {
+            print("⚠️ ProgramDataService: Failed to cleanup temporary templates: \\(error)")
+            // Continue with program deletion even if template cleanup fails
+        }
+        
+        // Delete the program document
+        try await db.collection("trainers")
+            .document(trainerId)
+            .collection("programs")
+            .document(program.id.uuidString)
+            .delete()
+        
+        // Remove from local array
+        programs.removeAll { $0.id == program.id }
+        
+        print("✅ ProgramDataService: Successfully deleted program and cleaned up temporary templates")
     }
     
     // MARK: - Template Dependency Management
@@ -249,7 +242,7 @@ class ProgramDataService: ObservableObject {
             do {
                 let program = try Program(from: document)
                 let usesTemplate = program.scheduledWorkouts.contains { workout in
-                    workout.workoutTemplate?.id == templateId
+                    workout.workoutTemplateId == templateId
                 }
                 
                 if usesTemplate {
@@ -275,8 +268,11 @@ class ProgramDataService: ObservableObject {
             var updatedProgram = program
             updatedProgram.scheduledWorkouts = program.scheduledWorkouts.map { workout in
                 var updatedWorkout = workout
-                if workout.workoutTemplate?.id == oldTemplateId {
-                    updatedWorkout.workoutTemplate = newTemplate
+                if workout.workoutTemplateId == oldTemplateId {
+                    if let newTemplate = newTemplate {
+                        updatedWorkout.workoutTemplateId = newTemplate.id
+                        updatedWorkout.workoutTemplateName = newTemplate.name
+                    }
                 }
                 return updatedWorkout
             }
@@ -290,6 +286,49 @@ class ProgramDataService: ObservableObject {
     func incrementTemplateUsage(_ templateId: UUID) async throws {
         // This will be handled by the TemplateDataService
         // We just need to call it from the TemplateDataService
+    }
+    
+    /// Counts how many clients currently have this program assigned (current or next plan)
+    func getAssignedClientCount(for programId: UUID) async throws -> Int {
+        guard let trainerId = currentTrainerId else {
+            throw ProgramError.notAuthenticated
+        }
+        
+        // Query all clients for this trainer from the main clients collection
+        let clientsSnapshot = try await db.collection("clients")
+            .whereField("trainerId", isEqualTo: trainerId)
+            .getDocuments()
+        
+        var assignedCount = 0
+        let programIdString = programId.uuidString
+        
+
+        
+        for document in clientsSnapshot.documents {
+            let data = document.data()
+            let clientName = data["name"] as? String ?? "Unknown"
+            
+
+            
+            
+            // Check if this program is assigned as current plan
+            if let currentPlanId = data["currentPlanId"] as? String,
+               currentPlanId == programIdString {
+                assignedCount += 1
+                
+                continue
+            }
+            
+            // Check if this program is assigned as next plan
+            if let nextPlanId = data["nextPlanId"] as? String,
+               nextPlanId == programIdString {
+                assignedCount += 1
+                
+            }
+        }
+        
+
+        return assignedCount
     }
     
     // MARK: - Utility Functions
@@ -319,6 +358,7 @@ class ProgramDataService: ObservableObject {
             program.tags.joined().localizedCaseInsensitiveContains(query)
         }
     }
+
 }
 
 // MARK: - Program Error Types
@@ -366,26 +406,34 @@ extension Program {
             throw ProgramError.invalidData
         }
         
-        // Parse scheduled workouts (this is simplified for now)
-        let scheduledWorkouts: [ScheduledWorkout] = scheduledWorkoutsData.compactMap { workoutData in
+        // Parse scheduled workouts with template resolution
+        let scheduledWorkouts: [ScheduledWorkout] = scheduledWorkoutsData.compactMap { workoutData -> ScheduledWorkout? in
             guard let idString = workoutData["id"] as? String,
                   let workoutId = UUID(uuidString: idString),
                   let dateTimestamp = workoutData["date"] as? Timestamp,
-                  let isCompleted = workoutData["isCompleted"] as? Bool else {
+                  let isCompleted = workoutData["isCompleted"] as? Bool,
+                  let workoutTemplateIdString = workoutData["workoutTemplateId"] as? String,
+                  let workoutTemplateId = UUID(uuidString: workoutTemplateIdString),
+                  let workoutTemplateName = workoutData["workoutTemplateName"] as? String else {
                 return nil
             }
             
             let date = dateTimestamp.dateValue()
             let completedDate = (workoutData["completedDate"] as? Timestamp)?.dateValue()
+            let programDay = workoutData["day"] as? Int
+            let clientNotes = workoutData["clientNotes"] as? String
+            let trainerNotes = workoutData["trainerNotes"] as? String
             
-            // For now, we'll create a simple scheduled workout without template details
-            // In a full implementation, you'd need to resolve template references
             return ScheduledWorkout(
                 id: workoutId,
                 date: date,
-                workoutTemplate: nil, // This would need to be resolved from the templateId
+                workoutTemplateId: workoutTemplateId,
+                workoutTemplateName: workoutTemplateName,
+                programDay: programDay,
                 isCompleted: isCompleted,
-                completedDate: completedDate
+                completedDate: completedDate,
+                clientNotes: clientNotes,
+                trainerNotes: trainerNotes
             )
         }
         

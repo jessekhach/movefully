@@ -1,16 +1,12 @@
 import SwiftUI
 import FirebaseAuth
+import MessageUI
 
 struct TrainerProfileView: View {
     @EnvironmentObject var authViewModel: AuthenticationViewModel
+    @StateObject private var viewModel = TrainerProfileViewModel()
     @State private var showSignOutAlert = false
-    @State private var showEditProfile = false
-    @State private var showNotificationSettings = false
-    @State private var showAbout = false
-    @State private var showShareProfile = false
-    @State private var isEditing = false
-    @State private var showingSettings = false
-    @State private var selectedTab = 0
+    @State private var showingMailComposer = false
     
     var body: some View {
         NavigationStack {
@@ -37,7 +33,7 @@ struct TrainerProfileView: View {
                                     .foregroundColor(.white)
                                 
                                 // Edit button overlay
-                                Button(action: { isEditing = true }) {
+                                Button(action: { viewModel.startEditingProfile() }) {
                                     Image(systemName: "camera.fill")
                                         .font(.system(size: 16, weight: .medium))
                                         .foregroundColor(.white)
@@ -51,43 +47,46 @@ struct TrainerProfileView: View {
                             
                             // Name and title
                             VStack(spacing: MovefullyTheme.Layout.paddingS) {
-                                Text("Jesse Khachmanian")
+                                Text(viewModel.trainerProfile?.name ?? "Trainer")
                                     .font(MovefullyTheme.Typography.title1)
                                     .foregroundColor(MovefullyTheme.Colors.textPrimary)
                                 
-                                Text("Wellness Coach & Movement Specialist")
+                                Text(viewModel.trainerProfile?.title ?? "Wellness Coach & Movement Specialist")
                                     .font(MovefullyTheme.Typography.callout)
                                     .foregroundColor(MovefullyTheme.Colors.textSecondary)
                                     .multilineTextAlignment(.center)
                                 
-                                // Location and certifications
-                                HStack(spacing: MovefullyTheme.Layout.paddingL) {
+                                // Location
+                                if let location = viewModel.trainerProfile?.location, !location.isEmpty {
                                     HStack(spacing: MovefullyTheme.Layout.paddingXS) {
                                         Image(systemName: "location.fill")
                                             .font(.system(size: 12, weight: .medium))
                                             .foregroundColor(MovefullyTheme.Colors.textTertiary)
-                                        Text("San Francisco, CA")
-                                            .font(MovefullyTheme.Typography.caption)
-                                            .foregroundColor(MovefullyTheme.Colors.textTertiary)
-                                    }
-                                    
-                                    HStack(spacing: MovefullyTheme.Layout.paddingXS) {
-                                        Image(systemName: "checkmark.seal.fill")
-                                            .font(.system(size: 12, weight: .medium))
-                                            .foregroundColor(MovefullyTheme.Colors.softGreen)
-                                        Text("NASM Certified")
+                                        Text(location)
                                             .font(MovefullyTheme.Typography.caption)
                                             .foregroundColor(MovefullyTheme.Colors.textTertiary)
                                     }
                                 }
+                                
+                                // Certification (commented for future use)
+                                /*
+                                HStack(spacing: MovefullyTheme.Layout.paddingXS) {
+                                    Image(systemName: "checkmark.seal.fill")
+                                        .font(.system(size: 12, weight: .medium))
+                                        .foregroundColor(MovefullyTheme.Colors.softGreen)
+                                    Text("NASM Certified")
+                                        .font(MovefullyTheme.Typography.caption)
+                                        .foregroundColor(MovefullyTheme.Colors.textTertiary)
+                                }
+                                */
                             }
                         }
                         
                         // Quick stats
                         HStack(spacing: MovefullyTheme.Layout.paddingL) {
-                            TrainerProfileStatView(title: "Active Clients", value: "24", icon: "heart.circle")
-                            TrainerProfileStatView(title: "Total Plans", value: "8", icon: "doc.text")
-                            TrainerProfileStatView(title: "Years Experience", value: "5", icon: "star.circle")
+                            TrainerProfileStatView(title: "Active Clients", value: "\(viewModel.activeClientCount)", icon: "heart.circle")
+                            TrainerProfileStatView(title: "Total Plans", value: "\(viewModel.totalProgramCount)", icon: "doc.text")
+                            TrainerProfileStatView(title: "Experience", value: viewModel.yearsExperienceText, icon: "star.circle")
                         }
                     }
                     .padding(.horizontal, MovefullyTheme.Layout.paddingXL)
@@ -104,46 +103,68 @@ struct TrainerProfileView: View {
                     VStack(spacing: MovefullyTheme.Layout.paddingL) {
                         // About section
                         TrainerProfileSectionCard(title: "About Me", icon: "person.circle") {
-                            VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingM) {
-                                Text("Passionate about helping people discover the joy of movement and create sustainable wellness habits. I believe fitness should feel good, not just look good.")
+                            HStack {
+                                Text(viewModel.trainerProfile?.bio ?? "No bio available. Edit your profile to add a bio.")
                                     .font(MovefullyTheme.Typography.body)
                                     .foregroundColor(MovefullyTheme.Colors.textSecondary)
                                     .lineLimit(nil)
-                                
-                                HStack {
-                                    Spacer()
-                                    Button("Edit Bio") {
-                                        isEditing = true
-                                    }
-                                    .font(MovefullyTheme.Typography.buttonSmall)
-                                    .foregroundColor(MovefullyTheme.Colors.primaryTeal)
-                                    .padding(.horizontal, MovefullyTheme.Layout.paddingL)
-                                    .padding(.vertical, MovefullyTheme.Layout.paddingS)
-                                    .background(MovefullyTheme.Colors.primaryTeal.opacity(0.15))
-                                    .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
-                                }
+                                    .multilineTextAlignment(.leading)
+                                Spacer()
                             }
                         }
                         
                         // Specialties section
                         TrainerProfileSectionCard(title: "Specialties", icon: "sparkles") {
-                            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: MovefullyTheme.Layout.paddingM) {
-                                SpecialtyTag(text: "Functional Movement")
-                                SpecialtyTag(text: "Injury Prevention")
-                                SpecialtyTag(text: "Mobility & Flexibility")
-                                SpecialtyTag(text: "Mindful Movement")
-                                SpecialtyTag(text: "Strength Training")
-                                SpecialtyTag(text: "Movement Therapy")
+                            let specialties = viewModel.trainerProfile?.specialties ?? []
+                            if specialties.isEmpty {
+                                Text("No specialties added yet")
+                                    .font(MovefullyTheme.Typography.body)
+                                    .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                                    .italic()
+                            } else {
+                                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: MovefullyTheme.Layout.paddingM) {
+                                    ForEach(specialties, id: \.self) { specialty in
+                                        SpecialtyTag(text: specialty)
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // Contact Information section (only show if contact info exists)
+                        if hasContactInformation {
+                            TrainerProfileSectionCard(title: "Contact Information", icon: "envelope.circle") {
+                                VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingM) {
+                                    if !(viewModel.trainerProfile?.email.isEmpty ?? true) {
+                                        ContactInfoRow(icon: "envelope.fill", text: viewModel.trainerProfile?.email ?? "")
+                                    }
+                                    
+                                    if let phoneNumber = viewModel.trainerProfile?.phoneNumber, !phoneNumber.isEmpty {
+                                        ContactInfoRow(icon: "phone.fill", text: phoneNumber)
+                                    }
+                                    
+                                    Text("Your contact information is visible to your clients.")
+                                        .font(MovefullyTheme.Typography.caption)
+                                        .foregroundColor(MovefullyTheme.Colors.textTertiary)
+                                        .multilineTextAlignment(.leading)
+                                }
                             }
                         }
                         
                         // Quick actions
                         TrainerProfileSectionCard(title: "Quick Actions", icon: "bolt.circle") {
                             VStack(spacing: MovefullyTheme.Layout.paddingM) {
-                                TrainerProfileActionRow(title: "Edit Profile", icon: "person.crop.circle", action: { isEditing = true })
-                                TrainerProfileActionRow(title: "Settings & Privacy", icon: "gearshape", action: { showingSettings = true })
-                                TrainerProfileActionRow(title: "Help & Support", icon: "questionmark.circle", action: { showAbout = true })
-                                TrainerProfileActionRow(title: "Share Profile", icon: "square.and.arrow.up", action: { showShareProfile = true })
+                                TrainerProfileActionRow(title: "Edit Profile", icon: "person.crop.circle", action: { 
+                                    viewModel.startEditingProfile()
+                                })
+                                TrainerProfileActionRow(title: "Settings & Privacy", icon: "gearshape", action: { 
+                                    viewModel.showingSettings = true
+                                })
+                                TrainerProfileActionRow(title: "Help & Support", icon: "questionmark.circle", action: { 
+                                    showingMailComposer = true 
+                                })
+                                TrainerProfileActionRow(title: "Sign Out", icon: "rectangle.portrait.and.arrow.right", action: { 
+                                    showSignOutAlert = true
+                                })
                             }
                         }
                     }
@@ -154,17 +175,14 @@ struct TrainerProfileView: View {
             .background(MovefullyTheme.Colors.backgroundPrimary)
             .navigationBarHidden(true)
         }
-        .sheet(isPresented: $isEditing) {
-            EditProfileView()
+        .sheet(isPresented: $viewModel.showingEditProfile) {
+            EditProfileView(viewModel: viewModel)
         }
-        .sheet(isPresented: $showingSettings) {
+        .sheet(isPresented: $viewModel.showingSettings) {
             SettingsView()
         }
-        .sheet(isPresented: $showAbout) {
-            HelpSupportView()
-        }
-        .sheet(isPresented: $showShareProfile) {
-            ShareProfileView()
+        .sheet(isPresented: $showingMailComposer) {
+            SupportContactView()
         }
         .alert("Sign Out", isPresented: $showSignOutAlert) {
             Button("Cancel", role: .cancel) { }
@@ -188,6 +206,12 @@ struct TrainerProfileView: View {
             return user.email ?? authViewModel.userEmail
         }
         return authViewModel.userEmail
+    }
+    
+    private var hasContactInformation: Bool {
+        let hasEmail = !(viewModel.trainerProfile?.email.isEmpty ?? true)
+        let hasPhone = !(viewModel.trainerProfile?.phoneNumber?.isEmpty ?? true)
+        return hasEmail || hasPhone
     }
 }
 
@@ -301,17 +325,32 @@ struct TrainerProfileActionRow: View {
     }
 }
 
-// Placeholder views for sheets
+struct ContactInfoRow: View {
+    let icon: String
+    let text: String
+    
+    var body: some View {
+        HStack(spacing: MovefullyTheme.Layout.paddingM) {
+            Image(systemName: icon)
+                .font(.system(size: 16, weight: .medium))
+                .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+                .frame(width: 24)
+            
+            Text(text)
+                .font(MovefullyTheme.Typography.body)
+                .foregroundColor(MovefullyTheme.Colors.textSecondary)
+            
+            Spacer()
+        }
+    }
+}
+
+// Real edit profile view with functionality
 struct EditProfileView: View {
+    @ObservedObject var viewModel: TrainerProfileViewModel
     @Environment(\.dismiss) private var dismiss
-    @State private var displayName = "Sarah Chen"
-    @State private var bio = "Passionate movement coach dedicated to helping clients discover joy in their wellness journey. Specializing in functional movement and mindful fitness."
-    @State private var location = "San Francisco, CA"
-    @State private var website = "www.sarahchenwellness.com"
-    @State private var phoneNumber = "+1 (555) 123-4567"
-    @State private var yearsExperience = "5"
-    @State private var specialties = ["Functional Movement", "Injury Prevention", "Mobility & Flexibility", "Mindful Movement"]
-    @State private var isEditing = false
+    @State private var newSpecialty = ""
+    @State private var showingAddSpecialtyAlert = false
     
     var body: some View {
         NavigationStack {
@@ -350,12 +389,41 @@ struct EditProfileView: View {
                     
                     // Form Fields
                     VStack(spacing: MovefullyTheme.Layout.paddingL) {
-                        ProfileEditField(title: "Display Name", text: $displayName)
-                        ProfileEditField(title: "Bio", text: $bio, isMultiline: true)
-                        ProfileEditField(title: "Location", text: $location)
-                        ProfileEditField(title: "Website", text: $website)
-                        ProfileEditField(title: "Phone Number", text: $phoneNumber)
-                        ProfileEditField(title: "Years of Experience", text: $yearsExperience)
+                        ProfileEditField(title: "Display Name", text: $viewModel.profileName)
+                        ProfileEditFieldWithLimit(
+                            title: "Professional Title", 
+                            text: $viewModel.profileTitle, 
+                            characterLimit: viewModel.titleCharacterLimit
+                        )
+                        ProfileEditFieldWithLimit(
+                            title: "Bio", 
+                            text: $viewModel.profileBio, 
+                            characterLimit: viewModel.bioCharacterLimit,
+                            isMultiline: true
+                        )
+                        ProfileEditFieldWithLimit(
+                            title: "Location", 
+                            text: $viewModel.profileLocation, 
+                            characterLimit: viewModel.locationCharacterLimit
+                        )
+                        ProfileEditField(title: "Website", text: $viewModel.profileWebsite)
+                        
+                        // Contact Information Section
+                        VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingM) {
+                            Text("Contact Information")
+                                .font(MovefullyTheme.Typography.bodyMedium)
+                                .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                            
+                            ProfileEditField(title: "Email", text: $viewModel.profileEmail)
+                            ProfileEditField(title: "Phone Number", text: $viewModel.profilePhoneNumber)
+                            
+                            Text("Contact information is optional. If provided, it will be visible to your clients.")
+                                .font(MovefullyTheme.Typography.caption)
+                                .foregroundColor(MovefullyTheme.Colors.textTertiary)
+                                .multilineTextAlignment(.leading)
+                        }
+                        
+                        ProfileEditField(title: "Years of Experience", text: $viewModel.profileYearsExperience)
                         
                         // Specialties Section
                         VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingM) {
@@ -364,7 +432,7 @@ struct EditProfileView: View {
                                 .foregroundColor(MovefullyTheme.Colors.textPrimary)
                             
                             LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: MovefullyTheme.Layout.paddingS) {
-                                ForEach(specialties, id: \.self) { specialty in
+                                ForEach(viewModel.profileSpecialties, id: \.self) { specialty in
                                     HStack {
                                         Text(specialty)
                                             .font(MovefullyTheme.Typography.caption)
@@ -374,9 +442,7 @@ struct EditProfileView: View {
                                         Spacer()
                                         
                                         Button(action: {
-                                            if let index = specialties.firstIndex(of: specialty) {
-                                                specialties.remove(at: index)
-                                            }
+                                            viewModel.removeSpecialty(specialty)
                                         }) {
                                             Image(systemName: "xmark.circle.fill")
                                                 .font(.system(size: 16))
@@ -390,18 +456,10 @@ struct EditProfileView: View {
                                 }
                             }
                             
-                            Button("Add Specialty") {
-                                // Handle add specialty
-                            }
-                            .font(MovefullyTheme.Typography.caption)
-                            .foregroundColor(MovefullyTheme.Colors.primaryTeal)
-                            .padding(.horizontal, MovefullyTheme.Layout.paddingM)
-                            .padding(.vertical, MovefullyTheme.Layout.paddingS)
-                            .background(MovefullyTheme.Colors.primaryTeal.opacity(0.1))
-                            .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM)
-                                    .stroke(MovefullyTheme.Colors.primaryTeal.opacity(0.3), lineWidth: 1)
+                            AddSpecialtyButton(
+                                canAddMore: viewModel.profileSpecialties.count < viewModel.maxSpecialties,
+                                maxSpecialties: viewModel.maxSpecialties,
+                                onTap: { showingAddSpecialtyAlert = true }
                             )
                         }
                     }
@@ -414,8 +472,9 @@ struct EditProfileView: View {
                         .movefullyButtonStyle(.tertiary)
                         
                         Button("Save Changes") {
-                            // Save profile changes
-                            dismiss()
+                            Task {
+                                await viewModel.saveProfile()
+                            }
                         }
                         .movefullyButtonStyle(.primary)
                     }
@@ -432,6 +491,20 @@ struct EditProfileView: View {
                     Button("Done") { dismiss() }
                         .foregroundColor(MovefullyTheme.Colors.primaryTeal)
                 }
+            }
+            .alert("Add Specialty", isPresented: $showingAddSpecialtyAlert) {
+                TextField("Enter specialty", text: $newSpecialty)
+                Button("Add") {
+                    if !newSpecialty.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        viewModel.addSpecialty(newSpecialty.trimmingCharacters(in: .whitespacesAndNewlines))
+                        newSpecialty = ""
+                    }
+                }
+                Button("Cancel", role: .cancel) {
+                    newSpecialty = ""
+                }
+            } message: {
+                Text("Enter a specialty to add to your profile")
             }
         }
     }
@@ -462,6 +535,83 @@ struct ProfileEditField: View {
                     placeholder: title,
                     text: $text
                     )
+            }
+        }
+    }
+}
+
+struct AddSpecialtyButton: View {
+    let canAddMore: Bool
+    let maxSpecialties: Int
+    let onTap: () -> Void
+    
+    var body: some View {
+        if canAddMore {
+            Button("Add Specialty") {
+                onTap()
+            }
+            .font(MovefullyTheme.Typography.caption)
+            .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+            .padding(.horizontal, MovefullyTheme.Layout.paddingM)
+            .padding(.vertical, MovefullyTheme.Layout.paddingS)
+            .background(MovefullyTheme.Colors.primaryTeal.opacity(0.1))
+            .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
+            .overlay(
+                RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM)
+                    .stroke(MovefullyTheme.Colors.primaryTeal.opacity(0.3), lineWidth: 1)
+            )
+        } else {
+            Text("Maximum \(maxSpecialties) specialties reached")
+                .font(MovefullyTheme.Typography.caption)
+                .foregroundColor(MovefullyTheme.Colors.textTertiary)
+                .italic()
+        }
+    }
+}
+
+struct ProfileEditFieldWithLimit: View {
+    let title: String
+    @Binding var text: String
+    let characterLimit: Int
+    let isMultiline: Bool
+    
+    init(title: String, text: Binding<String>, characterLimit: Int, isMultiline: Bool = false) {
+        self.title = title
+        self._text = text
+        self.characterLimit = characterLimit
+        self.isMultiline = isMultiline
+    }
+    
+    var body: some View {
+        MovefullyFormField(title: title) {
+            VStack(alignment: .trailing, spacing: MovefullyTheme.Layout.paddingXS) {
+                if isMultiline {
+                    MovefullyTextEditor(
+                        placeholder: title,
+                        text: $text,
+                        minLines: 4,
+                        maxLines: 8
+                    )
+                    .onChange(of: text) { newValue in
+                        if newValue.count > characterLimit {
+                            text = String(newValue.prefix(characterLimit))
+                        }
+                    }
+                } else {
+                    MovefullyTextField(
+                        placeholder: title,
+                        text: $text
+                    )
+                    .onChange(of: text) { newValue in
+                        if newValue.count > characterLimit {
+                            text = String(newValue.prefix(characterLimit))
+                        }
+                    }
+                }
+                
+                Text("\(text.count)/\(characterLimit)")
+                    .font(MovefullyTheme.Typography.caption)
+                    .foregroundColor(text.count > characterLimit * 9 / 10 ? MovefullyTheme.Colors.warning : MovefullyTheme.Colors.textTertiary)
             }
         }
     }

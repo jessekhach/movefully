@@ -1,4 +1,6 @@
 import SwiftUI
+import FirebaseAuth
+import PhotosUI
 #if canImport(MessageUI)
 import MessageUI
 #endif
@@ -14,6 +16,14 @@ struct ClientProfileView: View {
     @State private var showAbout = false
     @State private var isEditing = false
     @State private var showingSettings = false
+    @State private var selectedPhoto: PhotosPickerItem?
+    @State private var isUploadingPhoto = false
+    
+    // Delete account states
+    @State private var showDeleteAccountAlert = false
+    @State private var showDeleteAccountConfirmation = false
+    @State private var deleteConfirmationText = ""
+    @StateObject private var deletionService = ClientDeletionService()
     
     var body: some View {
         NavigationStack {
@@ -23,23 +33,62 @@ struct ClientProfileView: View {
                     VStack(spacing: MovefullyTheme.Layout.paddingL) {
                         // Profile photo and basic info
                         VStack(spacing: MovefullyTheme.Layout.paddingM) {
-                            // Profile image
+                            // Profile image with photo picker
                             ZStack {
                                 Circle()
                                     .fill(MovefullyTheme.Colors.primaryTeal.opacity(0.1))
                                     .frame(width: 100, height: 100)
                                 
-                                Image(systemName: "person.crop.circle.fill")
-                                    .font(.system(size: 60))
-                                    .foregroundColor(MovefullyTheme.Colors.primaryTeal.opacity(0.7))
+                                if let profileImageUrl = viewModel.currentClient?.profileImageUrl, !profileImageUrl.isEmpty {
+                                    AsyncImage(url: URL(string: profileImageUrl)) { image in
+                                        image
+                                            .resizable()
+                                            .aspectRatio(contentMode: .fill)
+                                            .frame(width: 100, height: 100)
+                                            .clipShape(Circle())
+                                    } placeholder: {
+                                        if isUploadingPhoto {
+                                            ProgressView()
+                                                .scaleEffect(0.8)
+                                                .tint(MovefullyTheme.Colors.primaryTeal)
+                                        } else {
+                                            Image(systemName: "person.crop.circle.fill")
+                                                .font(.system(size: 60))
+                                                .foregroundColor(MovefullyTheme.Colors.primaryTeal.opacity(0.7))
+                                        }
+                                    }
+                                } else {
+                                    if isUploadingPhoto {
+                                        ProgressView()
+                                            .scaleEffect(0.8)
+                                            .tint(MovefullyTheme.Colors.primaryTeal)
+                                    } else {
+                                        Image(systemName: "person.crop.circle.fill")
+                                            .font(.system(size: 60))
+                                            .foregroundColor(MovefullyTheme.Colors.primaryTeal.opacity(0.7))
+                                    }
+                                }
+                                
+                                // Camera button overlay
+                                PhotosPicker(selection: $selectedPhoto, matching: .images) {
+                                    Image(systemName: "camera.fill")
+                                        .font(.system(size: 16, weight: .medium))
+                                        .foregroundColor(.white)
+                                        .padding(8)
+                                        .background(MovefullyTheme.Colors.primaryTeal)
+                                        .clipShape(Circle())
+                                        .shadow(color: MovefullyTheme.Effects.cardShadow, radius: 4, x: 0, y: 2)
+                                }
+                                .offset(x: 35, y: 35)
+                                .disabled(isUploadingPhoto)
                             }
                             .shadow(color: MovefullyTheme.Colors.primaryTeal.opacity(0.2), radius: 10, x: 0, y: 5)
                             
                             VStack(spacing: MovefullyTheme.Layout.paddingS) {
-                                Text(viewModel.currentClient.name)
-                                    .font(MovefullyTheme.Typography.title1)
-                                    .fontWeight(.semibold)
+                                Text(viewModel.currentClient?.name ?? "Client")
+                                    .font(MovefullyTheme.Typography.title2)
                                     .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                                    .fontWeight(.semibold)
                                 
                                 Text(userEmail)
                                     .font(MovefullyTheme.Typography.body)
@@ -62,7 +111,7 @@ struct ClientProfileView: View {
                             
                             ClientProfileStatView(
                                 title: "Streak",
-                                value: "7", // This would come from actual data
+                                value: "\(viewModel.currentStreak)",
                                 subtitle: "days",
                                 icon: "flame.fill"
                             )
@@ -73,8 +122,8 @@ struct ClientProfileView: View {
                             
                             ClientProfileStatView(
                                 title: "Progress",
-                                value: "85%",
-                                subtitle: "this month",
+                                value: "\(Int(viewModel.progressPercentage * 100))%",
+                                subtitle: "this week",
                                 icon: "chart.line.uptrend.xyaxis"
                             )
                         }
@@ -102,7 +151,7 @@ struct ClientProfileView: View {
                         // Goals section
                         ClientProfileSectionCard(title: "My Goals", icon: "target") {
                             VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingM) {
-                                if let goals = viewModel.currentClient.goals {
+                                if let goals = viewModel.currentClient?.goals {
                                     Text(goals)
                                         .font(MovefullyTheme.Typography.body)
                                         .foregroundColor(MovefullyTheme.Colors.textPrimary)
@@ -118,7 +167,7 @@ struct ClientProfileView: View {
                         // Health info section
                         ClientProfileSectionCard(title: "Health Information", icon: "heart.text.square") {
                             VStack(spacing: MovefullyTheme.Layout.paddingM) {
-                                if let height = viewModel.currentClient.height, let weight = viewModel.currentClient.weight {
+                                if let height = viewModel.currentClient?.height, let weight = viewModel.currentClient?.weight {
                                     HStack {
                                         ClientProfileInfoItem(label: "Height", value: height)
                                         Spacer()
@@ -126,11 +175,11 @@ struct ClientProfileView: View {
                                     }
                                 }
                                 
-                                if let injuries = viewModel.currentClient.injuries {
+                                if let injuries = viewModel.currentClient?.injuries {
                                     ClientProfileInfoItem(label: "Notes/Injuries", value: injuries, fullWidth: true)
                                 }
                                 
-                                if let coachingStyle = viewModel.currentClient.preferredCoachingStyle {
+                                if let coachingStyle = viewModel.currentClient?.preferredCoachingStyle {
                                     ClientProfileInfoItem(label: "Preferred Style", value: coachingStyle.rawValue, fullWidth: true)
                                 }
                             }
@@ -143,7 +192,13 @@ struct ClientProfileView: View {
                                 ClientProfileActionRow(title: "Notifications", icon: "bell", action: { showNotificationSettings = true })
                                 ClientProfileActionRow(title: "Settings & Privacy", icon: "lock.shield", action: { showingSettings = true })
                                 ClientProfileActionRow(title: "Help & Support", icon: "questionmark.circle", action: { showAbout = true })
+                                
+                                // Danger zone separator
+                                Divider()
+                                    .background(MovefullyTheme.Colors.divider)
+                                
                                 ClientProfileActionRow(title: "Sign Out", icon: "rectangle.portrait.and.arrow.right", isDanger: true, action: { showSignOutAlert = true })
+                                ClientProfileActionRow(title: "Delete Account", icon: "trash", isDanger: true, action: { showDeleteAccountAlert = true })
                             }
                         }
                     }
@@ -181,10 +236,63 @@ struct ClientProfileView: View {
         } message: {
             Text("Are you sure you want to sign out?")
         }
+        .alert("Delete Account", isPresented: $showDeleteAccountAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("I Understand", role: .destructive) {
+                showDeleteAccountConfirmation = true
+            }
+        } message: {
+            Text("⚠️ WARNING: This action is permanent and cannot be undone.\n\nDeleting your account will:\n• Remove all your workout history\n• Delete all progress data\n• Remove all conversations with your trainer\n• Permanently delete your account\n\nAre you absolutely sure?")
+        }
+        .sheet(isPresented: $showDeleteAccountConfirmation) {
+            DeleteAccountConfirmationView(
+                deletionService: deletionService,
+                onCancel: { showDeleteAccountConfirmation = false },
+                onComplete: { 
+                    authViewModel.signOut()
+                    showDeleteAccountConfirmation = false
+                }
+            )
+        }
+        .onChange(of: selectedPhoto) { newPhoto in
+            if let newPhoto = newPhoto {
+                uploadProfilePhoto(newPhoto)
+            }
+        }
     }
     
     private var userEmail: String {
         return authViewModel.userEmail
+    }
+    
+    private func uploadProfilePhoto(_ photo: PhotosPickerItem) {
+        isUploadingPhoto = true
+        
+        Task {
+            do {
+                // Load the image data
+                guard let imageData = try await photo.loadTransferable(type: Data.self) else {
+                    await MainActor.run {
+                        isUploadingPhoto = false
+                    }
+                    return
+                }
+                
+                // Upload to Firebase Storage and update client profile
+                try await viewModel.uploadProfilePhoto(imageData)
+                
+                await MainActor.run {
+                    isUploadingPhoto = false
+                    selectedPhoto = nil
+                }
+            } catch {
+                await MainActor.run {
+                    isUploadingPhoto = false
+                    selectedPhoto = nil
+                    print("❌ Failed to upload profile photo: \(error)")
+                }
+            }
+        }
     }
 }
 
@@ -317,17 +425,25 @@ struct ClientProfileActionRow: View {
 struct ClientEditProfileView: View {
     @ObservedObject var viewModel: ClientViewModel
     @Environment(\.dismiss) private var dismiss
+    @State private var name: String
+    @State private var email: String
     @State private var goals: String
     @State private var height: String
     @State private var weight: String
     @State private var injuries: String
+    @State private var isLoading = false
+    @State private var errorMessage: String?
+    @State private var showingError = false
     
     init(viewModel: ClientViewModel) {
         self.viewModel = viewModel
-        _goals = State(initialValue: viewModel.currentClient.goals ?? "")
-        _height = State(initialValue: viewModel.currentClient.height ?? "")
-        _weight = State(initialValue: viewModel.currentClient.weight ?? "")
-        _injuries = State(initialValue: viewModel.currentClient.injuries ?? "")
+        _name = State(initialValue: viewModel.currentClient?.name ?? "")
+        // Pre-fill email with authenticated user's email from Firebase Auth
+        _email = State(initialValue: Auth.auth().currentUser?.email ?? viewModel.currentClient?.email ?? "")
+        _goals = State(initialValue: viewModel.currentClient?.goals ?? "")
+        _height = State(initialValue: viewModel.currentClient?.height ?? "")
+        _weight = State(initialValue: viewModel.currentClient?.weight ?? "")
+        _injuries = State(initialValue: viewModel.currentClient?.injuries ?? "")
     }
     
     var body: some View {
@@ -349,6 +465,34 @@ struct ClientEditProfileView: View {
                     
                     // Form sections
                     VStack(spacing: MovefullyTheme.Layout.paddingL) {
+                        // Personal Information
+                        ClientEditSection(title: "Personal Information") {
+                            VStack(spacing: MovefullyTheme.Layout.paddingM) {
+                                MovefullyFormField(title: "Full Name") {
+                                    MovefullyTextField(
+                                        placeholder: "Enter your full name",
+                                        text: $name
+                                    )
+                                }
+                                
+                                MovefullyFormField(title: "Email Address") {
+                                    VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingS) {
+                                        Text(email)
+                                            .font(MovefullyTheme.Typography.body)
+                                            .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                                            .padding(MovefullyTheme.Layout.paddingM)
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                            .background(MovefullyTheme.Colors.backgroundSecondary)
+                                            .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
+                                        
+                                        Text("Email address cannot be changed from this view")
+                                            .font(MovefullyTheme.Typography.caption)
+                                            .foregroundColor(MovefullyTheme.Colors.textTertiary)
+                                    }
+                                }
+                            }
+                        }
+                        
                         // Goals
                         ClientEditSection(title: "Wellness Goals") {
                             VStack(spacing: MovefullyTheme.Layout.paddingM) {
@@ -398,10 +542,10 @@ struct ClientEditProfileView: View {
                         .movefullyButtonStyle(.tertiary)
                         
                         Button("Save Changes") {
-                            // Save profile changes
-                            dismiss()
+                            saveProfileChanges()
                         }
                         .movefullyButtonStyle(.primary)
+                        .disabled(isLoading)
                     }
                     .padding(.top, MovefullyTheme.Layout.paddingL)
                 }
@@ -418,10 +562,53 @@ struct ClientEditProfileView: View {
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Save") { 
-                        // Save changes
-                        dismiss() 
+                        saveProfileChanges()
                     }
                     .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+                    .disabled(isLoading)
+                }
+            }
+        }
+        .alert("Error", isPresented: $showingError) {
+            Button("OK") { }
+        } message: {
+            Text(errorMessage ?? "An error occurred while saving your profile.")
+        }
+    }
+    
+    private func saveProfileChanges() {
+        // Validate required fields
+        guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            errorMessage = "Name is required"
+            showingError = true
+            return
+        }
+        
+        isLoading = true
+        
+        Task {
+            do {
+                // Update the client data (email is not updated as it's managed by Firebase Auth)
+                var updatedClient = viewModel.currentClient
+                updatedClient?.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+                // Note: Email is not updated here as it's managed by Firebase Authentication
+                updatedClient?.goals = goals.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : goals.trimmingCharacters(in: .whitespacesAndNewlines)
+                updatedClient?.height = height.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : height.trimmingCharacters(in: .whitespacesAndNewlines)
+                updatedClient?.weight = weight.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : weight.trimmingCharacters(in: .whitespacesAndNewlines)
+                updatedClient?.injuries = injuries.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : injuries.trimmingCharacters(in: .whitespacesAndNewlines)
+                
+                // Save to the view model (this will handle the actual data persistence)
+                try await viewModel.updateClientProfile(updatedClient!)
+                
+                await MainActor.run {
+                    isLoading = false
+                    dismiss()
+                }
+            } catch {
+                await MainActor.run {
+                    isLoading = false
+                    errorMessage = "Failed to save profile changes: \(error.localizedDescription)"
+                    showingError = true
                 }
             }
         }
@@ -649,6 +836,159 @@ struct ClientSettingsView: View {
             }
         }
         .environmentObject(themeManager)
+    }
+}
+
+// MARK: - Delete Account Confirmation View
+
+struct DeleteAccountConfirmationView: View {
+    @ObservedObject var deletionService: ClientDeletionService
+    let onCancel: () -> Void
+    let onComplete: () -> Void
+    
+    @State private var confirmationText = ""
+    @State private var showError = false
+    
+    private let requiredText = "DELETE MY ACCOUNT"
+    private var isConfirmationValid: Bool {
+        confirmationText.uppercased() == requiredText
+    }
+    
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: MovefullyTheme.Layout.paddingL) {
+                // Warning header
+                VStack(spacing: MovefullyTheme.Layout.paddingM) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 60))
+                        .foregroundColor(MovefullyTheme.Colors.warning)
+                    
+                    Text("Delete Account")
+                        .font(MovefullyTheme.Typography.title1)
+                        .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                    
+                    Text("This action cannot be undone")
+                        .font(MovefullyTheme.Typography.body)
+                        .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                        .multilineTextAlignment(.center)
+                }
+                .padding(.top, MovefullyTheme.Layout.paddingXL)
+                
+                // Consequences list
+                MovefullyCard {
+                    VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingM) {
+                        Text("What will be deleted:")
+                            .font(MovefullyTheme.Typography.bodyMedium)
+                            .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                        
+                        VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingS) {
+                            DeleteConsequenceRow(text: "All workout history and progress")
+                            DeleteConsequenceRow(text: "All messages with your trainer")
+                            DeleteConsequenceRow(text: "All body measurements and milestones")
+                            DeleteConsequenceRow(text: "Your complete profile and preferences")
+                            DeleteConsequenceRow(text: "Your authentication account")
+                        }
+                    }
+                }
+                
+                // Confirmation input
+                MovefullyCard {
+                    VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingM) {
+                        Text("Type '\(requiredText)' to confirm:")
+                            .font(MovefullyTheme.Typography.bodyMedium)
+                            .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                        
+                        MovefullyTextField(
+                            placeholder: "Type here to confirm...",
+                            text: $confirmationText
+                        )
+                        
+                        if !confirmationText.isEmpty && !isConfirmationValid {
+                            Text("Text doesn't match. Please type exactly: \(requiredText)")
+                                .font(MovefullyTheme.Typography.caption)
+                                .foregroundColor(MovefullyTheme.Colors.warning)
+                        }
+                    }
+                }
+                
+                // Progress indicator
+                if deletionService.isDeleting {
+                    VStack(spacing: MovefullyTheme.Layout.paddingM) {
+                        ProgressView()
+                            .scaleEffect(1.2)
+                            .tint(MovefullyTheme.Colors.warning)
+                        
+                        Text(deletionService.deletionProgress)
+                            .font(MovefullyTheme.Typography.body)
+                            .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding(MovefullyTheme.Layout.paddingL)
+                }
+                
+                Spacer()
+            }
+            .padding(.horizontal, MovefullyTheme.Layout.paddingL)
+            .movefullyBackground()
+            .navigationTitle("Delete Account")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        onCancel()
+                    }
+                    .disabled(deletionService.isDeleting)
+                }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Delete") {
+                        deleteAccount()
+                    }
+                    .foregroundColor(MovefullyTheme.Colors.warning)
+                    .disabled(!isConfirmationValid || deletionService.isDeleting)
+                }
+            }
+        }
+        .alert("Error", isPresented: $showError) {
+            Button("OK") { }
+        } message: {
+            Text(deletionService.errorMessage ?? "An error occurred while deleting your account.")
+        }
+    }
+    
+    private func deleteAccount() {
+        Task {
+            do {
+                try await deletionService.deleteClientAccount()
+                await MainActor.run {
+                    deletionService.cleanup()
+                    onComplete()
+                }
+            } catch {
+                await MainActor.run {
+                    deletionService.errorMessage = error.localizedDescription
+                    showError = true
+                }
+            }
+        }
+    }
+}
+
+struct DeleteConsequenceRow: View {
+    let text: String
+    
+    var body: some View {
+        HStack(spacing: MovefullyTheme.Layout.paddingS) {
+            Image(systemName: "xmark.circle.fill")
+                .font(.system(size: 12))
+                .foregroundColor(MovefullyTheme.Colors.warning)
+            
+            Text(text)
+                .font(MovefullyTheme.Typography.callout)
+                .foregroundColor(MovefullyTheme.Colors.textSecondary)
+            
+            Spacer()
+        }
     }
 }
 

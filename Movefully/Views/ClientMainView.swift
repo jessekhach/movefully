@@ -2,7 +2,7 @@ import SwiftUI
 
 // MARK: - Main Client Interface
 struct ClientMainView: View {
-    @StateObject private var viewModel = ClientViewModel()
+    @ObservedObject var viewModel: ClientViewModel
     @ObservedObject private var themeManager = ThemeManager.shared
     @EnvironmentObject var authViewModel: AuthenticationViewModel
     
@@ -49,5 +49,5 @@ struct ClientMainView: View {
 }
 
 #Preview {
-    ClientMainView()
+    ClientMainView(viewModel: ClientViewModel())
 } 

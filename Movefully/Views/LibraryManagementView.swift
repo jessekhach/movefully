@@ -118,49 +118,12 @@ struct LibraryManagementView: View {
             LazyVStack(spacing: MovefullyTheme.Layout.paddingL) {
                 ForEach(filteredTemplates) { template in
                     NavigationLink(destination: TemplateDetailView(template: template).environmentObject(programsViewModel)) {
-                        WorkoutTemplateCardContent(template: template)
+                        WorkoutTemplateCardContent(template: template, programsViewModel: programsViewModel)
                     }
                     .buttonStyle(PlainButtonStyle())
                 }
             }
         }
-    }
-}
-
-// MARK: - Exercise with Sets/Reps
-struct ExerciseWithSetsReps: Identifiable, Codable {
-    let id = UUID()
-    let exercise: Exercise
-    var sets: Int = 3
-    var reps: String = "12" // Can be "12", "10-15", "30 sec", etc.
-    
-    init(exercise: Exercise) {
-        self.exercise = exercise
-        // Set default values based on exercise type
-        if exercise.exerciseType == .duration {
-            self.reps = "\(exercise.duration ?? 30)" // Use exercise's default duration or 30 seconds
-        } else {
-            self.reps = "12" // Default reps
-        }
-    }
-    
-    // Custom Codable implementation to handle UUID
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.exercise = try container.decode(Exercise.self, forKey: .exercise)
-        self.sets = try container.decode(Int.self, forKey: .sets)
-        self.reps = try container.decode(String.self, forKey: .reps)
-    }
-    
-    func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(exercise, forKey: .exercise)
-        try container.encode(sets, forKey: .sets)
-        try container.encode(reps, forKey: .reps)
-    }
-    
-    private enum CodingKeys: String, CodingKey {
-        case exercise, sets, reps
     }
 }
 
@@ -472,7 +435,7 @@ struct CreateTemplateView: View {
                                                     .font(MovefullyTheme.Typography.caption)
                                                     .foregroundColor(MovefullyTheme.Colors.textTertiary)
                                             } else {
-                                                Text("\(exercise.exercise.duration ?? 0) sec")
+                                                Text("\(exercise.reps) sec")
                                                     .font(MovefullyTheme.Typography.caption)
                                                     .foregroundColor(MovefullyTheme.Colors.textTertiary)
                                             }
@@ -560,7 +523,8 @@ struct CreateTemplateView: View {
             updatedDate: Date()
         )
         
-        programsViewModel.createTemplate(template)
+        // Pass the exercises with sets/reps data to the view model
+        programsViewModel.createTemplate(template, exercisesWithPrescription: selectedExercises)
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
             isLoading = false
@@ -643,7 +607,7 @@ struct SelectedExerciseRow: View {
                         .font(MovefullyTheme.Typography.caption)
                         .foregroundColor(MovefullyTheme.Colors.textSecondary)
                     
-                                            TextField(exercise.exercise.exerciseType == .reps ? "12" : "60", text: $exercise.reps)
+                                            TextField(exercise.exercise.exerciseType == .reps ? "10" : "60", text: $exercise.reps)
                         .font(MovefullyTheme.Typography.body)
                         .foregroundColor(MovefullyTheme.Colors.textPrimary)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
@@ -927,6 +891,7 @@ struct ExerciseSelectionRowWithType: View {
 // MARK: - Workout Template Card Content (for NavigationLink)
 struct WorkoutTemplateCardContent: View {
     let template: WorkoutTemplate
+    let programsViewModel: ProgramsViewModel
     
     var body: some View {
         VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingM) {
@@ -973,7 +938,7 @@ struct WorkoutTemplateCardContent: View {
                 
                 TemplateStatView(
                     icon: "arrow.clockwise",
-                    value: "\(template.usageCount)",
+                    value: "\(programsViewModel.getUsageCount(for: template.id))",
                     label: "uses"
                 )
                 
@@ -985,35 +950,28 @@ struct WorkoutTemplateCardContent: View {
             }
             
             // Tags section (always present)
-            HStack(spacing: MovefullyTheme.Layout.paddingS) {
-                if template.tags.isEmpty {
+            if template.tags.isEmpty {
+                HStack {
                     Text("No tags assigned")
                         .font(MovefullyTheme.Typography.caption)
                         .foregroundColor(MovefullyTheme.Colors.textTertiary)
                         .italic()
-                } else {
-                    ForEach(template.tags.prefix(3), id: \.self) { tag in
-                        Text(tag)
-                            .font(MovefullyTheme.Typography.caption)
-                            .foregroundColor(MovefullyTheme.Colors.primaryTeal)
-                            .padding(.horizontal, MovefullyTheme.Layout.paddingS)
-                            .padding(.vertical, MovefullyTheme.Layout.paddingXS)
-                            .background(MovefullyTheme.Colors.primaryTeal.opacity(0.15))
-                            .clipShape(Capsule())
-                    }
-                    
-                    if template.tags.count > 3 {
-                        Text("+\(template.tags.count - 3)")
-                            .font(MovefullyTheme.Typography.caption)
-                            .foregroundColor(MovefullyTheme.Colors.textTertiary)
-                            .padding(.horizontal, MovefullyTheme.Layout.paddingS)
-                            .padding(.vertical, MovefullyTheme.Layout.paddingXS)
-                            .background(MovefullyTheme.Colors.textTertiary.opacity(0.15))
-                            .clipShape(Capsule())
+                    Spacer()
+                }
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: MovefullyTheme.Layout.paddingS) {
+                        ForEach(template.tags, id: \.self) { tag in
+                            Text(tag)
+                                .font(MovefullyTheme.Typography.caption)
+                                .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+                                .padding(.horizontal, MovefullyTheme.Layout.paddingM)
+                                .padding(.vertical, 4)
+                                .background(MovefullyTheme.Colors.primaryTeal.opacity(0.1))
+                                .clipShape(Capsule())
+                        }
                     }
                 }
-                
-                Spacer()
             }
         }
         .padding(MovefullyTheme.Layout.paddingL)
@@ -1059,11 +1017,12 @@ struct WorkoutTemplateCardContent: View {
 // MARK: - Workout Template Card (with Button for other uses)
 struct WorkoutTemplateCard: View {
     let template: WorkoutTemplate
+    let programsViewModel: ProgramsViewModel
     let onTap: () -> Void
     
     var body: some View {
         Button(action: onTap) {
-            WorkoutTemplateCardContent(template: template)
+            WorkoutTemplateCardContent(template: template, programsViewModel: programsViewModel)
         }
         .buttonStyle(PlainButtonStyle())
     }
@@ -1326,7 +1285,7 @@ struct TemplateDetailView: View {
                                     Text("3 sets")
                                         .font(MovefullyTheme.Typography.caption)
                                         .foregroundColor(MovefullyTheme.Colors.textTertiary)
-                                    Text("12 reps")
+                                    Text("10 reps")
                                         .font(MovefullyTheme.Typography.caption)
                                         .foregroundColor(MovefullyTheme.Colors.textTertiary)
                                 }
@@ -1388,7 +1347,7 @@ struct TemplateDetailView: View {
                 
                 VStack(spacing: MovefullyTheme.Layout.paddingS) {
                     HStack {
-                        Text("Used in \(template.usageCount) programs")
+                        Text("Used in \(programsViewModel.getUsageCount(for: template.id)) programs")
                             .font(MovefullyTheme.Typography.body)
                             .foregroundColor(MovefullyTheme.Colors.textSecondary)
                         Spacer()
@@ -1549,7 +1508,7 @@ struct TemplateExerciseRow: View {
             
             Spacer()
             
-                                            Text("\(exercise.duration ?? 0) sec")
+                                            Text("30 sec")
                 .font(MovefullyTheme.Typography.caption)
                 .foregroundColor(MovefullyTheme.Colors.textSecondary)
                 .padding(.horizontal, MovefullyTheme.Layout.paddingS)
@@ -1641,6 +1600,7 @@ struct EditTemplateView: View {
         self._estimatedDuration = State(initialValue: template.estimatedDuration)
 
         self._selectedTags = State(initialValue: Set(template.tags))
+        // Initialize with default values first, will load actual data in onAppear
         self._selectedExercises = State(initialValue: template.exercises.map { exercise in
             ExerciseWithSetsReps(exercise: exercise) // Will use default sets/reps
         })
@@ -1696,6 +1656,17 @@ struct EditTemplateView: View {
             ExerciseSelectionSheet(selectedExercises: $selectedExercises)
         }
         .interactiveDismissDisabled(showingExerciseLibrary) // Prevent swipe to dismiss exercise selection
+        .onAppear {
+            // Load actual prescription data from Firestore
+            Task {
+                let prescriptionData = await programsViewModel.loadTemplatePrescriptionData(for: template.id)
+                await MainActor.run {
+                    if !prescriptionData.isEmpty {
+                        selectedExercises = prescriptionData
+                    }
+                }
+            }
+        }
         .alert("Unsaved Changes", isPresented: $showingUnsavedChangesAlert) {
             Button("Save Changes") { updateTemplate() }
             Button("Discard", role: .destructive) { dismiss() }
@@ -2058,7 +2029,7 @@ struct EditTemplateView: View {
             updatedDate: Date()
         )
         
-        programsViewModel.updateTemplate(updatedTemplate)
+        programsViewModel.updateTemplate(updatedTemplate, exercisesWithPrescription: selectedExercises)
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
             isLoading = false
@@ -2134,8 +2105,14 @@ struct DuplicateTemplateSheet: View {
             updatedDate: Date()
         )
         
-        programsViewModel.createTemplate(duplicatedTemplate)
-        dismiss()
+        // Load the original prescription data and use it for the duplicate
+        Task {
+            let originalPrescriptionData = await programsViewModel.loadTemplatePrescriptionData(for: originalTemplate.id)
+            await MainActor.run {
+                programsViewModel.createTemplate(duplicatedTemplate, exercisesWithPrescription: originalPrescriptionData)
+                dismiss()
+            }
+        }
     }
 }
 

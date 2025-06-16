@@ -8,7 +8,7 @@ enum ClientFilter: String, CaseIterable {
     case all = "All"
     case active = "Active"
     case needsAttention = "Needs Attention"
-    case new = "New"
+
     case paused = "Paused"
     
     var title: String {
@@ -65,12 +65,16 @@ class ClientManagementViewModel: ObservableObject {
     private let clientDataService = ClientDataService()
     private let activityService = ClientActivityService()
     private let statusService = ClientStatusService()
+    private let smartAlertService = SmartAlertService.shared
     private var currentFilter: ClientStatus? = nil
     private var currentSort: ClientSortOption = .name
     private var currentSearchText: String = ""
     
     var alertCount: Int {
-        clients.filter { $0.status == .needsAttention }.count
+        return clients.reduce(0) { count, client in
+            let alertsForClient = smartAlertService.generateAlerts(for: client)
+            return count + alertsForClient.count
+        }
     }
     
     init() {
@@ -141,8 +145,7 @@ class ClientManagementViewModel: ObservableObject {
             filtered = filtered.filter { $0.status == .active }
         case .needsAttention:
             filtered = filtered.filter { $0.status == .needsAttention }
-        case .new:
-            filtered = filtered.filter { $0.status == .new }
+
         case .paused:
             filtered = filtered.filter { $0.status == .paused }
         }
@@ -206,53 +209,7 @@ class ClientManagementViewModel: ObservableObject {
         isLoading = false
     }
     
-    func inviteClientWithDetails(_ invitation: ClientInvitation) {
-        isLoading = true
-        // Simulate API call
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            self.successMessage = "Invitation sent successfully!"
-            self.isLoading = false
-            
-            // Add pending client
-            let newClient = Client(
-                id: UUID().uuidString,
-                name: invitation.clientName ?? invitation.clientEmail,
-                email: invitation.clientEmail,
-                trainerId: "trainer1", // This should come from the current trainer
-                status: .pending,
-                joinedDate: Date(),
-                profileImageUrl: nil,
-                height: "N/A",
-                weight: "N/A",
-                goal: invitation.goal ?? "General fitness",
-                injuries: invitation.injuries ?? "None",
-                preferredCoachingStyle: invitation.preferredCoachingStyle ?? .hybrid,
-                lastWorkoutDate: nil,
-                lastActivityDate: Date(),
-                currentPlanId: nil,
-                totalWorkoutsCompleted: 0
-            )
-            
-            self.clients.append(newClient)
-            self.filteredClients = self.clients
-            
-            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { [self] in
-                successMessage = ""
-            }
-        }
-    }
-    
-    func generateInviteLink(_ invitation: ClientInvitation) {
-        isLoading = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            self.successMessage = "Invite link generated successfully!"
-            self.isLoading = false
-            
-            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { [self] in
-                successMessage = ""
-            }
-        }
-    }
+    // REMOVED: Placeholder invitation methods - all functionality now handled by real InvitationService
     
     func removeClient(_ client: Client) {
         clients.removeAll { $0.id == client.id }
@@ -264,12 +221,7 @@ class ClientManagementViewModel: ObservableObject {
         }
     }
     
-    func refreshClients() {
-        isLoading = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            self.isLoading = false
-        }
-    }
+
     
     private func isValidEmail(_ email: String) -> Bool {
         let emailRegex = "[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,64}"

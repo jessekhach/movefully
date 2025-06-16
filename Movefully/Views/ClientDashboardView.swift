@@ -4,346 +4,424 @@ import SwiftUI
 struct ClientDashboardView: View {
     @ObservedObject var viewModel: ClientViewModel
     @ObservedObject private var themeManager = ThemeManager.shared
-    @State private var showingProfile = false
+    @StateObject private var progressService = ProgressHistoryService()
+    @StateObject private var progressCacheService = ProgressDataCacheService.shared
+    @State private var progressEntries: [ProgressEntry] = []
+    @State private var milestones: [Milestone] = []
+    @State private var workoutCompletions: [ClientProgressService.WorkoutCompletion] = []
+    @State private var selectedCategory: ProgressCategory? = nil
+    @State private var isLoading = true
+    @State private var showingAddProgressSheet = false
+    @State private var showingWorkoutDetail = false
+    @State private var selectedWorkoutCompletion: ClientProgressService.WorkoutCompletion?
     
     var body: some View {
-        MovefullyClientNavigation(
-            title: "Progress",
-            showProfileButton: false
-        ) {
-            // Welcome message
-            welcomeSection
-            
-            // Weekly progress
-            weeklyProgressSection
-            
-            // Monthly overview
-            monthlyOverviewSection
-            
-            // Recent activity
-            recentActivitySection
-        }
-        .sheet(isPresented: $showingProfile) {
-            // ClientProfileView will be added when available
-        }
-    }
-    
-    // MARK: - Welcome Section
-    private var welcomeSection: some View {
-        VStack(spacing: 0) {
-            // Add top padding to match trainer views
-            Spacer()
-                .frame(height: MovefullyTheme.Layout.paddingM)
-            
-            MovefullyCard {
-                VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingM) {
-                    HStack {
-                        VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingS) {
-                            Text("Your Progress")
-                                .font(MovefullyTheme.Typography.title2)
-                                .foregroundColor(MovefullyTheme.Colors.textPrimary)
-                            
-                            Text("Keep up the great momentum!")
-                                .font(MovefullyTheme.Typography.body)
-                                .foregroundColor(MovefullyTheme.Colors.textSecondary)
-                        }
-                        
-                        Spacer()
-                        
-                        Image(systemName: "chart.line.uptrend.xyaxis")
-                            .font(MovefullyTheme.Typography.title1)
-                            .foregroundColor(MovefullyTheme.Colors.primaryTeal.opacity(0.7))
-                    }
-                    
-                    // Quick completion rate
-                    HStack {
-                        Text("Overall completion rate:")
-                            .font(MovefullyTheme.Typography.callout)
-                            .foregroundColor(MovefullyTheme.Colors.textSecondary)
-                        
-                        Spacer()
-                        
-                        Text("\(Int(viewModel.progressPercentage * 100))%")
-                            .font(MovefullyTheme.Typography.title3)
-                            .foregroundColor(MovefullyTheme.Colors.softGreen)
-                    }
-                }
-            }
-        }
-    }
-    
-    // MARK: - Weekly Progress Section
-    private var weeklyProgressSection: some View {
-        VStack(spacing: MovefullyTheme.Layout.paddingL) {
-            HStack {
-                Text("This Week")
-                    .font(MovefullyTheme.Typography.title3)
-                    .foregroundColor(MovefullyTheme.Colors.textPrimary)
-                Spacer()
-            }
-            
-            VStack(spacing: MovefullyTheme.Layout.paddingM) {
-                // Workouts completed vs assigned
-                MovefullyCard {
-                    VStack(spacing: MovefullyTheme.Layout.paddingL) {
-                        HStack {
-                            VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingS) {
-                                Text("Workouts Completed")
-                                    .font(MovefullyTheme.Typography.bodyMedium)
-                                    .foregroundColor(MovefullyTheme.Colors.textPrimary)
-                                
-                                Text("\(viewModel.completedAssignments) of \(viewModel.totalAssignments)")
-                                    .font(MovefullyTheme.Typography.title1)
-                                    .foregroundColor(MovefullyTheme.Colors.gentleBlue)
-                            }
-                            
-                            Spacer()
-                            
-                            CircularProgressView(
-                                progress: viewModel.progressPercentage,
-                                color: MovefullyTheme.Colors.gentleBlue
-                            )
-                        }
-                        
-                        ProgressView(value: Double(viewModel.completedAssignments), total: Double(viewModel.totalAssignments))
-                    }
-                }
-                
-                // Weekly stats grid
-                HStack(spacing: MovefullyTheme.Layout.paddingM) {
-                    // Completion percentage
-                    MovefullyCard {
-                        VStack(spacing: MovefullyTheme.Layout.paddingS) {
-                            Image(systemName: "target")
-                                .font(MovefullyTheme.Typography.title2)
-                                .foregroundColor(MovefullyTheme.Colors.softGreen)
-                            
-                            Text("\(Int(viewModel.progressPercentage * 100))%")
-                                .font(MovefullyTheme.Typography.title2)
-                                .foregroundColor(MovefullyTheme.Colors.textPrimary)
-                            
-                            Text("On Track")
-                                .font(MovefullyTheme.Typography.caption)
-                                .foregroundColor(MovefullyTheme.Colors.textSecondary)
-                                .textCase(.uppercase)
-                                .tracking(1.1)
-                        }
-                        .frame(maxWidth: .infinity)
-                    }
-                    
-                    // Consistency
-                    MovefullyCard {
-                        VStack(spacing: MovefullyTheme.Layout.paddingS) {
-                            Image(systemName: "flame.fill")
-                                .font(MovefullyTheme.Typography.title2)
-                                .foregroundColor(MovefullyTheme.Colors.warmOrange)
-                            
-                            Text("\(viewModel.currentStreak)")
-                                .font(MovefullyTheme.Typography.title2)
-                                .foregroundColor(MovefullyTheme.Colors.textPrimary)
-                            
-                            Text("Days Active")
-                                .font(MovefullyTheme.Typography.caption)
-                                .foregroundColor(MovefullyTheme.Colors.textSecondary)
-                                .textCase(.uppercase)
-                                .tracking(1.1)
-                        }
-                        .frame(maxWidth: .infinity)
-                    }
-                }
-            }
-        }
-    }
-    
-    // MARK: - Monthly Overview Section
-    private var monthlyOverviewSection: some View {
-        VStack(spacing: MovefullyTheme.Layout.paddingL) {
-            HStack {
-                Text("This Month")
-                    .font(MovefullyTheme.Typography.title3)
-                    .foregroundColor(MovefullyTheme.Colors.textPrimary)
-                Spacer()
-            }
-            
-            VStack(spacing: MovefullyTheme.Layout.paddingM) {
-                // Monthly completion card
-                MovefullyCard {
-                    VStack(spacing: MovefullyTheme.Layout.paddingL) {
-                        HStack {
-                            VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingS) {
-                                Text("Monthly Progress")
-                                    .font(MovefullyTheme.Typography.bodyMedium)
-                                    .foregroundColor(MovefullyTheme.Colors.textPrimary)
-                                
-                                Text("\(viewModel.completedAssignments) of \(viewModel.totalAssignments)")
-                                    .font(MovefullyTheme.Typography.title1)
-                                    .foregroundColor(MovefullyTheme.Colors.gentleBlue)
-                            }
-                            
-                            Spacer()
-                            
-                            CircularProgressView(
-                                progress: viewModel.progressPercentage,
-                                color: MovefullyTheme.Colors.gentleBlue
-                            )
-                        }
-                        
-                        ProgressView(value: Double(viewModel.completedAssignments), total: Double(viewModel.totalAssignments))
-                            .tint(MovefullyTheme.Colors.gentleBlue)
-                            .scaleEffect(y: 2)
-                    }
-                }
-                
-                // Monthly stats
-                HStack(spacing: MovefullyTheme.Layout.paddingM) {
-                    // Total workouts
-                    MovefullyCard {
-                        VStack(spacing: MovefullyTheme.Layout.paddingS) {
-                            Image(systemName: "calendar.badge.checkmark")
-                                .font(MovefullyTheme.Typography.title2)
-                                .foregroundColor(MovefullyTheme.Colors.gentleBlue)
-                            
-                            Text("\(viewModel.currentClient.totalWorkoutsCompleted) this month")
-                                .font(MovefullyTheme.Typography.callout)
-                                .foregroundColor(MovefullyTheme.Colors.textSecondary)
-                        }
-                        .frame(maxWidth: .infinity)
-                    }
-                    
-                    // Average per week
-                    MovefullyCard {
-                        VStack(spacing: MovefullyTheme.Layout.paddingS) {
-                            Image(systemName: "chart.bar.fill")
-                                .font(MovefullyTheme.Typography.title2)
-                                .foregroundColor(MovefullyTheme.Colors.lavender)
-                            
-                            Text("\(viewModel.completedAssignments)")
-                                .font(MovefullyTheme.Typography.title2)
-                                .foregroundColor(MovefullyTheme.Colors.textPrimary)
-                            
-                            Text("Per Week")
-                                .font(MovefullyTheme.Typography.caption)
-                                .foregroundColor(MovefullyTheme.Colors.textSecondary)
-                                .textCase(.uppercase)
-                                .tracking(1.1)
-                        }
-                        .frame(maxWidth: .infinity)
-                    }
-                }
-            }
-        }
-    }
-    
-    // MARK: - Recent Activity Section
-    private var recentActivitySection: some View {
-        VStack(spacing: MovefullyTheme.Layout.paddingL) {
-            HStack {
-                Text("Recent Activity")
-                    .font(MovefullyTheme.Typography.title3)
-                    .foregroundColor(MovefullyTheme.Colors.textPrimary)
-                Spacer()
-            }
-            
-            VStack(spacing: MovefullyTheme.Layout.paddingM) {
-                ForEach(WorkoutAssignment.sampleAssignments.prefix(3)) { assignment in
-                    RecentActivityCard(assignment: assignment)
-                }
-            }
-        }
-    }
-}
-
-// MARK: - Circular Progress View Component
-struct CircularProgressView: View {
-    let progress: Double
-    let color: Color
-    let lineWidth: CGFloat = 8
-    let size: CGFloat = 60
-    
-    var body: some View {
-        ZStack {
-            Circle()
-                .stroke(color.opacity(0.2), lineWidth: lineWidth)
-                .frame(width: size, height: size)
-            
-            Circle()
-                .trim(from: 0, to: progress)
-                .stroke(
-                    AngularGradient(
-                        colors: [color, color.opacity(0.8)],
-                        center: .center,
-                        startAngle: .degrees(-90),
-                        endAngle: .degrees(270)
-                    ),
-                    style: StrokeStyle(lineWidth: lineWidth, lineCap: .round)
+        NavigationStack {
+            MovefullyClientNavigation(
+                title: "Progress",
+                showProfileButton: false,
+                trailingButton: MovefullyStandardNavigation.ToolbarButton(
+                    icon: "plus",
+                    action: { showingAddProgressSheet = true },
+                    accessibilityLabel: "Add Progress"
                 )
-                .frame(width: size, height: size)
-                .rotationEffect(.degrees(-90))
-                .animation(.easeInOut(duration: 1.0), value: progress)
-            
-            Text("\(Int(progress * 100))%")
-                .font(MovefullyTheme.Typography.caption)
-                .foregroundColor(color)
-                .fontWeight(.semibold)
+            ) {
+                if isLoading {
+                    loadingView
+                } else {
+                    // Progress Overview + Chart Section
+                    progressOverviewSection
+                    
+                    // Progress Updates Section (includes trend and updates)
+                    progressUpdatesSection
+                    
+                    // Recent Workouts Section (at bottom)
+                    recentWorkoutsSection
+                }
+            }
+            .navigationBarTitleDisplayMode(.large)
+            .task {
+                await loadProgressData()
+            }
+            .sheet(isPresented: $showingAddProgressSheet) {
+                if let currentClient = viewModel.currentClient {
+                    AddProgressSheet(client: currentClient) {
+                        Task { await loadProgressData() }
+                    }
+                }
+            }
+            .sheet(isPresented: $showingWorkoutDetail) {
+                if let selectedWorkout = selectedWorkoutCompletion {
+                    WorkoutReviewView(
+                        assignment: createWorkoutAssignmentFromCompletion(selectedWorkout),
+                        viewModel: viewModel
+                    )
+                }
+            }
         }
     }
-}
-
-// MARK: - Recent Activity Card Component
-struct RecentActivityCard: View {
-    let assignment: WorkoutAssignment
-    @ObservedObject private var themeManager = ThemeManager.shared
     
-    var body: some View {
-        MovefullyCard {
-            HStack(spacing: MovefullyTheme.Layout.paddingM) {
-                // Status indicator
-                VStack {
-                    Image(systemName: assignment.status.icon)
-                        .font(MovefullyTheme.Typography.title3)
-                        .foregroundColor(assignment.status.color)
-                        .frame(width: 40, height: 40)
-                        .background(assignment.status.color.opacity(0.1))
-                        .clipShape(Circle())
-                    
-                    Spacer()
-                }
-                
-                // Workout details
-                VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingS) {
-                    Text(assignment.title)
-                        .font(MovefullyTheme.Typography.bodyMedium)
-                        .foregroundColor(MovefullyTheme.Colors.textPrimary)
-                    
-                    Text(formatDate(assignment.date))
-                        .font(MovefullyTheme.Typography.callout)
-                        .foregroundColor(MovefullyTheme.Colors.textSecondary)
-                    
+    // MARK: - Loading View
+    private var loadingView: some View {
+        VStack(spacing: MovefullyTheme.Layout.paddingL) {
+            Spacer()
+            
+            ProgressView()
+                .scaleEffect(1.2)
+                .tint(MovefullyTheme.Colors.primaryTeal)
+            
+            Text("Loading your progress...")
+                .font(MovefullyTheme.Typography.body)
+                .foregroundColor(MovefullyTheme.Colors.textSecondary)
+            
+            Spacer()
+        }
+    }
+    
+    // MARK: - Progress Overview Section
+    private var progressOverviewSection: some View {
+        VStack(spacing: MovefullyTheme.Layout.paddingM) {
+            // Stats Header
+            MovefullyCard {
+                VStack(spacing: MovefullyTheme.Layout.paddingM) {
                     HStack {
-                        MovefullyStatusBadge(
-                            text: assignment.status.rawValue,
-                            color: assignment.status.color,
-                            showDot: false
+                        Text("Progress Overview")
+                            .font(MovefullyTheme.Typography.title3)
+                            .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                        
+                        Spacer()
+                    }
+                    
+                    HStack(spacing: MovefullyTheme.Layout.paddingL) {
+                        ProgressStatView(
+                            title: "Total Updates",
+                            value: "\(progressEntries.count)",
+                            icon: "chart.line.uptrend.xyaxis"
                         )
                         
-                        Spacer()
+                        ProgressStatView(
+                            title: "This Month",
+                            value: "\(entriesThisMonth)",
+                            icon: "calendar.badge.checkmark"
+                        )
                         
-                        Text("\(assignment.estimatedDuration) min")
-                            .font(MovefullyTheme.Typography.caption)
-                            .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                        ProgressStatView(
+                            title: "Milestones",
+                            value: "\(milestones.count)",
+                            icon: "trophy"
+                        )
                     }
                 }
-                
-                Spacer()
+            }
+            
+            // Progress Chart
+            if !progressEntries.isEmpty {
+                ProgressChartView(entries: progressEntries)
             }
         }
     }
     
-    private func formatDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .none
-        return formatter.string(from: date)
+    // MARK: - Progress Updates Section
+    private var progressUpdatesSection: some View {
+        VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingM) {
+            HStack {
+                Text("Progress Updates")
+                    .font(MovefullyTheme.Typography.title3)
+                    .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                
+                Spacer()
+            }
+            
+            // Category Filter
+            categoryFilter
+            
+            // Progress Entries
+            if filteredProgressEntries.isEmpty {
+                MovefullyEmptyState(
+                    icon: "chart.line.uptrend.xyaxis",
+                    title: selectedCategory == nil ? "No Progress Updates" : "No Updates in \(selectedCategory?.displayName ?? "")",
+                    description: "Tap the + button to start tracking your progress measurements",
+                    actionButton: nil
+                )
+            } else {
+                VStack(spacing: MovefullyTheme.Layout.paddingM) {
+                    ForEach(Array(filteredProgressEntries.prefix(5))) { entry in
+                        ProgressEntryCard(entry: entry)
+                    }
+                    
+                    if filteredProgressEntries.count > 5 {
+                        Button("View All Updates") {
+                            // Could navigate to full history view if needed
+                        }
+                        .font(MovefullyTheme.Typography.callout)
+                        .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+                        .padding(.top, MovefullyTheme.Layout.paddingS)
+                    }
+                }
+            }
+            
+            // Milestones
+            if !milestones.isEmpty {
+                VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingM) {
+                    HStack {
+                        Text("Milestones")
+                            .font(MovefullyTheme.Typography.title3)
+                            .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                        
+                        Spacer()
+                    }
+                    
+                    VStack(spacing: MovefullyTheme.Layout.paddingM) {
+                        ForEach(Array(milestones.prefix(3))) { milestone in
+                            MilestoneCard(milestone: milestone)
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    // MARK: - Recent Workouts Section
+    private var recentWorkoutsSection: some View {
+        VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingM) {
+            HStack {
+                Text("Recent Workouts")
+                    .font(MovefullyTheme.Typography.title3)
+                    .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                
+                Spacer()
+            }
+            
+            if workoutCompletions.isEmpty {
+                MovefullyEmptyState(
+                    icon: "figure.strengthtraining.traditional",
+                    title: "No Recent Workouts",
+                    description: "Complete workouts to see your progress here",
+                    actionButton: nil
+                )
+            } else {
+                VStack(spacing: MovefullyTheme.Layout.paddingM) {
+                    ForEach(workoutCompletions, id: \.id) { completion in
+                        workoutCompletionCard(completion)
+                    }
+                }
+            }
+        }
+    }
+    
+    // MARK: - Workout Completion Card
+    private func workoutCompletionCard(_ completion: ClientProgressService.WorkoutCompletion) -> some View {
+        Button {
+            selectedWorkoutCompletion = completion
+            showingWorkoutDetail = true
+        } label: {
+            MovefullyCard {
+                HStack(spacing: MovefullyTheme.Layout.paddingM) {
+                    // Workout Icon
+                    Image(systemName: "figure.strengthtraining.traditional")
+                        .font(.system(size: 24, weight: .medium))
+                        .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+                        .frame(width: 40, height: 40)
+                        .background(MovefullyTheme.Colors.primaryTeal.opacity(0.1))
+                        .clipShape(Circle())
+                    
+                    VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingXS) {
+                        Text(completion.workoutTitle)
+                            .font(MovefullyTheme.Typography.bodyMedium)
+                            .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                            .lineLimit(1)
+                            .multilineTextAlignment(.leading)
+                        
+                        HStack(spacing: MovefullyTheme.Layout.paddingM) {
+                            // Rating
+                            HStack(spacing: MovefullyTheme.Layout.paddingXS) {
+                                ForEach(1...5, id: \.self) { star in
+                                    Image(systemName: star <= completion.rating ? "star.fill" : "star")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(star <= completion.rating ? MovefullyTheme.Colors.warmOrange : MovefullyTheme.Colors.textTertiary)
+                                }
+                            }
+                            
+                            // Duration
+                            if completion.duration > 0 {
+                                Text("\(completion.duration) min")
+                                    .font(MovefullyTheme.Typography.caption)
+                                    .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                            }
+                        }
+                        
+                        // Date
+                        Text(formatRelativeTime(completion.completedDate))
+                            .font(MovefullyTheme.Typography.caption)
+                            .foregroundColor(MovefullyTheme.Colors.textTertiary)
+                    }
+                    
+                    Spacer()
+                    
+                    // Right arrow
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(MovefullyTheme.Colors.textTertiary)
+                }
+                .padding(MovefullyTheme.Layout.paddingM)
+            }
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+    
+    // MARK: - Category Filter
+    private var categoryFilter: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: MovefullyTheme.Layout.paddingM) {
+                // All Categories
+                categoryFilterButton(
+                    title: "All",
+                    icon: "list.bullet",
+                    isSelected: selectedCategory == nil,
+                    action: { selectedCategory = nil }
+                )
+                
+                // Individual Categories
+                ForEach(ProgressCategory.allCases, id: \.self) { category in
+                    categoryFilterButton(
+                        title: category.displayName,
+                        icon: category.icon,
+                        isSelected: selectedCategory == category,
+                        action: { selectedCategory = category }
+                    )
+                }
+            }
+            .padding(.horizontal, MovefullyTheme.Layout.paddingL)
+        }
+    }
+    
+    private func categoryFilterButton(title: String, icon: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: MovefullyTheme.Layout.paddingS) {
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .medium))
+                
+                Text(title)
+                    .font(MovefullyTheme.Typography.callout)
+            }
+            .foregroundColor(isSelected ? .white : MovefullyTheme.Colors.textSecondary)
+            .padding(.horizontal, MovefullyTheme.Layout.paddingM)
+            .padding(.vertical, MovefullyTheme.Layout.paddingS)
+            .background(
+                isSelected 
+                    ? MovefullyTheme.Colors.primaryTeal
+                    : MovefullyTheme.Colors.cardBackground
+            )
+            .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
+            .shadow(color: isSelected ? MovefullyTheme.Colors.primaryTeal.opacity(0.3) : Color.clear, radius: 4, x: 0, y: 2)
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+    
+    // MARK: - Helper Properties
+    private var entriesThisMonth: Int {
+        let calendar = Calendar.current
+        let now = Date()
+        return progressEntries.filter { entry in
+            calendar.isDate(entry.timestamp, equalTo: now, toGranularity: .month)
+        }.count
+    }
+    
+    private var filteredProgressEntries: [ProgressEntry] {
+        if let selectedCategory = selectedCategory {
+            return progressEntries.filter { $0.field.category == selectedCategory }
+        }
+        return progressEntries
+    }
+    
+    // MARK: - Helper Functions
+    private func formatRelativeTime(_ date: Date) -> String {
+        let calendar = Calendar.current
+        let now = Date()
+        
+        if calendar.isDateInToday(date) {
+            return "Today"
+        } else if calendar.isDateInYesterday(date) {
+            return "Yesterday"
+        } else {
+            let daysDiff = calendar.dateComponents([.day], from: date, to: now).day ?? 0
+            if daysDiff < 7 {
+                return "\(daysDiff) days ago"
+            } else {
+                let formatter = DateFormatter()
+                formatter.dateFormat = "MMM d"
+                return formatter.string(from: date)
+            }
+        }
+    }
+    
+    private func findWorkoutInWeeklyAssignments(title: String, date: Date) -> WorkoutAssignment? {
+        // Search through all weekly assignments to find a matching workout
+        for weekAssignments in viewModel.assignmentsByWeek.values {
+            if let foundWorkout = weekAssignments.first(where: { workout in
+                workout.title == title && Calendar.current.isDate(workout.date, inSameDayAs: date)
+            }) {
+                return foundWorkout
+            }
+        }
+        return nil
+    }
+    
+    private func createWorkoutAssignmentFromCompletion(_ completion: ClientProgressService.WorkoutCompletion) -> WorkoutAssignment {
+        // First, try to find the workout in today's workout
+        if let todayWorkout = viewModel.todayWorkout,
+           todayWorkout.title == completion.workoutTitle,
+           Calendar.current.isDate(todayWorkout.date, inSameDayAs: completion.completedDate) {
+            return todayWorkout
+        }
+        
+        // Then try to find it in the weekly assignments
+        if let foundWorkout = findWorkoutInWeeklyAssignments(
+            title: completion.workoutTitle,
+            date: completion.completedDate
+        ) {
+            return foundWorkout
+        }
+        
+        // Fallback: create a minimal workout assignment
+        return WorkoutAssignment(
+            title: completion.workoutTitle,
+            description: completion.notes.isEmpty ? "Completed workout session" : completion.notes,
+            date: completion.completedDate,
+            status: .completed,
+            exercises: [], // Will show completion data only
+            trainerNotes: nil,
+            estimatedDuration: completion.duration
+        )
+    }
+    
+    // MARK: - Data Loading
+    private func loadProgressData() async {
+        guard let currentClient = viewModel.currentClient else { return }
+        
+        // First, try to load from cache
+        if let cachedData = progressCacheService.getCachedProgressData() {
+            print("📦 ClientDashboardView: Using cached progress data")
+            progressEntries = cachedData.progressEntries
+            milestones = cachedData.milestones
+            workoutCompletions = cachedData.workoutCompletions
+            isLoading = false
+            return
+        }
+        
+        // If no cache available, fetch fresh data
+        isLoading = true
+        
+        do {
+            let (entries, milestonesList, completions) = try await progressCacheService.fetchAndCacheProgressData()
+            progressEntries = entries
+            milestones = milestonesList
+            workoutCompletions = completions
+        } catch {
+            print("Error loading progress data: \(error)")
+        }
+        
+        isLoading = false
     }
 }
 

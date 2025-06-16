@@ -16,16 +16,18 @@ struct ClientManagementView: View {
                 accessibilityLabel: "Invite Client"
             )
         ) {
-            // Search field - only show when there are clients to search
-            if !viewModel.clients.isEmpty {
-                MovefullySearchField(
-                    placeholder: "Search clients...",
-                    text: $searchText
-                )
+            VStack(spacing: MovefullyTheme.Layout.paddingL) {
+                // Search field - only show when there are clients to search
+                if !viewModel.clients.isEmpty {
+                    MovefullySearchField(
+                        placeholder: "Search clients...",
+                        text: $searchText
+                    )
+                }
+                
+                // Clients content
+                clientsContent
             }
-            
-            // Clients content
-            clientsContent
         }
         .sheet(isPresented: $viewModel.showInviteClientSheet) {
             InviteClientSheet()
@@ -38,14 +40,17 @@ struct ClientManagementView: View {
     private var clientsContent: some View {
         if viewModel.isLoading {
             MovefullyLoadingState(message: "Loading clients...")
+                .frame(maxWidth: .infinity, minHeight: 300)
         } else if filteredClients.isEmpty {
             clientsEmptyState
         } else {
-            ForEach(filteredClients, id: \.id) { client in
-                NavigationLink(destination: ClientDetailView(client: client)) {
-                    SimpleClientCard(client: client)
+            LazyVStack(spacing: MovefullyTheme.Layout.paddingL) {
+                ForEach(filteredClients, id: \.id) { client in
+                    NavigationLink(destination: ClientDetailView(client: client)) {
+                        SimpleClientCard(client: client)
+                    }
+                    .buttonStyle(PlainButtonStyle())
                 }
-                .buttonStyle(PlainButtonStyle())
             }
         }
     }
@@ -167,6 +172,7 @@ struct SimpleClientCard: View {
                     Text(client.name)
                         .font(MovefullyTheme.Typography.bodyMedium)
                         .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                        .lineLimit(1)
                     
                     Spacer()
                     
@@ -244,20 +250,20 @@ struct StatusIndicator: View {
     private var statusText: String {
         switch status {
         case .active: return "Active"
-        case .new: return "New"
+        case .pending: return "Pending"
         case .needsAttention: return "Attention"
         case .paused: return "Paused"
-        case .pending: return "Pending"
+        case .trainer_removed: return "Removed"
         }
     }
     
     private var statusColor: Color {
         switch status {
         case .active: return MovefullyTheme.Colors.softGreen
-        case .new: return MovefullyTheme.Colors.gentleBlue
+        case .pending: return MovefullyTheme.Colors.gentleBlue
         case .needsAttention: return MovefullyTheme.Colors.warmOrange
         case .paused: return MovefullyTheme.Colors.mediumGray
-        case .pending: return MovefullyTheme.Colors.lavender
+        case .trainer_removed: return MovefullyTheme.Colors.warning
         }
     }
 }
