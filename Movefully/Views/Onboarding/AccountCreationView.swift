@@ -18,9 +18,9 @@ struct AccountCreationView: View {
                 .foregroundColor(MovefullyTheme.Colors.textSecondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, MovefullyTheme.Layout.paddingXL)
-
-            Spacer()
             
+            Spacer()
+
             SignInWithAppleButton(
                 .signIn,
                 onRequest: { request in
@@ -34,19 +34,30 @@ struct AccountCreationView: View {
             .frame(height: MovefullyTheme.Layout.buttonHeightM)
             .padding(.horizontal, MovefullyTheme.Layout.paddingXL)
 
-
-            NavigationLink(destination: EmailSignUpView()) {
-                Text("Or continue with Email")
-                    .font(MovefullyTheme.Typography.body)
-                    .foregroundColor(MovefullyTheme.Colors.textSecondary)
-            }
-            .padding(.top, MovefullyTheme.Layout.paddingL)
-            
+            Spacer()
             Spacer()
         }
-        .padding(.bottom)
         .background(MovefullyTheme.Colors.backgroundPrimary.ignoresSafeArea())
-        .navigationBarHidden(true)
+        .navigationBarBackButtonHidden(true)
+        .toolbar {
+            ToolbarItemGroup(placement: .navigationBarLeading) {
+                Button(action: {
+                    coordinator.previousStep()
+                }) {
+                    Image(systemName: "chevron.left")
+                    Text("Back")
+                }
+                .foregroundColor(MovefullyTheme.Colors.textPrimary)
+            }
+            
+            ToolbarItemGroup(placement: .bottomBar) {
+                NavigationLink(destination: EmailSignUpView()) {
+                    Text("Or continue with Email")
+                        .font(MovefullyTheme.Typography.body)
+                        .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                }
+            }
+        }
     }
     
     private func handleAppleSignIn(result: Result<ASAuthorization, Error>) {
@@ -77,4 +88,4 @@ struct AccountCreationView: View {
             .environmentObject(AuthenticationViewModel())
             .environmentObject(OnboardingCoordinator())
     }
-} 
+}
