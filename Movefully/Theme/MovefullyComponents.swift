@@ -7,6 +7,223 @@ import UIKit
 // MARK: - Standardized Movefully UI Components
 // This file contains all reusable UI components that ensure design consistency across the app
 
+// MARK: - Primary Button Style
+struct MovefullyPrimaryButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+
+    func makeBody(configuration: Configuration) -> some View {
+        let disabledColors = [MovefullyTheme.Colors.mediumGray, MovefullyTheme.Colors.mediumGray.opacity(0.8)]
+        
+        configuration.label
+            .font(MovefullyTheme.Typography.buttonMedium)
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .frame(height: MovefullyTheme.Layout.buttonHeightM)
+            .background(
+                LinearGradient(
+                    colors: isEnabled ? [MovefullyTheme.Colors.primaryTeal, MovefullyTheme.Colors.gentleBlue] : disabledColors,
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+            .cornerRadius(MovefullyTheme.Layout.cornerRadiusM)
+            .shadow(color: isEnabled ? MovefullyTheme.Effects.buttonShadow : .clear, radius: 8, x: 0, y: 4)
+            .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
+            .animation(.easeInOut(duration: 0.2), value: configuration.isPressed)
+            .animation(.easeInOut(duration: 0.2), value: isEnabled)
+    }
+}
+
+// MARK: - Alert Component
+struct MovefullyAlert: View {
+    enum AlertType {
+        case info
+        case warning
+        case error
+        case success
+
+        var icon: String {
+            switch self {
+            case .info: return "info.circle.fill"
+            case .warning: return "exclamationmark.triangle.fill"
+            case .error: return "xmark.octagon.fill"
+            case .success: return "checkmark.circle.fill"
+            }
+        }
+
+        var color: Color {
+            switch self {
+            case .info: return .blue
+            case .warning: return .orange
+            case .error: return .red
+            case .success: return .green
+            }
+        }
+    }
+
+    let message: String
+    let type: AlertType
+
+    var body: some View {
+        HStack(alignment: .top, spacing: MovefullyTheme.Layout.paddingM) {
+            Image(systemName: type.icon)
+                .font(.title3)
+                .foregroundColor(type.color)
+
+            Text(message)
+                .font(MovefullyTheme.Typography.body)
+                .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Spacer()
+        }
+        .padding(MovefullyTheme.Layout.paddingL)
+        .background(type.color.opacity(0.1))
+        .cornerRadius(MovefullyTheme.Layout.cornerRadiusM)
+        .overlay(
+            RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM)
+                .stroke(type.color.opacity(0.3), lineWidth: 1)
+        )
+    }
+}
+
+// MARK: - Secondary Button Style
+struct MovefullySecondaryButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(MovefullyTheme.Typography.buttonMedium)
+            .foregroundColor(isEnabled ? MovefullyTheme.Colors.primaryTeal : MovefullyTheme.Colors.textSecondary)
+            .frame(maxWidth: .infinity)
+            .frame(height: MovefullyTheme.Layout.buttonHeightM)
+            .background(
+                ZStack {
+                    RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM)
+                        .fill(isEnabled ? (configuration.isPressed ? MovefullyTheme.Colors.primaryTeal.opacity(0.1) : Color.clear) : Color.clear)
+                    
+                    RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM)
+                        .stroke(isEnabled ? MovefullyTheme.Colors.primaryTeal : MovefullyTheme.Colors.textTertiary, lineWidth: 1.5)
+                }
+            )
+            .cornerRadius(MovefullyTheme.Layout.cornerRadiusM)
+            .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
+            .animation(.easeInOut(duration: 0.2), value: configuration.isPressed)
+            .animation(.easeInOut(duration: 0.2), value: isEnabled)
+    }
+}
+
+// MARK: - Text Field Component
+struct MovefullyTextField: View {
+    let placeholder: String
+    @Binding var text: String
+    let onTextChange: ((String) -> Void)?
+    let icon: String?
+    let keyboardType: UIKeyboardType
+    let autocapitalization: TextInputAutocapitalization
+    let disableAutocorrection: Bool
+    let maxCharacters: Int?
+    
+    init(
+        placeholder: String,
+        text: Binding<String>,
+        onTextChange: ((String) -> Void)? = nil,
+        icon: String? = nil,
+        keyboardType: UIKeyboardType = .default,
+        autocapitalization: TextInputAutocapitalization = .sentences,
+        disableAutocorrection: Bool = false,
+        maxCharacters: Int? = nil
+    ) {
+        self.placeholder = placeholder
+        self._text = text
+        self.onTextChange = onTextChange
+        self.icon = icon
+        self.keyboardType = keyboardType
+        self.autocapitalization = autocapitalization
+        self.disableAutocorrection = disableAutocorrection
+        self.maxCharacters = maxCharacters
+    }
+    
+    var body: some View {
+        HStack(spacing: MovefullyTheme.Layout.paddingM) {
+            if let icon = icon {
+                Image(systemName: icon)
+                    .font(MovefullyTheme.Typography.buttonSmall)
+                    .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                    .frame(width: 20)
+            }
+            
+            TextField(placeholder, text: $text)
+                .font(MovefullyTheme.Typography.body)
+                .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                .accentColor(MovefullyTheme.Colors.primaryTeal)
+                .keyboardType(keyboardType)
+                .textInputAutocapitalization(autocapitalization)
+                .disableAutocorrection(disableAutocorrection)
+                .onChange(of: text) { newValue in
+                    if let maxCharacters = maxCharacters, newValue.count > maxCharacters {
+                        text = String(newValue.prefix(maxCharacters))
+                    } else {
+                        onTextChange?(newValue)
+                    }
+                }
+        }
+        .padding(MovefullyTheme.Layout.paddingM)
+        .background(MovefullyTheme.Colors.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
+        .overlay(
+            RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM)
+                .stroke(MovefullyTheme.Colors.divider, lineWidth: 1)
+        )
+    }
+}
+
+// MARK: - Secure Field Component
+struct MovefullySecureField: View {
+    let placeholder: String
+    @Binding var text: String
+    let icon: String?
+    let onTextChange: ((String) -> Void)?
+    
+    init(
+        placeholder: String,
+        text: Binding<String>,
+        icon: String? = nil,
+        onTextChange: ((String) -> Void)? = nil
+    ) {
+        self.placeholder = placeholder
+        self._text = text
+        self.icon = icon
+        self.onTextChange = onTextChange
+    }
+    
+    var body: some View {
+        HStack(spacing: MovefullyTheme.Layout.paddingM) {
+            if let icon = icon {
+                Image(systemName: icon)
+                    .font(MovefullyTheme.Typography.buttonSmall)
+                    .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                    .frame(width: 20)
+            }
+            
+            SecureField(placeholder, text: $text)
+                .font(MovefullyTheme.Typography.body)
+                .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                .accentColor(MovefullyTheme.Colors.primaryTeal)
+                .onChange(of: text) { newValue in
+                    onTextChange?(newValue)
+                }
+        }
+        .padding(MovefullyTheme.Layout.paddingM)
+        .background(MovefullyTheme.Colors.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
+        .overlay(
+            RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM)
+                .stroke(MovefullyTheme.Colors.divider, lineWidth: 1)
+        )
+    }
+}
+
 // MARK: - Search Field Component
 struct MovefullySearchField: View {
     let placeholder: String
@@ -388,71 +605,6 @@ struct MovefullyFormField<Content: View>: View {
     }
 }
 
-// MARK: - Text Field Component
-struct MovefullyTextField: View {
-    let placeholder: String
-    @Binding var text: String
-    let onTextChange: ((String) -> Void)?
-    let icon: String?
-    let keyboardType: UIKeyboardType
-    let autocapitalization: TextInputAutocapitalization
-    let disableAutocorrection: Bool
-    let maxCharacters: Int?
-    
-    init(
-        placeholder: String,
-        text: Binding<String>,
-        onTextChange: ((String) -> Void)? = nil,
-        icon: String? = nil,
-        keyboardType: UIKeyboardType = .default,
-        autocapitalization: TextInputAutocapitalization = .sentences,
-        disableAutocorrection: Bool = false,
-        maxCharacters: Int? = nil
-    ) {
-        self.placeholder = placeholder
-        self._text = text
-        self.onTextChange = onTextChange
-        self.icon = icon
-        self.keyboardType = keyboardType
-        self.autocapitalization = autocapitalization
-        self.disableAutocorrection = disableAutocorrection
-        self.maxCharacters = maxCharacters
-    }
-    
-    var body: some View {
-        HStack(spacing: MovefullyTheme.Layout.paddingM) {
-            if let icon = icon {
-                Image(systemName: icon)
-                    .font(MovefullyTheme.Typography.buttonSmall)
-                    .foregroundColor(MovefullyTheme.Colors.textSecondary)
-                    .frame(width: 20)
-            }
-            
-            TextField(placeholder, text: $text)
-                .font(MovefullyTheme.Typography.body)
-                .foregroundColor(MovefullyTheme.Colors.textPrimary)
-                .accentColor(MovefullyTheme.Colors.primaryTeal)
-                .keyboardType(keyboardType)
-                .textInputAutocapitalization(autocapitalization)
-                .disableAutocorrection(disableAutocorrection)
-                .onChange(of: text) { newValue in
-                    if let maxCharacters = maxCharacters, newValue.count > maxCharacters {
-                        text = String(newValue.prefix(maxCharacters))
-                    } else {
-                        onTextChange?(newValue)
-                    }
-                }
-        }
-        .padding(MovefullyTheme.Layout.paddingM)
-        .background(MovefullyTheme.Colors.cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
-        .overlay(
-            RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM)
-                .stroke(MovefullyTheme.Colors.divider, lineWidth: 1)
-        )
-    }
-}
-
 // MARK: - Multiline Text Field Component
 struct MovefullyTextEditor: View {
     let placeholder: String
@@ -498,52 +650,6 @@ struct MovefullyTextEditor: View {
                     onTextChange?(newValue)
                 }
             }
-    }
-}
-
-// MARK: - Secure Field Component
-struct MovefullySecureField: View {
-    let placeholder: String
-    @Binding var text: String
-    let icon: String?
-    let onTextChange: ((String) -> Void)?
-    
-    init(
-        placeholder: String,
-        text: Binding<String>,
-        icon: String? = nil,
-        onTextChange: ((String) -> Void)? = nil
-    ) {
-        self.placeholder = placeholder
-        self._text = text
-        self.icon = icon
-        self.onTextChange = onTextChange
-    }
-    
-    var body: some View {
-        HStack(spacing: MovefullyTheme.Layout.paddingM) {
-            if let icon = icon {
-                Image(systemName: icon)
-                    .font(MovefullyTheme.Typography.buttonSmall)
-                    .foregroundColor(MovefullyTheme.Colors.textSecondary)
-                    .frame(width: 20)
-            }
-            
-            SecureField(placeholder, text: $text)
-                .font(MovefullyTheme.Typography.body)
-                .foregroundColor(MovefullyTheme.Colors.textPrimary)
-                .accentColor(MovefullyTheme.Colors.primaryTeal)
-                .onChange(of: text) { newValue in
-                    onTextChange?(newValue)
-                }
-        }
-        .padding(MovefullyTheme.Layout.paddingM)
-        .background(MovefullyTheme.Colors.cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
-        .overlay(
-            RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM)
-                .stroke(MovefullyTheme.Colors.divider, lineWidth: 1)
-        )
     }
 }
 

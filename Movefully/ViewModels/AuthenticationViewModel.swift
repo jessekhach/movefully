@@ -20,9 +20,11 @@ class AuthenticationViewModel: NSObject, ObservableObject {
     // Apple Sign-In properties
     private var currentNonce: String?
     private var authorizationController: ASAuthorizationController?
+    private var pendingProfileData: Any?
+    private var appleSignInCompletion: ((Result<Void, Error>) -> Void)?
     
     // Simulator detection
-    private var isRunningOnSimulator: Bool {
+    var isSimulator: Bool {
         #if targetEnvironment(simulator)
         return true
         #else
@@ -88,11 +90,20 @@ class AuthenticationViewModel: NSObject, ObservableObject {
     
     // MARK: - Apple Sign-In
     
-    func signInWithApple() {
+    func signInWithApple(profileData: Any?, completion: @escaping (Result<Void, Error>) -> Void) {
+        print("🍎 Storing profile data and completion handler for Apple Sign-In...")
+        self.pendingProfileData = profileData
+        self.appleSignInCompletion = completion
+        
+        // Now, start the actual sign in flow
+        self.performAppleSignIn()
+    }
+    
+    private func performAppleSignIn() {
         print("🍎 Starting Apple Sign-In process...")
         
         // Check if running on simulator and warn user
-        if isRunningOnSimulator {
+        if isSimulator {
             print("⚠️ Apple Sign-In has limited support on iOS Simulator")
         }
         
@@ -164,39 +175,114 @@ class AuthenticationViewModel: NSObject, ObservableObject {
         return hashString
     }
     
+    // MARK: - User Profile Creation
+    
+    private func createUserProfile(uid: String, name: String, email: String, role: String, profileData: Any?) {
+        let userRef = db.collection("users").document(uid)
+        
+        // 1. Create the main user document
+        let userData: [String: Any] = [
+            "name": name,
+            "email": email,
+            "role": role,
+            "createdAt": Timestamp()
+        ]
+        
+        userRef.setData(userData) { error in
+            if let error = error {
+                print("❌ Error creating user document: \(error.localizedDescription)")
+                self.errorMessage = "Could not save user data. Please try again."
+                return
+            }
+            print("✅ User document created for \(uid)")
+            
+            // 2. Create the role-specific profile document
+            if let trainerData = profileData as? TrainerProfileData {
+                let trainerRef = self.db.collection("trainers").document(uid)
+                let trainerProfile: [String: Any] = [
+                    "name": trainerData.name,
+                    "professionalTitle": trainerData.title,
+                    "specialties": trainerData.specialties,
+                    "yearsOfExperience": trainerData.yearsOfExperience,
+                    "bio": trainerData.bio ?? "",
+                    "location": trainerData.location ?? "",
+                    "phoneNumber": trainerData.phoneNumber ?? "",
+                    "website": trainerData.website ?? "",
+                    "email": email // Also store email here for convenience
+                ]
+                trainerRef.setData(trainerProfile) { error in
+                    if let error = error {
+                        print("❌ Error creating trainer profile: \(error.localizedDescription)")
+                    } else {
+                        print("✅ Trainer profile created for \(uid)")
+                    }
+                }
+            } else if let clientData = profileData as? ClientProfileData {
+                let clientRef = self.db.collection("clients").document(uid)
+                let clientProfile: [String: Any] = [
+                    "name": clientData.name,
+                    "fitnessLevel": clientData.fitnessLevel,
+                    "goals": clientData.goals,
+                    "email": email // Also store email here for convenience
+                ]
+                clientRef.setData(clientProfile) { error in
+                    if let error = error {
+                        print("❌ Error creating client profile: \(error.localizedDescription)")
+                    } else {
+                        print("✅ Client profile created for \(uid)")
+                    }
+                }
+            }
+        }
+    }
+    
     // MARK: - Email/Password Authentication
     
-    func signUp(email: String, password: String, name: String) {
-        guard !email.isEmpty, !password.isEmpty, !name.isEmpty else {
-            errorMessage = "Please fill in all fields"
+    func signUp(email: String, password: String, fullName: String, profileData: Any?, completion: @escaping (Result<Void, Error>) -> Void) {
+        guard !email.isEmpty, !password.isEmpty, !fullName.isEmpty else {
+            let error = NSError(domain: "AuthenticationError", code: -1, userInfo: [NSLocalizedDescriptionKey: "Please fill in all fields."])
+            completion(.failure(error))
             return
         }
         
         isLoading = true
         errorMessage = ""
         
-        Auth.auth().createUser(withEmail: email, password: password) { [weak self] result, error in
+        Auth.auth().createUser(withEmail: email, password: password) { [weak self] authResult, error in
             DispatchQueue.main.async {
                 self?.isLoading = false
                 
                 if let error = error {
-                    self?.errorMessage = error.localizedDescription
+                    print("❌ Firebase auth error: \(error.localizedDescription)")
+                    completion(.failure(error))
                     return
                 }
                 
-                guard let user = result?.user else { return }
+                guard let user = authResult?.user, let self = self else {
+                    let error = NSError(domain: "AuthenticationError", code: -2, userInfo: [NSLocalizedDescriptionKey: "User creation failed unexpectedly."])
+                    completion(.failure(error))
+                    return
+                }
                 
-                // Update display name
+                // Determine role from profileData
+                let role = (profileData is TrainerProfileData) ? "trainer" : "client"
+                
+                // Create user profile in Firestore
+                self.createUserProfile(uid: user.uid, name: fullName, email: email, role: role, profileData: profileData)
+                
+                // Update Firebase Auth display name
                 let changeRequest = user.createProfileChangeRequest()
-                changeRequest.displayName = name
+                changeRequest.displayName = fullName
                 changeRequest.commitChanges { error in
                     if let error = error {
-                        print("Error updating display name: \(error.localizedDescription)")
+                        // This is not a fatal error, so we just log it but still call success
+                        print("⚠️ Error updating display name: \(error.localizedDescription)")
                     }
                 }
                 
-                self?.userName = name
-                self?.userEmail = email
+                self.userName = fullName
+                self.userEmail = email
+                completion(.success(()))
             }
         }
     }
@@ -286,7 +372,7 @@ class AuthenticationViewModel: NSObject, ObservableObject {
     // MARK: - Demo/Test Account (Simulator only)
     
     func signInWithTestAccount() {
-        guard isRunningOnSimulator else {
+        guard isSimulator else {
             print("⚠️ Test account is only available on simulator")
             return
         }
@@ -427,177 +513,75 @@ class AuthenticationViewModel: NSObject, ObservableObject {
 
 extension AuthenticationViewModel: ASAuthorizationControllerDelegate {
     func authorizationController(controller: ASAuthorizationController, didCompleteWithAuthorization authorization: ASAuthorization) {
-        print("🍎 Apple authorization completed successfully")
-        print("🍎 Authorization object type: \(type(of: authorization.credential))")
-        
-        if let appleIDCredential = authorization.credential as? ASAuthorizationAppleIDCredential {
-            print("🍎 Apple ID credential received")
-            print("🍎 User ID: \(appleIDCredential.user)")
-            print("🍎 Email: \(appleIDCredential.email ?? "nil")")
-            print("🍎 Full name: \(appleIDCredential.fullName?.formatted() ?? "nil")")
-            
-            guard let nonce = currentNonce else {
-                print("❌ Invalid state: No nonce found")
-                DispatchQueue.main.async {
-                    self.isLoading = false
-                    self.errorMessage = "Authentication error: Invalid state"
-                }
-                return
-            }
-            
-            guard let appleIDToken = appleIDCredential.identityToken else {
-                print("❌ Unable to fetch identity token")
-                DispatchQueue.main.async {
-                    self.isLoading = false
-                    self.errorMessage = "Unable to fetch identity token"
-                }
-                return
-            }
-            
-            guard let idTokenString = String(data: appleIDToken, encoding: .utf8) else {
-                print("❌ Unable to serialize token string from data")
-                DispatchQueue.main.async {
-                    self.isLoading = false
-                    self.errorMessage = "Unable to process identity token"
-                }
-                return
-            }
-            
-            print("🍎 Creating Firebase credential...")
-            let credential = OAuthProvider.credential(withProviderID: "apple.com",
-                                                      idToken: idTokenString,
-                                                      rawNonce: nonce)
-            
-            print("🍎 Signing in to Firebase...")
-            Auth.auth().signIn(with: credential) { [weak self] result, error in
-                DispatchQueue.main.async {
-                    self?.isLoading = false
-                    
-                    if let error = error {
-                        print("❌ Firebase sign-in error: \(error.localizedDescription)")
-                        
-                        // Check if this is an audience mismatch error
-                        if error.localizedDescription.contains("audience") {
-                            print("🍎 Attempting fallback authentication...")
-                            self?.handleAppleSignInFallback(appleIDCredential: appleIDCredential, nonce: nonce)
-                            return
-                        }
-                        
-                        self?.errorMessage = "Sign-in failed: \(error.localizedDescription)"
-                        return
-                    }
-                    
-                    guard let user = result?.user else {
-                        print("❌ No user returned from Firebase")
-                        self?.errorMessage = "Authentication failed: No user data"
-                        return
-                    }
-                    
-                    print("✅ Firebase sign-in successful for user: \(user.uid)")
-                    
-                    // Set user info from Apple ID credential
-                    if let fullName = appleIDCredential.fullName {
-                        let displayName = [fullName.givenName, fullName.familyName]
-                            .compactMap { $0 }
-                            .joined(separator: " ")
-                        
-                        if !displayName.isEmpty {
-                            print("🍎 Setting display name: \(displayName)")
-                            self?.userName = displayName
-                            
-                            // Update Firebase user profile
-                            let changeRequest = user.createProfileChangeRequest()
-                            changeRequest.displayName = displayName
-                            changeRequest.commitChanges { error in
-                                if let error = error {
-                                    print("❌ Error updating display name: \(error.localizedDescription)")
-                                } else {
-                                    print("✅ Display name updated successfully")
-                                }
-                            }
-                        }
-                    }
-                    
-                    if let email = appleIDCredential.email {
-                        print("🍎 Setting email from Apple: \(email)")
-                        self?.userEmail = email
-                    } else {
-                        print("🍎 Using Firebase email: \(user.email ?? "none")")
-                        self?.userEmail = user.email ?? ""
-                    }
-                    
-                    // Clear the authorization controller
-                    self?.authorizationController = nil
-                    self?.currentNonce = nil
-                }
-            }
-        } else {
-            print("❌ Invalid credential type received: \(type(of: authorization.credential))")
+        print("🍎 Authorization controller completed successfully.")
+        guard let appleIDCredential = authorization.credential as? ASAuthorizationAppleIDCredential,
+              let nonce = currentNonce,
+              let appleIDToken = appleIDCredential.identityToken,
+              let idTokenString = String(data: appleIDToken, encoding: .utf8) else {
+            let authError = NSError(domain: "com.movefully.auth", code: -1, userInfo: [NSLocalizedDescriptionKey: "Could not retrieve Apple ID Credential."])
+            handleSignInCompletion(result: .failure(authError))
+            return
+        }
+
+        let credential = OAuthProvider.credential(withProviderID: "apple.com", idToken: idTokenString, rawNonce: nonce)
+
+        Auth.auth().signIn(with: credential) { [weak self] authResult, error in
             DispatchQueue.main.async {
-                self.isLoading = false
-                self.errorMessage = "Invalid credential type"
+                guard let self = self else { return }
+
+                if let error = error {
+                    self.handleSignInCompletion(result: .failure(error))
+                    return
+                }
+
+                guard let user = authResult?.user else {
+                    let authError = NSError(domain: "com.movefully.auth", code: -2, userInfo: [NSLocalizedDescriptionKey: "Could not retrieve user after Apple Sign-In."])
+                    self.handleSignInCompletion(result: .failure(authError))
+                    return
+                }
+
+                // Check if this is a new user
+                let isNewUser = authResult?.additionalUserInfo?.isNewUser ?? false
+
+                if isNewUser {
+                    print("🍎 New user detected from Apple Sign-In. Creating profile...")
+                    guard let email = user.email, let fullName = appleIDCredential.fullName?.formatted() else {
+                        let profileError = NSError(domain: "com.movefully.auth", code: -3, userInfo: [NSLocalizedDescriptionKey: "Could not retrieve user details from Apple for profile creation."])
+                        self.handleSignInCompletion(result: .failure(profileError))
+                        return
+                    }
+
+                    let role = (self.pendingProfileData is TrainerProfileData) ? "trainer" : "client"
+                    self.createUserProfile(uid: user.uid, name: fullName, email: email, role: role, profileData: self.pendingProfileData)
+                } else {
+                    print("🍎 Returning user from Apple Sign-In.")
+                    // For returning users, data is fetched by the auth state listener.
+                }
+                
+                // Finalize the sign-in process
+                self.handleSignInCompletion(result: .success(()))
             }
         }
     }
-    
+
     func authorizationController(controller: ASAuthorizationController, didCompleteWithError error: Error) {
-        print("❌ Apple Sign-In failed with error: \(error.localizedDescription)")
-        print("❌ Error code: \((error as NSError).code)")
-        print("❌ Error domain: \((error as NSError).domain)")
-        
+        print("🍎 Authorization controller failed with error: \(error.localizedDescription)")
+        handleSignInCompletion(result: .failure(error))
+    }
+    
+    private func handleSignInCompletion(result: Result<Void, Error>) {
         DispatchQueue.main.async {
             self.isLoading = false
-            
-            // Check if user cancelled
-            if let authError = error as? ASAuthorizationError {
-                print("🍎 ASAuthorizationError case: \(authError.code.rawValue)")
-                switch authError.code {
-                case .canceled:
-                    print("🍎 User cancelled Apple Sign-In")
-                    self.errorMessage = ""
-                case .failed:
-                    if self.isRunningOnSimulator {
-                        self.errorMessage = "Apple Sign-In has limited support on iOS Simulator. Try using email/password instead, or test on a physical device."
-                    } else {
-                        self.errorMessage = "Apple Sign-In failed. Please try again."
-                    }
-                case .invalidResponse:
-                    self.errorMessage = "Invalid response from Apple. Please try again."
-                case .notHandled:
-                    self.errorMessage = "Apple Sign-In not handled. Please try again."
-                case .unknown:
-                    if self.isRunningOnSimulator {
-                        self.errorMessage = "Apple Sign-In error on simulator. Try email/password instead."
-                    } else {
-                        self.errorMessage = "Unknown error occurred. Please try again."
-                    }
-                case .notInteractive:
-                    self.errorMessage = "Apple Sign-In requires user interaction."
-                case .matchedExcludedCredential:
-                    self.errorMessage = "Credential not available. Please try again."
-                case .credentialImport:
-                    self.errorMessage = "Credential import failed. Please try again."
-                case .credentialExport:
-                    self.errorMessage = "Credential export failed. Please try again."
-                @unknown default:
-                    if self.isRunningOnSimulator {
-                        self.errorMessage = "Apple Sign-In may not work properly on simulator. Try email/password instead."
-                    } else {
-                        self.errorMessage = "Apple Sign-In failed. Please try again."
-                    }
-                }
-            } else {
-                // Handle other types of errors (like AKAuthenticationError)
-                if self.isRunningOnSimulator {
-                    self.errorMessage = "Apple Sign-In has known limitations on iOS Simulator. Please use email/password authentication instead, or test on a physical device for full Apple Sign-In functionality."
-                } else {
-                    self.errorMessage = "Apple Sign-In failed: \(error.localizedDescription)"
-                }
+            if case .failure(let error) = result {
+                self.errorMessage = error.localizedDescription
             }
+            // Call the completion handler
+            self.appleSignInCompletion?(result)
             
-            // Clear the authorization controller
-            self.authorizationController = nil
+            // Clean up
             self.currentNonce = nil
+            self.pendingProfileData = nil
+            self.appleSignInCompletion = nil
         }
     }
 }

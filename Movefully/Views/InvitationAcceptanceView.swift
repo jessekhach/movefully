@@ -17,7 +17,6 @@ struct InvitationAcceptanceView: View {
     @State private var invitation: ClientInvitation?
     @State private var acceptanceComplete = false
     @State private var showManualEntry = false
-    @State private var authCancellable: AnyCancellable?
     
     var body: some View {
         NavigationStack {
@@ -307,53 +306,28 @@ struct InvitationAcceptanceView: View {
     }
     
     private func handleAppleSignIn() {
-                                    guard invitation != nil else { return }
+        guard invitation != nil else { return }
         
         isLoading = true
         urlHandler.isProcessingInvitation = true
         
-        print("🍎 Setting up authentication listener for invitation acceptance")
-        print("🍎 Current authentication state: \(authViewModel.isAuthenticated)")
-        
-        // If user is already authenticated, we need a different approach
-        if authViewModel.isAuthenticated {
-            print("🍎 User already authenticated, will proceed after Apple Sign-In completes")
-            // Set up a timer-based check since the auth state won't change
-            authCancellable = Timer.publish(every: 0.5, on: .main, in: .common)
-                .autoconnect()
-                .sink { _ in
-                    // Check if Apple Sign-In process is complete (loading stopped and still authenticated)
-                    if !self.authViewModel.isLoading && self.authViewModel.isAuthenticated && self.isLoading {
-                        print("🍎 Apple Sign-In process completed, starting invitation acceptance")
-                        self.authCancellable?.cancel()
-                        self.authCancellable = nil
-                        Task {
-                            await self.completeInvitationAcceptance()
-                        }
-                    }
+        authViewModel.signInWithApple(profileData: nil) { result in
+            switch result {
+            case .success:
+                // The user is authenticated. Now, accept the invitation on the backend.
+                Task {
+                    await self.completeInvitationAcceptance()
                 }
-        } else {
-            // Set up listener for when Apple Sign-In completes
-            authCancellable = authViewModel.$isAuthenticated
-                .dropFirst() // Skip the initial value
-                .sink { isAuthenticated in
-                    print("🍎 Authentication state changed: \(isAuthenticated), isLoading: \(self.isLoading)")
-                    
-                    if isAuthenticated && self.isLoading {
-                        print("🍎 Authentication successful, starting invitation acceptance")
-                        // Delay slightly to ensure Firebase user is fully set up
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                            Task {
-                                await self.completeInvitationAcceptance()
-                            }
-                        }
-                    }
+            case .failure(let error):
+                // Don't show "cancelled" errors, but stop loading.
+                if (error as? ASAuthorizationError)?.code != .canceled {
+                    self.errorMessage = error.localizedDescription
+                    self.showError = true
                 }
+                self.isLoading = false
+                self.urlHandler.isProcessingInvitation = false
+            }
         }
-        
-        // Start the Apple Sign-In process
-        print("🍎 Starting Apple Sign-In for invitation acceptance")
-        authViewModel.signInWithApple()
     }
     
     private func handleManualAcceptInvitation() {
@@ -387,7 +361,7 @@ struct InvitationAcceptanceView: View {
     
     @MainActor
     private func completeInvitationAcceptance() async {
-        guard let invitation = invitation else { return }
+        guard invitation != nil else { return }
         
         print("🔄 Starting invitation acceptance process")
         
@@ -422,17 +396,9 @@ struct InvitationAcceptanceView: View {
                 self.urlHandler.isProcessingInvitation = false
             }
         }
-        
-        // Clean up the authentication listener
-        authCancellable?.cancel()
-        authCancellable = nil
     }
     
     private func handleCancel() {
-        // Cancel any pending auth listener
-        authCancellable?.cancel()
-        authCancellable = nil
-        
         urlHandler.clearPendingInvitation()
                         dismiss()
                     }

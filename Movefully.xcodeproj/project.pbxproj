@@ -25,6 +25,13 @@
 		273B792C2DEB9C2700F755A6 /* ClientMainView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 273B791B2DEB9C2700F755A6 /* ClientMainView.swift */; };
 		273B792D2DEB9C2700F755A6 /* ClientScheduleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 273B791F2DEB9C2700F755A6 /* ClientScheduleView.swift */; };
 		2742EEAC2DFB82C400908B9D /* WorkoutDataCacheService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2742EEAB2DFB82C400908B9D /* WorkoutDataCacheService.swift */; };
+		2748D6BF2E065C4F00C01F1C /* OnboardingCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2748D6BE2E065C4F00C01F1C /* OnboardingCoordinator.swift */; };
+		2748D6C62E065C9A00C01F1C /* FeatureHighlightsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2748D6C02E065C9A00C01F1C /* FeatureHighlightsView.swift */; };
+		2748D6C72E065C9A00C01F1C /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2748D6C42E065C9A00C01F1C /* WelcomeView.swift */; };
+		2748D6C82E065C9A00C01F1C /* OnboardingCompleteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2748D6C12E065C9A00C01F1C /* OnboardingCompleteView.swift */; };
+		2748D6C92E065C9A00C01F1C /* ProfileSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2748D6C32E065C9A00C01F1C /* ProfileSetupView.swift */; };
+		2748D6CA2E065C9A00C01F1C /* OnboardingFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2748D6C22E065C9A00C01F1C /* OnboardingFlowView.swift */; };
+		2748D6CC2E065EC100C01F1C /* AccountCreationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2748D6CB2E065EC100C01F1C /* AccountCreationView.swift */; };
 		277995032DEB94BC002C32C6 /* MovefullyComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 277995012DEB94BB002C32C6 /* MovefullyComponents.swift */; };
 		277995042DEB94BC002C32C6 /* MovefullyLayouts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 277995022DEB94BB002C32C6 /* MovefullyLayouts.swift */; };
 		278308402DF2555A00AC3717 /* ReadOnlyClientProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2783083F2DF2555A00AC3717 /* ReadOnlyClientProfileView.swift */; };
@@ -60,7 +67,6 @@
 		81A1B2EC2B8F234700D2C4A1 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 81A1B2EB2B8F234700D2C4A1 /* Preview Assets.xcassets */; };
 		81A1B2F42B8F235A00D2C4A1 /* AuthenticationViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81A1B2F32B8F235A00D2C4A1 /* AuthenticationViewModel.swift */; };
 		81A1B2F62B8F236200D2C4A1 /* AuthenticationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81A1B2F52B8F236200D2C4A1 /* AuthenticationView.swift */; };
-		81A1B2F82B8F236A00D2C4A1 /* RoleSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81A1B2F72B8F236A00D2C4A1 /* RoleSelectionView.swift */; };
 		81A1B2FC2B8F237900D2C4A1 /* ClientDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81A1B2FB2B8F237900D2C4A1 /* ClientDashboardView.swift */; };
 		81A1B2FE2B8F238100D2C4A1 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 81A1B2FD2B8F238100D2C4A1 /* GoogleService-Info.plist */; };
 		81A1B3012B8F239000D2C4A1 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 81A1B3002B8F239000D2C4A1 /* FirebaseAuth */; };
@@ -103,6 +109,13 @@
 		273B79202DEB9C2700F755A6 /* ClientTodayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClientTodayView.swift; sourceTree = "<group>"; };
 		273B79212DEB9C2700F755A6 /* ExerciseRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseRowView.swift; sourceTree = "<group>"; };
 		2742EEAB2DFB82C400908B9D /* WorkoutDataCacheService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutDataCacheService.swift; sourceTree = "<group>"; };
+		2748D6BE2E065C4F00C01F1C /* OnboardingCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingCoordinator.swift; sourceTree = "<group>"; };
+		2748D6C02E065C9A00C01F1C /* FeatureHighlightsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureHighlightsView.swift; sourceTree = "<group>"; };
+		2748D6C12E065C9A00C01F1C /* OnboardingCompleteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingCompleteView.swift; sourceTree = "<group>"; };
+		2748D6C22E065C9A00C01F1C /* OnboardingFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingFlowView.swift; sourceTree = "<group>"; };
+		2748D6C32E065C9A00C01F1C /* ProfileSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileSetupView.swift; sourceTree = "<group>"; };
+		2748D6C42E065C9A00C01F1C /* WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
+		2748D6CB2E065EC100C01F1C /* AccountCreationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountCreationView.swift; sourceTree = "<group>"; };
 		277995012DEB94BB002C32C6 /* MovefullyComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovefullyComponents.swift; sourceTree = "<group>"; };
 		277995022DEB94BB002C32C6 /* MovefullyLayouts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovefullyLayouts.swift; sourceTree = "<group>"; };
 		2783083F2DF2555A00AC3717 /* ReadOnlyClientProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadOnlyClientProfileView.swift; sourceTree = "<group>"; };
@@ -142,7 +155,6 @@
 		81A1B2EB2B8F234700D2C4A1 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		81A1B2F32B8F235A00D2C4A1 /* AuthenticationViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthenticationViewModel.swift; sourceTree = "<group>"; };
 		81A1B2F52B8F236200D2C4A1 /* AuthenticationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthenticationView.swift; sourceTree = "<group>"; };
-		81A1B2F72B8F236A00D2C4A1 /* RoleSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoleSelectionView.swift; sourceTree = "<group>"; };
 		81A1B2FB2B8F237900D2C4A1 /* ClientDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClientDashboardView.swift; sourceTree = "<group>"; };
 		81A1B2FD2B8F238100D2C4A1 /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		81A1B3072B8F23A800D2C4A1 /* Movefully.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Movefully.entitlements; sourceTree = "<group>"; };
@@ -180,6 +192,19 @@
 				271E19182DEC9A5E00995368 /* DataModels.swift */,
 			);
 			path = Models;
+			sourceTree = "<group>";
+		};
+		2748D6C52E065C9A00C01F1C /* Onboarding */ = {
+			isa = PBXGroup;
+			children = (
+				2748D6CB2E065EC100C01F1C /* AccountCreationView.swift */,
+				2748D6C02E065C9A00C01F1C /* FeatureHighlightsView.swift */,
+				2748D6C12E065C9A00C01F1C /* OnboardingCompleteView.swift */,
+				2748D6C22E065C9A00C01F1C /* OnboardingFlowView.swift */,
+				2748D6C32E065C9A00C01F1C /* ProfileSetupView.swift */,
+				2748D6C42E065C9A00C01F1C /* WelcomeView.swift */,
+			);
+			path = Onboarding;
 			sourceTree = "<group>";
 		};
 		81A1B2D82B8F234500D2C4A1 = {
@@ -230,6 +255,7 @@
 		81A1B2F22B8F235000D2C4A1 /* ViewModels */ = {
 			isa = PBXGroup;
 			children = (
+				2748D6BE2E065C4F00C01F1C /* OnboardingCoordinator.swift */,
 				27B8AF9C2DFA463F003DF5AC /* TrainerProfileViewModel.swift */,
 				27B8AF962DFA15ED003DF5AC /* ConversationDetailViewModel.swift */,
 				27B8AF942DFA15E7003DF5AC /* ProgressHistoryViewModel.swift */,
@@ -248,6 +274,7 @@
 		81A1B3062B8F239700D2C4A1 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				2748D6C52E065C9A00C01F1C /* Onboarding */,
 				2706F7462DFDA2A9005B80A6 /* WorkoutReviewView.swift */,
 				27B8AFA02DFA484E003DF5AC /* SupportContactView.swift */,
 				BF3E77172DF60C1A00675D2E /* ExerciseLibraryView.swift */,
@@ -273,7 +300,6 @@
 				273B79202DEB9C2700F755A6 /* ClientTodayView.swift */,
 				273B79212DEB9C2700F755A6 /* ExerciseRowView.swift */,
 				81A1B2F52B8F236200D2C4A1 /* AuthenticationView.swift */,
-				81A1B2F72B8F236A00D2C4A1 /* RoleSelectionView.swift */,
 				81A1B2FB2B8F237900D2C4A1 /* ClientDashboardView.swift */,
 				G7H8I9J0K1L2M3N4O5P6Q7R8 /* WorkoutDetailView.swift */,
 			);
@@ -427,12 +453,18 @@
 			buildActionMask = 2147483647;
 			files = (
 				270D43732DF7C91E008ACE70 /* ClientPlanAssignmentService.swift in Sources */,
+				2748D6CC2E065EC100C01F1C /* AccountCreationView.swift in Sources */,
 				81A1B2E72B8F234500D2C4A1 /* ContentView.swift in Sources */,
 				81A1B2F42B8F235A00D2C4A1 /* AuthenticationViewModel.swift in Sources */,
 				BF3E77142DF60B0000675D2E /* InvitationAcceptanceView.swift in Sources */,
 				81A1B2F62B8F236200D2C4A1 /* AuthenticationView.swift in Sources */,
 				27E3E52F2DF1F8E600054DD4 /* TrainerDashboardView.swift in Sources */,
 				277995032DEB94BC002C32C6 /* MovefullyComponents.swift in Sources */,
+				2748D6C62E065C9A00C01F1C /* FeatureHighlightsView.swift in Sources */,
+				2748D6C72E065C9A00C01F1C /* WelcomeView.swift in Sources */,
+				2748D6C82E065C9A00C01F1C /* OnboardingCompleteView.swift in Sources */,
+				2748D6C92E065C9A00C01F1C /* ProfileSetupView.swift in Sources */,
+				2748D6CA2E065C9A00C01F1C /* OnboardingFlowView.swift in Sources */,
 				277995042DEB94BC002C32C6 /* MovefullyLayouts.swift in Sources */,
 				2706F7472DFDA2A9005B80A6 /* WorkoutReviewView.swift in Sources */,
 				81A1B2FC2B8F237900D2C4A1 /* ClientDashboardView.swift in Sources */,
@@ -445,7 +477,7 @@
 				278308402DF2555A00AC3717 /* ReadOnlyClientProfileView.swift in Sources */,
 				2789D1152DED367A004A1D27 /* ClientViewTrainerProfileView.swift in Sources */,
 				273B79192DEB9C1100F755A6 /* ClientDetailViewModel.swift in Sources */,
-				81A1B2F82B8F236A00D2C4A1 /* RoleSelectionView.swift in Sources */,
+				2748D6BF2E065C4F00C01F1C /* OnboardingCoordinator.swift in Sources */,
 				81A1B2E52B8F234500D2C4A1 /* MovefullyApp.swift in Sources */,
 				270D43752DF7CBDC008ACE70 /* URLHandlingService.swift in Sources */,
 				2700D2C62DF938DD00D51463 /* ProgressHistoryService.swift in Sources */,

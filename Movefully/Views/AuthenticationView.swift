@@ -75,7 +75,7 @@ struct AuthenticationView: View {
                         if AuthenticationViewModel.isSignInWithAppleAvailable {
                             VStack(spacing: 16) {
                                 Button(action: {
-                                    authViewModel.signInWithApple()
+                                    authViewModel.signInWithApple(profileData: nil) { _ in }
                                 }) {
                                     HStack {
                                         if authViewModel.isLoading {
@@ -311,17 +311,21 @@ struct AuthenticationView: View {
     }
     
     private func handleSignUp() {
-        guard password == confirmPassword else {
-            authViewModel.errorMessage = "Passwords don't match"
-            return
+        if password == confirmPassword {
+            authViewModel.signUp(email: email, password: password, fullName: name, profileData: nil) { result in
+                switch result {
+                case .success:
+                    // The view will automatically dismiss on successful authentication
+                    // via the coordinator's state change.
+                    print("Sign up successful from generic auth view.")
+                case .failure(let error):
+                    // Error is already published by the view model, so just print it.
+                    print("Sign up failed: \(error.localizedDescription)")
+                }
+            }
+        } else {
+            authViewModel.errorMessage = "Passwords do not match."
         }
-        
-        guard password.count >= 6 else {
-            authViewModel.errorMessage = "Password must be at least 6 characters"
-            return
-        }
-        
-        authViewModel.signUp(email: email, password: password, name: name)
     }
     
     private func clearFields() {
@@ -365,4 +369,13 @@ extension View {
     func hideKeyboard() {
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
-} 
+}
+
+// MARK: - Previews
+#if DEBUG
+struct AuthenticationView_Previews: PreviewProvider {
+    static var previews: some View {
+        AuthenticationView()
+    }
+}
+#endif 
