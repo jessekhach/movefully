@@ -8,16 +8,77 @@ struct AccountCreationView: View {
     @State private var email = ""
     @State private var password = ""
     @State private var fullName = ""
+    @State private var showEmailSignUp = false
     
     var body: some View {
+        VStack {
+            if showEmailSignUp {
+                emailSignUpForm
+            } else {
+                appleSignInPrompt
+            }
+        }
+        .background(MovefullyTheme.Colors.backgroundPrimary.ignoresSafeArea())
+        .navigationBarHidden(true)
+        .animation(.easeInOut, value: showEmailSignUp)
+        .onAppear {
+            // Pre-fill name from the profile setup step
+            if !coordinator.tempTrainerName.isEmpty {
+                self.fullName = coordinator.tempTrainerName
+            } else if !coordinator.tempClientName.isEmpty {
+                self.fullName = coordinator.tempClientName
+            }
+            // Clear any previous error messages
+            authViewModel.errorMessage = ""
+        }
+    }
+    
+    private var appleSignInPrompt: some View {
+        VStack {
+            Spacer()
+            
+            Text("Create Your Account")
+                .font(MovefullyTheme.Typography.title1)
+                .padding(.bottom, MovefullyTheme.Layout.paddingM)
+
+            Text("Create your account securely with Apple. We won't see your password and it's easier to get started.")
+                .font(MovefullyTheme.Typography.body)
+                .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, MovefullyTheme.Layout.paddingXL)
+            
+            Spacer()
+
+            Button("Or continue with Email") {
+                showEmailSignUp = true
+            }
+            .font(MovefullyTheme.Typography.body)
+            .foregroundColor(MovefullyTheme.Colors.textSecondary)
+            .padding(.bottom, MovefullyTheme.Layout.paddingM)
+        }
+        .toolbar {
+            ToolbarItemGroup(placement: .bottomBar) {
+                Button(action: handleAppleSignIn) {
+                    HStack {
+                        Image(systemName: "apple.logo")
+                        Text("Continue with Apple")
+                    }
+                }
+                .buttonStyle(MovefullyPrimaryButtonStyle())
+                .padding(.bottom, MovefullyTheme.Layout.paddingM)
+            }
+        }
+    }
+    
+    private var emailSignUpForm: some View {
         ScrollView {
             VStack(spacing: MovefullyTheme.Layout.paddingL) {
                 
-                Text("Create Your Account")
+                Text("Create with Email")
                     .font(MovefullyTheme.Typography.title1)
-                    .padding(.vertical, MovefullyTheme.Layout.paddingL)
+                    .padding(.top, MovefullyTheme.Layout.paddingXL)
+                    .padding(.bottom, MovefullyTheme.Layout.paddingL)
                 
-                // Email/Password form
                 VStack(spacing: MovefullyTheme.Layout.paddingM) {
                     MovefullyTextField(
                         placeholder: "Full Name",
@@ -40,73 +101,59 @@ struct AccountCreationView: View {
                 }
                 
                 if !authViewModel.errorMessage.isEmpty {
-                    MovefullyAlert(message: authViewModel.errorMessage, type: .error)
-                        .padding(.top)
+                    Text(authViewModel.errorMessage)
+                        .foregroundColor(.red)
+                        .font(.caption)
                 }
-
+                
                 Spacer()
             }
             .padding(.horizontal, MovefullyTheme.Layout.paddingL)
         }
-        .background(MovefullyTheme.Colors.backgroundPrimary.ignoresSafeArea())
-        .navigationBarHidden(true)
         .toolbar {
-            ToolbarItemGroup(placement: .bottomBar) {
-                VStack(spacing: MovefullyTheme.Layout.paddingM) {
-                    // Action Button
-                    Button(action: {
-                        authViewModel.signUp(
-                            email: email,
-                            password: password,
-                            fullName: fullName,
-                            profileData: coordinator.getProfileForCreation()
-                        ) { result in
-                            switch result {
-                            case .success:
-                                coordinator.nextStep()
-                            case .failure(let error):
-                                authViewModel.errorMessage = error.localizedDescription
-                            }
-                        }
-                    }) {
-                        Text("Create Account & Continue")
-                    }
-                    .buttonStyle(MovefullyPrimaryButtonStyle())
-                    .disabled(email.isEmpty || password.count < 8 || fullName.isEmpty)
-                    
-                    // Social Sign-in
-                    Button(action: {
-                        authViewModel.signInWithApple(profileData: coordinator.getProfileForCreation()) { result in
-                            switch result {
-                            case .success:
-                                coordinator.nextStep()
-                            case .failure(let error):
-                                // Don't show "cancelled" errors
-                                if (error as? ASAuthorizationError)?.code != .canceled {
-                                    authViewModel.errorMessage = error.localizedDescription
-                                }
-                            }
-                        }
-                    }) {
-                        HStack {
-                            Image(systemName: "apple.logo")
-                            Text("Continue with Apple")
-                        }
-                    }
-                    .buttonStyle(MovefullySecondaryButtonStyle())
+            ToolbarItemGroup(placement: .navigationBarLeading) {
+                Button(action: { showEmailSignUp = false }) {
+                    Image(systemName: "chevron.left")
+                    Text("Back")
                 }
-                .padding()
+                .foregroundColor(MovefullyTheme.Colors.textPrimary)
+            }
+
+            ToolbarItemGroup(placement: .bottomBar) {
+                Button(action: handleEmailSignUp) {
+                    Text("Create Account & Continue")
+                }
+                .buttonStyle(MovefullyPrimaryButtonStyle())
+                .disabled(email.isEmpty || password.isEmpty || fullName.isEmpty)
+                .padding(.bottom, MovefullyTheme.Layout.paddingM)
             }
         }
-        .onAppear {
-            // Pre-fill name from the profile setup step
-            if !coordinator.tempTrainerName.isEmpty {
-                self.fullName = coordinator.tempTrainerName
-            } else if !coordinator.tempClientName.isEmpty {
-                self.fullName = coordinator.tempClientName
+    }
+    
+    private func handleAppleSignIn() {
+        let profileData = coordinator.getProfileForCreation()
+        authViewModel.signInWithApple(profileData: profileData) { result in
+            switch result {
+            case .success:
+                coordinator.nextStep()
+            case .failure(let error):
+                // Don't show "cancelled" errors
+                if (error as? ASAuthorizationError)?.code != .canceled {
+                    authViewModel.errorMessage = error.localizedDescription
+                }
             }
-            // Clear any previous error messages
-            authViewModel.errorMessage = ""
+        }
+    }
+    
+    private func handleEmailSignUp() {
+        let profileData = coordinator.getProfileForCreation()
+        authViewModel.signUp(email: email, password: password, fullName: fullName, profileData: profileData) { result in
+            switch result {
+            case .success:
+                coordinator.nextStep()
+            case .failure(let error):
+                authViewModel.errorMessage = error.localizedDescription
+            }
         }
     }
 }
