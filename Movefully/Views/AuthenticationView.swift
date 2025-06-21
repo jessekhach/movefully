@@ -44,33 +44,6 @@ struct AuthenticationView: View {
                                 .foregroundColor(.primary)
                         }
                         
-                        // Simulator warning banner
-                        #if targetEnvironment(simulator)
-                        VStack(spacing: 8) {
-                            HStack {
-                                Image(systemName: "exclamationmark.triangle.fill")
-                                    .foregroundColor(.orange)
-                                Text("Running on Simulator")
-                                    .font(.caption.weight(.medium))
-                                    .foregroundColor(.orange)
-                            }
-                            
-                            Text("Apple Sign-In has limited support on simulator. Email/password is recommended for testing.")
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
-                                .multilineTextAlignment(.center)
-                        }
-                        .padding(12)
-                        .background(
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(Color.orange.opacity(0.1))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .stroke(Color.orange.opacity(0.3), lineWidth: 1)
-                                )
-                        )
-                        #endif
-                        
                         // Apple Sign-In (Primary)
                         if AuthenticationViewModel.isSignInWithAppleAvailable {
                             VStack(spacing: 16) {
@@ -128,38 +101,6 @@ struct AuthenticationView: View {
                                     .foregroundColor(.secondary)
                             }
                         }
-                        
-                        #if targetEnvironment(simulator)
-                        // Test Account Button (Simulator only)
-                        Button(action: {
-                            authViewModel.signInWithTestAccount()
-                        }) {
-                            HStack {
-                                if authViewModel.isLoading {
-                                    ProgressView()
-                                        .scaleEffect(0.8)
-                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                } else {
-                                    Image(systemName: "flask")
-                                        .font(.system(size: 16, weight: .medium))
-                                    Text("Quick Test Account")
-                                        .font(.system(size: 14, weight: .medium, design: .rounded))
-                                }
-                            }
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 44)
-                            .foregroundColor(.white)
-                            .background(
-                                LinearGradient(
-                                    gradient: Gradient(colors: [Color.orange, Color.red]),
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
-                            .clipShape(RoundedRectangle(cornerRadius: 22))
-                        }
-                        .disabled(authViewModel.isLoading)
-                        #endif
                         
                         // Divider
                         HStack {

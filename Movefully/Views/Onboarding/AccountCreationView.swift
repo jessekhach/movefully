@@ -17,13 +17,6 @@ struct AccountCreationView: View {
                     .font(MovefullyTheme.Typography.title1)
                     .padding(.vertical, MovefullyTheme.Layout.paddingL)
                 
-                if authViewModel.isSimulator {
-                    MovefullyAlert(
-                        message: "Apple Sign-In has limited support on the simulator. Email is recommended for testing.",
-                        type: .warning
-                    )
-                }
-                
                 // Email/Password form
                 VStack(spacing: MovefullyTheme.Layout.paddingM) {
                     MovefullyTextField(
