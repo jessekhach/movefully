@@ -31,9 +31,6 @@ class OnboardingCoordinator: ObservableObject {
     @Published var tempFitnessLevel: String = "Beginner"
     @Published var tempSelectedGoals: Set<String> = []
     
-    // Nonce for Apple Sign In
-    var currentNonce: String?
-    
     enum OnboardingStep: CaseIterable {
         case welcome
         case features

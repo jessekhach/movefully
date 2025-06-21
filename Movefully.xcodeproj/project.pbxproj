@@ -32,6 +32,7 @@
 		2748D6C92E065C9A00C01F1C /* ProfileSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2748D6C32E065C9A00C01F1C /* ProfileSetupView.swift */; };
 		2748D6CA2E065C9A00C01F1C /* OnboardingFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2748D6C22E065C9A00C01F1C /* OnboardingFlowView.swift */; };
 		2748D6CC2E065EC100C01F1C /* AccountCreationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2748D6CB2E065EC100C01F1C /* AccountCreationView.swift */; };
+		2748D6CE2E06E7D600C01F1C /* EmailSignUpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2748D6CD2E06E7D600C01F1C /* EmailSignUpView.swift */; };
 		277995032DEB94BC002C32C6 /* MovefullyComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 277995012DEB94BB002C32C6 /* MovefullyComponents.swift */; };
 		277995042DEB94BC002C32C6 /* MovefullyLayouts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 277995022DEB94BB002C32C6 /* MovefullyLayouts.swift */; };
 		278308402DF2555A00AC3717 /* ReadOnlyClientProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2783083F2DF2555A00AC3717 /* ReadOnlyClientProfileView.swift */; };
@@ -116,6 +117,7 @@
 		2748D6C32E065C9A00C01F1C /* ProfileSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileSetupView.swift; sourceTree = "<group>"; };
 		2748D6C42E065C9A00C01F1C /* WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
 		2748D6CB2E065EC100C01F1C /* AccountCreationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountCreationView.swift; sourceTree = "<group>"; };
+		2748D6CD2E06E7D600C01F1C /* EmailSignUpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmailSignUpView.swift; sourceTree = "<group>"; };
 		277995012DEB94BB002C32C6 /* MovefullyComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovefullyComponents.swift; sourceTree = "<group>"; };
 		277995022DEB94BB002C32C6 /* MovefullyLayouts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovefullyLayouts.swift; sourceTree = "<group>"; };
 		2783083F2DF2555A00AC3717 /* ReadOnlyClientProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadOnlyClientProfileView.swift; sourceTree = "<group>"; };
@@ -197,6 +199,7 @@
 		2748D6C52E065C9A00C01F1C /* Onboarding */ = {
 			isa = PBXGroup;
 			children = (
+				2748D6CD2E06E7D600C01F1C /* EmailSignUpView.swift */,
 				2748D6CB2E065EC100C01F1C /* AccountCreationView.swift */,
 				2748D6C02E065C9A00C01F1C /* FeatureHighlightsView.swift */,
 				2748D6C12E065C9A00C01F1C /* OnboardingCompleteView.swift */,
@@ -495,6 +498,7 @@
 				2790A3432DFF61390042F63D /* ClientDeletionService.swift in Sources */,
 				27E3E53F2DF2013800054DD4 /* WorkoutPlansView.swift in Sources */,
 				273B79252DEB9C2700F755A6 /* ExerciseRowView.swift in Sources */,
+				2748D6CE2E06E7D600C01F1C /* EmailSignUpView.swift in Sources */,
 				273B79272DEB9C2700F755A6 /* ClientResourcesView.swift in Sources */,
 				BFED21DB2DF5F49000D7D2A9 /* ExerciseDataService.swift in Sources */,
 				BFED21DC2DF5F49000D7D2A9 /* TemplateDataService.swift in Sources */,
