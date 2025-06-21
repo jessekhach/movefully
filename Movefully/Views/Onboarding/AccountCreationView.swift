@@ -1,5 +1,7 @@
 import SwiftUI
 import AuthenticationServices
+import Firebase
+import CryptoKit
 
 struct AccountCreationView: View {
     @EnvironmentObject var authViewModel: AuthenticationViewModel
@@ -22,19 +24,21 @@ struct AccountCreationView: View {
         .navigationBarHidden(true)
         .animation(.easeInOut, value: showEmailSignUp)
         .onAppear {
-            // Pre-fill name from the profile setup step
             if !coordinator.tempTrainerName.isEmpty {
                 self.fullName = coordinator.tempTrainerName
             } else if !coordinator.tempClientName.isEmpty {
                 self.fullName = coordinator.tempClientName
             }
-            // Clear any previous error messages
             authViewModel.errorMessage = ""
+        }
+        .onDisappear {
+            authViewModel.detachListener()
         }
     }
     
+    @ViewBuilder
     private var appleSignInPrompt: some View {
-        VStack {
+        VStack(spacing: 0) {
             Spacer()
             
             Text("Create Your Account")
@@ -46,6 +50,21 @@ struct AccountCreationView: View {
                 .foregroundColor(MovefullyTheme.Colors.textSecondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, MovefullyTheme.Layout.paddingXL)
+                .padding(.bottom, MovefullyTheme.Layout.paddingXL * 2)
+
+            SignInWithAppleButton(
+                .signIn,
+                onRequest: { request in
+                    let nonce = randomNonceString()
+                    coordinator.currentNonce = nonce
+                    request.requestedScopes = [.fullName, .email]
+                    request.nonce = sha256(nonce)
+                },
+                onCompletion: handleAppleSignInCompletion
+            )
+            .signInWithAppleButtonStyle(.black)
+            .frame(height: MovefullyTheme.Layout.buttonHeightM)
+            .padding(.horizontal, MovefullyTheme.Layout.paddingL)
             
             Spacer()
 
@@ -54,71 +73,62 @@ struct AccountCreationView: View {
             }
             .font(MovefullyTheme.Typography.body)
             .foregroundColor(MovefullyTheme.Colors.textSecondary)
-            .padding(.bottom, MovefullyTheme.Layout.paddingM)
-        }
-        .toolbar {
-            ToolbarItemGroup(placement: .bottomBar) {
-                Button(action: handleAppleSignIn) {
-                    HStack {
-                        Image(systemName: "apple.logo")
-                        Text("Continue with Apple")
-                    }
-                }
-                .buttonStyle(MovefullyPrimaryButtonStyle())
-                .padding(.bottom, MovefullyTheme.Layout.paddingM)
-            }
+            .padding(.vertical, MovefullyTheme.Layout.paddingL)
         }
     }
     
+    @ViewBuilder
     private var emailSignUpForm: some View {
-        ScrollView {
-            VStack(spacing: MovefullyTheme.Layout.paddingL) {
-                
-                Text("Create with Email")
-                    .font(MovefullyTheme.Typography.title1)
-                    .padding(.top, MovefullyTheme.Layout.paddingXL)
-                    .padding(.bottom, MovefullyTheme.Layout.paddingL)
-                
-                VStack(spacing: MovefullyTheme.Layout.paddingM) {
-                    MovefullyTextField(
-                        placeholder: "Full Name",
-                        text: $fullName,
-                        icon: "person.fill"
-                    )
-                    MovefullyTextField(
-                        placeholder: "Email",
-                        text: $email,
-                        icon: "envelope.fill",
-                        keyboardType: .emailAddress,
-                        autocapitalization: .never,
-                        disableAutocorrection: true
-                    )
-                    MovefullySecureField(
-                        placeholder: "Password (8+ characters)",
-                        text: $password,
-                        icon: "lock.fill"
-                    )
-                }
-                
-                if !authViewModel.errorMessage.isEmpty {
-                    Text(authViewModel.errorMessage)
-                        .foregroundColor(.red)
-                        .font(.caption)
-                }
-                
-                Spacer()
-            }
-            .padding(.horizontal, MovefullyTheme.Layout.paddingL)
-        }
-        .toolbar {
-            ToolbarItemGroup(placement: .navigationBarLeading) {
+        VStack {
+            HStack {
                 Button(action: { showEmailSignUp = false }) {
                     Image(systemName: "chevron.left")
                     Text("Back")
                 }
                 .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                Spacer()
             }
+            .padding()
 
+            ScrollView {
+                VStack(spacing: MovefullyTheme.Layout.paddingL) {
+                    Text("Create with Email")
+                        .font(MovefullyTheme.Typography.title1)
+                        .padding(.bottom, MovefullyTheme.Layout.paddingL)
+                    
+                    VStack(spacing: MovefullyTheme.Layout.paddingM) {
+                        MovefullyTextField(
+                            placeholder: "Full Name",
+                            text: $fullName,
+                            icon: "person.fill"
+                        )
+                        MovefullyTextField(
+                            placeholder: "Email",
+                            text: $email,
+                            icon: "envelope.fill",
+                            keyboardType: .emailAddress,
+                            autocapitalization: .never,
+                            disableAutocorrection: true
+                        )
+                        MovefullySecureField(
+                            placeholder: "Password (8+ characters)",
+                            text: $password,
+                            icon: "lock.fill"
+                        )
+                    }
+                    
+                    if !authViewModel.errorMessage.isEmpty {
+                        Text(authViewModel.errorMessage)
+                            .foregroundColor(.red)
+                            .font(.caption)
+                    }
+                    
+                    Spacer()
+                }
+                .padding(.horizontal, MovefullyTheme.Layout.paddingL)
+            }
+        }
+        .toolbar {
             ToolbarItemGroup(placement: .bottomBar) {
                 Button(action: handleEmailSignUp) {
                     Text("Create Account & Continue")
@@ -129,22 +139,7 @@ struct AccountCreationView: View {
             }
         }
     }
-    
-    private func handleAppleSignIn() {
-        let profileData = coordinator.getProfileForCreation()
-        authViewModel.signInWithApple(profileData: profileData) { result in
-            switch result {
-            case .success:
-                coordinator.nextStep()
-            case .failure(let error):
-                // Don't show "cancelled" errors
-                if (error as? ASAuthorizationError)?.code != .canceled {
-                    authViewModel.errorMessage = error.localizedDescription
-                }
-            }
-        }
-    }
-    
+
     private func handleEmailSignUp() {
         let profileData = coordinator.getProfileForCreation()
         authViewModel.signUp(email: email, password: password, fullName: fullName, profileData: profileData) { result in
@@ -155,6 +150,80 @@ struct AccountCreationView: View {
                 authViewModel.errorMessage = error.localizedDescription
             }
         }
+    }
+
+    private func handleAppleSignInCompletion(result: Result<ASAuthorization, Error>) {
+        switch result {
+        case .success(let authorization):
+            guard let nonce = coordinator.currentNonce else {
+                authViewModel.errorMessage = "An internal error occurred. Please try again."
+                return
+            }
+            let profileData = coordinator.getProfileForCreation()
+            
+            authViewModel.signInWithApple(credential: authorization, nonce: nonce, profileData: profileData) { result in
+                switch result {
+                case .success:
+                    // Onboarding will continue via the auth state listener
+                    break
+                case .failure(let error):
+                    authViewModel.errorMessage = "Failed to sign in: \(error.localizedDescription)"
+                }
+            }
+            
+        case .failure(let error):
+            if (error as? ASAuthorizationError)?.code != .canceled {
+                authViewModel.errorMessage = "Apple Sign-In failed: \(error.localizedDescription)"
+            }
+        }
+    }
+}
+
+// MARK: - Crypto Helpers
+
+private extension AccountCreationView {
+    
+    func randomNonceString(length: Int = 32) -> String {
+        precondition(length > 0)
+        let charset: [Character] =
+            Array("0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._")
+        var result = ""
+        var remainingLength = length
+        
+        while remainingLength > 0 {
+            let randoms: [UInt8] = (0 ..< 16).map { _ in
+                var random: UInt8 = 0
+                let errorCode = SecRandomCopyBytes(kSecRandomDefault, 1, &random)
+                if errorCode != errSecSuccess {
+                    fatalError("Unable to generate random bytes. OSStatus \(errorCode)")
+                }
+                return random
+            }
+            
+            randoms.forEach { random in
+                if remainingLength == 0 {
+                    return
+                }
+                
+                if random < charset.count {
+                    result.append(charset[Int(random)])
+                    remainingLength -= 1
+                }
+            }
+        }
+        
+        return result
+    }
+    
+    @available(iOS 13, *)
+    func sha256(_ input: String) -> String {
+        let inputData = Data(input.utf8)
+        let hashedData = SHA256.hash(data: inputData)
+        let hashString = hashedData.compactMap {
+            return String(format: "%02x", $0)
+        }.joined()
+        
+        return hashString
     }
 }
 

@@ -16,6 +16,7 @@ class AuthenticationViewModel: NSObject, ObservableObject {
     
     private let db = Firestore.firestore()
     private var authStateListener: AuthStateDidChangeListenerHandle?
+    private var userListener: ListenerRegistration?
     
     // Apple Sign-In properties
     private var currentNonce: String?
@@ -36,6 +37,11 @@ class AuthenticationViewModel: NSObject, ObservableObject {
     deinit {
         if let listener = authStateListener {
             Auth.auth().removeStateDidChangeListener(listener)
+        }
+        Task {
+            await MainActor.run {
+                self.detachListener()
+            }
         }
     }
     
@@ -65,6 +71,49 @@ class AuthenticationViewModel: NSObject, ObservableObject {
         }
     }
     
+    // MARK: - User Data Fetching
+
+    func fetchUserData(userId: String) {
+        print("📊 Fetching user data for: \(userId)")
+        let userRef = db.collection("users").document(userId)
+        isLoading = true
+        // Listen for changes to the user document
+        userListener = userRef.addSnapshotListener { [weak self] (documentSnapshot, error) in
+            guard let self = self else { return }
+            self.isLoading = false
+            
+            if let error = error {
+                print("📊 Error fetching user data: \(error.localizedDescription)")
+                self.errorMessage = "Error fetching user data. Please try again later."
+                return
+            }
+            
+            if let document = documentSnapshot, document.exists {
+                let data = document.data()
+                self.userRole = data?["role"] as? String
+                self.userName = data?["name"] as? String ?? ""
+                print("📊 User data fetched - Role: \(self.userRole ?? "nil"), Name: \(self.userName)")
+            } else {
+                print("📊 No user data found, user needs to select role")
+                self.userRole = nil
+                self.userName = ""
+            }
+        }
+    }
+
+    private func clearUserData() {
+        userRole = nil
+        userName = ""
+        userEmail = ""
+        errorMessage = ""
+        detachListener()
+    }
+    
+    func detachListener() {
+        userListener?.remove()
+        userListener = nil
+    }
+    
     // MARK: - Apple Sign-In
     
     func signInWithApple(profileData: Any?, completion: @escaping (Result<Void, Error>) -> Void) {
@@ -74,6 +123,48 @@ class AuthenticationViewModel: NSObject, ObservableObject {
         
         // Now, start the actual sign in flow
         self.performAppleSignIn()
+    }
+    
+    func signInWithApple(credential: ASAuthorization, nonce: String, profileData: Any?, completion: @escaping (Result<User, Error>) -> Void) {
+        guard let appleIDCredential = credential.credential as? ASAuthorizationAppleIDCredential,
+              let appleIDToken = appleIDCredential.identityToken,
+              let idTokenString = String(data: appleIDToken, encoding: .utf8)
+        else {
+            completion(.failure(NSError(domain: "com.movefully.auth", code: -1, userInfo: [NSLocalizedDescriptionKey: "Could not get Apple ID credential."])))
+            return
+        }
+        
+        let firebaseCredential = OAuthProvider.credential(withProviderID: "apple.com", idToken: idTokenString, rawNonce: nonce)
+        
+        Auth.auth().signIn(with: firebaseCredential) { [weak self] (authResult, error) in
+            guard let self = self else { return }
+            
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let user = authResult?.user else {
+                completion(.failure(NSError(domain: "com.movefully.auth", code: -2, userInfo: [NSLocalizedDescriptionKey: "User not found after sign in."])))
+                return
+            }
+            
+            // If it's a new user, create their profile
+            if authResult?.additionalUserInfo?.isNewUser == true {
+                let fullName = appleIDCredential.fullName
+                let email = appleIDCredential.email
+                
+                // We need to determine the role from the profile data
+                let role = (profileData is TrainerProfileData) ? "trainer" : "client"
+                
+                self.createUserProfile(uid: user.uid, name: fullName?.formatted() ?? user.displayName ?? "New User", email: email ?? user.email ?? "", role: role, profileData: profileData)
+                completion(.success(user))
+
+            } else {
+                // Existing user, just return success
+                completion(.success(user))
+            }
+        }
     }
     
     private func performAppleSignIn() {
@@ -303,31 +394,6 @@ class AuthenticationViewModel: NSObject, ObservableObject {
                 self?.userRole = role
             }
         }
-    }
-    
-    private func fetchUserData(userId: String) {
-        print("📊 Fetching user data for: \(userId)")
-        db.collection("users").document(userId).getDocument { [weak self] document, error in
-            DispatchQueue.main.async {
-                if let document = document, document.exists {
-                    let data = document.data()
-                    self?.userRole = data?["role"] as? String
-                    self?.userName = data?["name"] as? String ?? ""
-                    print("📊 User data fetched - Role: \(self?.userRole ?? "nil"), Name: \(self?.userName ?? "")")
-                } else {
-                    print("📊 No user data found, user needs to select role")
-                    self?.userRole = nil
-                    self?.userName = ""
-                }
-            }
-        }
-    }
-    
-    private func clearUserData() {
-        userRole = nil
-        userName = ""
-        userEmail = ""
-        errorMessage = ""
     }
     
     // MARK: - Apple Sign-In Delegates
