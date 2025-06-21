@@ -8,12 +8,18 @@ struct AccountCreationView: View {
     var body: some View {
         VStack(spacing: MovefullyTheme.Layout.paddingM) {
             Spacer()
+            
+            Image(systemName: "figure.mind.and.body")
+                .font(.system(size: 50))
+                .foregroundColor(MovefullyTheme.Colors.primary)
+                .padding(.bottom, MovefullyTheme.Layout.paddingL)
 
-            Text("Create Your Account")
+            Text("Begin Your Journey")
                 .font(MovefullyTheme.Typography.title1)
+                .foregroundColor(MovefullyTheme.Colors.textPrimary)
                 .padding(.bottom, MovefullyTheme.Layout.paddingS)
 
-            Text("Create your account securely with Apple. We won't see your password and it's easier to get started.")
+            Text("Create your account securely with Apple. We're here to support your wellness journey with gentle, mindful movement.")
                 .font(MovefullyTheme.Typography.body)
                 .foregroundColor(MovefullyTheme.Colors.textSecondary)
                 .multilineTextAlignment(.center)
