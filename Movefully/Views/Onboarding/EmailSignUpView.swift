@@ -7,7 +7,7 @@ struct EmailSignUpView: View {
     
     @State private var email = ""
     @State private var password = ""
-    @State private var name = ""
+    @State private var fullName = ""
     
     var body: some View {
         ScrollView {
@@ -25,27 +25,26 @@ struct EmailSignUpView: View {
                 
                 MovefullyTextField(
                     placeholder: "Full Name",
-                    text: $name,
-                    iconName: "person"
+                    text: $fullName,
+                    icon: "person.fill"
                 )
                 
                 MovefullyTextField(
                     placeholder: "Email",
                     text: $email,
-                    iconName: "envelope"
+                    icon: "envelope.fill",
+                    keyboardType: .emailAddress
                 )
-                .keyboardType(.emailAddress)
-                .autocapitalization(.none)
                 
                 MovefullySecureField(
                     placeholder: "Password (8+ characters)",
                     text: $password,
-                    iconName: "lock"
+                    icon: "lock.fill"
                 )
                 
                 if let errorMessage = authViewModel.errorMessage, !errorMessage.isEmpty {
                     Text(errorMessage)
-                        .foregroundColor(MovefullyTheme.Colors.alert)
+                        .foregroundColor(MovefullyTheme.Colors.warmOrange)
                         .font(MovefullyTheme.Typography.caption)
                         .padding(.top)
                 }
@@ -66,13 +65,16 @@ struct EmailSignUpView: View {
             }
             
             ToolbarItemGroup(placement: .bottomBar) {
-                MovefullyButton(
-                    title: "Create Account & Continue",
-                    action: handleEmailSignUp,
-                    style: .primary,
-                    isLoading: authViewModel.isLoading,
-                    disabled: !isFormValid()
-                )
+                Button(action: handleEmailSignUp) {
+                    if authViewModel.isLoading {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                    } else {
+                        Text("Create Account & Continue")
+                    }
+                }
+                .buttonStyle(MovefullyPrimaryButtonStyle())
+                .disabled(!isFormValid() || authViewModel.isLoading)
                 .padding()
             }
         }
@@ -80,18 +82,18 @@ struct EmailSignUpView: View {
     }
     
     private func isFormValid() -> Bool {
-        return !name.isEmpty && !email.isEmpty && password.count >= 8
+        return !fullName.isEmpty && !email.isEmpty && password.count >= 8
     }
     
     private func prefillName() {
         if let trainerData = coordinator.getStoredTrainerData() {
-            self.name = trainerData.name
+            self.fullName = trainerData.name
         } else if let clientData = coordinator.getStoredClientData() {
-            self.name = clientData.name
+            self.fullName = clientData.name
         } else if !coordinator.tempTrainerName.isEmpty {
-            self.name = coordinator.tempTrainerName
+            self.fullName = coordinator.tempTrainerName
         } else if !coordinator.tempClientName.isEmpty {
-            self.name = coordinator.tempClientName
+            self.fullName = coordinator.tempClientName
         }
         authViewModel.errorMessage = nil
     }
@@ -101,7 +103,7 @@ struct EmailSignUpView: View {
         authViewModel.signUp(
             email: email,
             password: password,
-            name: name,
+            fullName: fullName,
             profileData: profileData
         ) { result in
             switch result {

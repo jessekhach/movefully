@@ -11,7 +11,7 @@ struct AccountCreationView: View {
             
             Image(systemName: "figure.mind.and.body")
                 .font(.system(size: 50))
-                .foregroundColor(MovefullyTheme.Colors.primary)
+                .foregroundColor(MovefullyTheme.Colors.primaryTeal)
                 .padding(.bottom, MovefullyTheme.Layout.paddingL)
 
             Text("Begin Your Journey")
@@ -30,10 +30,27 @@ struct AccountCreationView: View {
             SignInWithAppleButton(
                 .signIn,
                 onRequest: { request in
-                    // No customization needed for request
+                    // You can add scopes here if needed, e.g., for full name or email
+                    request.requestedScopes = [.fullName, .email]
                 },
                 onCompletion: { result in
-                    handleAppleSignIn(result: result)
+                    switch result {
+                    case .success(let authorization):
+                        authViewModel.handleAppleSignIn(authorization: authorization, profileData: coordinator.getProfileForCreation()) { authResult in
+                            switch authResult {
+                            case .success:
+                                coordinator.nextStep()
+                            case .failure(let error):
+                                if (error as? ASAuthorizationError)?.code != .canceled {
+                                    authViewModel.errorMessage = error.localizedDescription
+                                }
+                            }
+                        }
+                    case .failure(let error):
+                        if (error as? ASAuthorizationError)?.code != .canceled {
+                            authViewModel.errorMessage = error.localizedDescription
+                        }
+                    }
                 }
             )
             .signInWithAppleButtonStyle(.black)
@@ -65,33 +82,16 @@ struct AccountCreationView: View {
             }
         }
     }
-    
-    private func handleAppleSignIn(result: Result<ASAuthorization, Error>) {
-        switch result {
-        case .success(let authorization):
-            let profileData = coordinator.getProfileForCreation()
-            authViewModel.handleAppleSignIn(authorization: authorization, profileData: profileData) { authResult in
-                switch authResult {
-                case .success:
-                    coordinator.nextStep()
-                case .failure(let error):
-                    if (error as? ASAuthorizationError)?.code != .canceled {
-                        authViewModel.errorMessage = error.localizedDescription
-                    }
-                }
-            }
-        case .failure(let error):
-            if (error as? ASAuthorizationError)?.code != .canceled {
-                authViewModel.errorMessage = error.localizedDescription
-            }
+}
+
+#if DEBUG
+struct AccountCreationView_Previews: PreviewProvider {
+    static var previews: some View {
+        NavigationView {
+            AccountCreationView()
+                .environmentObject(AuthenticationViewModel())
+                .environmentObject(OnboardingCoordinator())
         }
     }
 }
-
-#Preview {
-    NavigationView {
-        AccountCreationView()
-            .environmentObject(AuthenticationViewModel())
-            .environmentObject(OnboardingCoordinator())
-    }
-}
+#endif

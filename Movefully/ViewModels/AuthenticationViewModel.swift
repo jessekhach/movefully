@@ -6,13 +6,15 @@ import AuthenticationServices
 import CryptoKit
 
 @MainActor
-class AuthenticationViewModel: NSObject, ObservableObject {
-    @Published var isAuthenticated = false
+class AuthenticationViewModel: NSObject, ObservableObject, ASAuthorizationControllerDelegate {
+    @Published var user: User?
+    @Published var isAuthenticated: Bool = false
+    @Published var isLoading: Bool = false
+    @Published var errorMessage: String? = nil
+    @Published var requiresProfileSetup: Bool = false
     @Published var userRole: String? = nil
     @Published var userName: String = ""
     @Published var userEmail: String = ""
-    @Published var errorMessage: String = ""
-    @Published var isLoading = false
     
     private let db = Firestore.firestore()
     private var authStateListener: AuthStateDidChangeListenerHandle?
@@ -88,8 +90,8 @@ class AuthenticationViewModel: NSObject, ObservableObject {
         request.nonce = sha256(nonce)
         
         let authorizationController = ASAuthorizationController(authorizationRequests: [request])
-        authorizationController.delegate = self as? ASAuthorizationControllerDelegate
-        authorizationController.presentationContextProvider = self as? ASAuthorizationControllerPresentationContextProviding
+        authorizationController.delegate = self
+        authorizationController.presentationContextProvider = self
         self.authorizationController = authorizationController
         authorizationController.performRequests()
     }
@@ -259,7 +261,7 @@ class AuthenticationViewModel: NSObject, ObservableObject {
         }
         
         isLoading = true
-        errorMessage = ""
+        errorMessage = nil
         
         Auth.auth().createUser(withEmail: email, password: password) { [weak self] authResult, error in
             DispatchQueue.main.async {
@@ -307,7 +309,7 @@ class AuthenticationViewModel: NSObject, ObservableObject {
         }
         
         isLoading = true
-        errorMessage = ""
+        errorMessage = nil
         
         Auth.auth().signIn(withEmail: email, password: password) { [weak self] result, error in
             DispatchQueue.main.async {
@@ -334,7 +336,7 @@ class AuthenticationViewModel: NSObject, ObservableObject {
         guard let user = Auth.auth().currentUser else { return }
         
         isLoading = true
-        errorMessage = ""
+        errorMessage = nil
         
         let userData: [String: Any] = [
             "role": role,
@@ -379,7 +381,7 @@ class AuthenticationViewModel: NSObject, ObservableObject {
         userRole = nil
         userName = ""
         userEmail = ""
-        errorMessage = ""
+        errorMessage = nil
     }
     
     // MARK: - Apple Sign-In Delegates
@@ -401,7 +403,7 @@ class AuthenticationViewModel: NSObject, ObservableObject {
     }
 }
 
-extension AuthenticationViewModel: ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding {
+extension AuthenticationViewModel: ASAuthorizationControllerPresentationContextProviding {
     @objc func authorizationController(controller: ASAuthorizationController, didCompleteWithAuthorization authorization: ASAuthorization) {
         print("🍎 Authorization controller completed successfully.")
         
