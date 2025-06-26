@@ -293,7 +293,7 @@ struct InvitationAcceptanceView: View {
         defer { isLoading = false }
         
         do {
-            let invitation = try await invitationService.getInvitationDetails(invitationId: invitationId)
+            let invitation = try await invitationService.validateInvitation(invitationId: invitationId)
             await MainActor.run {
                 self.invitation = invitation
             }
@@ -366,7 +366,18 @@ struct InvitationAcceptanceView: View {
         print("🔄 Starting invitation acceptance process")
         
         do {
-            let acceptedClient = try await invitationService.acceptInvitation(invitationId: invitationId)
+            guard let currentUser = Auth.auth().currentUser,
+                  let invitation = invitation else {
+                throw InvitationError.notAuthenticated
+            }
+            
+            let acceptedClient = try await invitationService.acceptInvitation(
+                invitationId: invitationId,
+                clientEmail: currentUser.email ?? invitation.clientEmail,
+                clientPassword: "temp-password", // This won't be used since user is already authenticated
+                clientName: currentUser.displayName ?? invitation.clientName ?? "Client",
+                clientPhone: nil
+            )
             print("🍎 Invitation acceptance successful: \(acceptedClient)")
             
             // Refresh user data in AuthenticationViewModel to recognize the new client role

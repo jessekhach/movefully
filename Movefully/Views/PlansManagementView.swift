@@ -4,29 +4,42 @@ import FirebaseFirestore
 
 struct ProgramsManagementView: View {
     @StateObject private var viewModel = ProgramsViewModel()
+    @ObservedObject private var themeManager = ThemeManager.shared
     @State private var searchText = ""
     @State private var showingCreatePlan = false
     
     var body: some View {
-        MovefullyTrainerNavigation(
-            title: "Plans",
-            showProfileButton: false,
-            trailingButton: MovefullyStandardNavigation.ToolbarButton(
-                icon: "plus",
-                action: { showingCreatePlan = true },
-                accessibilityLabel: "Create Plan"
-            )
-        ) {
-            // Search field - only show when there are plans to search
-            if !viewModel.programs.isEmpty {
-                MovefullySearchField(
-                    placeholder: "Search plans...",
-                    text: $searchText
-                )
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: MovefullyTheme.Layout.paddingL) {
+                    // Search field - only show when there are plans to search
+                    if !viewModel.programs.isEmpty {
+                        MovefullySearchField(
+                            placeholder: "Search plans...",
+                            text: $searchText
+                        )
+                    }
+                    
+                    // Plans content
+                    programsContent
+                }
+                .padding(.horizontal, MovefullyTheme.Layout.paddingL)
+                .padding(.top, MovefullyTheme.Layout.paddingL)
+                .padding(.bottom, MovefullyTheme.Layout.paddingXXL)
             }
-            
-            // Plans content
-            programsContent
+            .background(MovefullyTheme.Colors.backgroundPrimary)
+            .navigationTitle("Plans")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: { showingCreatePlan = true }) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 18, weight: .medium))
+                            .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+                    }
+                    .accessibilityLabel("Create Plan")
+                }
+            }
         }
         .sheet(isPresented: $showingCreatePlan) {
             CreatePlanView()
@@ -84,6 +97,7 @@ struct ProgramCard: View {
     let program: Program
     let viewModel: ProgramsViewModel
     let onTap: (() -> Void)?
+    @ObservedObject private var themeManager = ThemeManager.shared
     
     init(program: Program, viewModel: ProgramsViewModel, onTap: (() -> Void)? = nil) {
         self.program = program
@@ -214,6 +228,7 @@ struct ProgramStatView: View {
     let icon: String
     let value: String
     let label: String
+    @ObservedObject private var themeManager = ThemeManager.shared
     
     var body: some View {
         HStack(spacing: MovefullyTheme.Layout.paddingXS) {

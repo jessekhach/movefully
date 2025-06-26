@@ -1,5 +1,17 @@
 import Foundation
 import SwiftUI
+import FirebaseFirestore
+
+// MARK: - Shared Constants
+
+struct MovefullyConstants {
+    // Available specialties for trainers - used in onboarding and profile editing
+    static let availableSpecialties = [
+        "Strength", "Cardio", "Yoga", "Pilates", "CrossFit",
+        "Groups", "Nutrition", "Weight Loss", "Hypertrophy", 
+        "Flexibility", "Recovery"
+    ]
+}
 
 // MARK: - Client Status Enum
 enum ClientStatus: String, CaseIterable, Codable {
@@ -104,6 +116,10 @@ struct Client: Identifiable, Codable {
     var currentPlanId: String?
     var totalWorkoutsCompleted: Int
     
+    // Notification Settings
+    var notificationsEnabled: Bool
+    var fcmToken: String?
+    
     // Plan Assignment Queue
     var currentPlanStartDate: Date?
     var currentPlanEndDate: Date?
@@ -131,6 +147,8 @@ struct Client: Identifiable, Codable {
          lastActivityDate: Date? = nil,
          currentPlanId: String? = nil,
          totalWorkoutsCompleted: Int = 0,
+         notificationsEnabled: Bool = true,
+         fcmToken: String? = nil,
          currentPlanStartDate: Date? = nil,
          currentPlanEndDate: Date? = nil,
          nextPlanId: String? = nil,
@@ -153,6 +171,8 @@ struct Client: Identifiable, Codable {
         self.lastActivityDate = lastActivityDate
         self.currentPlanId = currentPlanId
         self.totalWorkoutsCompleted = totalWorkoutsCompleted
+        self.notificationsEnabled = notificationsEnabled
+        self.fcmToken = fcmToken
         self.currentPlanStartDate = currentPlanStartDate
         self.currentPlanEndDate = currentPlanEndDate
         self.nextPlanId = nextPlanId
@@ -2069,6 +2089,55 @@ struct TrainerProfile: Identifiable, Codable {
     var yearsOfExperience: Int?
     var createdAt: Date?
     var updatedAt: Date?
+    
+    // Notification Settings
+    var notificationsEnabled: Bool
+    var fcmToken: String?
+    
+    // Custom initializer to handle all cases
+    init(id: String, name: String, email: String, phoneNumber: String? = nil, title: String? = nil, bio: String? = nil, profileImageUrl: String? = nil, location: String? = nil, website: String? = nil, specialties: [String]? = nil, yearsOfExperience: Int? = nil, createdAt: Date? = nil, updatedAt: Date? = nil, notificationsEnabled: Bool = true, fcmToken: String? = nil) {
+        self.id = id
+        self.name = name
+        self.email = email
+        self.phoneNumber = phoneNumber
+        self.title = title
+        self.bio = bio
+        self.profileImageUrl = profileImageUrl
+        self.location = location
+        self.website = website
+        self.specialties = specialties
+        self.yearsOfExperience = yearsOfExperience
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+        self.notificationsEnabled = notificationsEnabled
+        self.fcmToken = fcmToken
+    }
+    
+    // Custom decoding to handle field mismatches
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        // ID is often not included in Firestore documents (it's the document ID)
+        id = try container.decodeIfPresent(String.self, forKey: .id) ?? "unknown"
+        name = try container.decodeIfPresent(String.self, forKey: .name) ?? "Trainer"
+        email = try container.decodeIfPresent(String.self, forKey: .email) ?? ""
+        phoneNumber = try container.decodeIfPresent(String.self, forKey: .phoneNumber)
+        title = try container.decodeIfPresent(String.self, forKey: .title)
+        bio = try container.decodeIfPresent(String.self, forKey: .bio)
+        profileImageUrl = try container.decodeIfPresent(String.self, forKey: .profileImageUrl)
+        location = try container.decodeIfPresent(String.self, forKey: .location)
+        website = try container.decodeIfPresent(String.self, forKey: .website)
+        specialties = try container.decodeIfPresent([String].self, forKey: .specialties)
+        yearsOfExperience = try container.decodeIfPresent(Int.self, forKey: .yearsOfExperience)
+        createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt)
+        updatedAt = try container.decodeIfPresent(Date.self, forKey: .updatedAt)
+        notificationsEnabled = try container.decodeIfPresent(Bool.self, forKey: .notificationsEnabled) ?? true
+        fcmToken = try container.decodeIfPresent(String.self, forKey: .fcmToken)
+    }
+    
+    private enum CodingKeys: String, CodingKey {
+        case id, name, email, phoneNumber, title, bio, profileImageUrl, location, website, specialties, yearsOfExperience, createdAt, updatedAt, notificationsEnabled, fcmToken
+    }
 }
 
 // MARK: - Workout Template Model (Enhanced)
@@ -2703,5 +2772,139 @@ struct ExerciseWithSetsReps: Identifiable, Codable {
     
     private enum CodingKeys: String, CodingKey {
         case exercise, sets, reps
+    }
+}
+
+// MARK: - Notification Settings Models
+
+struct ClientNotificationSettings: Codable {
+    var workoutReminders: Bool = true
+    var missedWorkoutFollowups: Bool = true
+    var planUpdates: Bool = true
+    var trainerMessages: Bool = true
+    var trainerNotes: Bool = true
+    var fcmToken: String?
+    
+    init() {}
+    
+    init(workoutReminders: Bool = true, 
+         missedWorkoutFollowups: Bool = true, 
+         planUpdates: Bool = true, 
+         trainerMessages: Bool = true, 
+         trainerNotes: Bool = true,
+         fcmToken: String? = nil) {
+        self.workoutReminders = workoutReminders
+        self.missedWorkoutFollowups = missedWorkoutFollowups
+        self.planUpdates = planUpdates
+        self.trainerMessages = trainerMessages
+        self.trainerNotes = trainerNotes
+        self.fcmToken = fcmToken
+    }
+}
+
+struct TrainerNotificationSettings: Codable {
+    var workoutCompletions: Bool = true
+    var missedWorkouts: Bool = true
+    var clientInactivity: Bool = true
+    var clientMessages: Bool = true
+    var newClientInvitations: Bool = true
+    var planAssignmentReminders: Bool = true
+    var fcmToken: String?
+    
+    init() {}
+    
+    init(workoutCompletions: Bool = true,
+         missedWorkouts: Bool = true,
+         clientInactivity: Bool = true,
+         clientMessages: Bool = true,
+         newClientInvitations: Bool = true,
+         planAssignmentReminders: Bool = true,
+         fcmToken: String? = nil) {
+        self.workoutCompletions = workoutCompletions
+        self.missedWorkouts = missedWorkouts
+        self.clientInactivity = clientInactivity
+        self.clientMessages = clientMessages
+        self.newClientInvitations = newClientInvitations
+        self.planAssignmentReminders = planAssignmentReminders
+        self.fcmToken = fcmToken
+    }
+}
+
+// MARK: - Notification Types for Cloud Functions
+
+enum NotificationType: String, Codable {
+    // Client notifications
+    case workoutReminder = "workout_reminder"
+    case missedWorkoutFollowup = "missed_workout_followup"
+    case planUpdate = "plan_update"
+    case trainerMessage = "trainer_message"
+    case trainerNote = "trainer_note"
+    
+    // Trainer notifications
+    case workoutCompletion = "workout_completion"
+    case missedWorkout = "missed_workout"
+    case clientInactivity = "client_inactivity"
+    case clientMessage = "client_message"
+    case newClientInvitation = "new_client_invitation"
+    case planAssignmentReminder = "plan_assignment_reminder"
+    
+    var title: String {
+        switch self {
+        // Client notifications
+        case .workoutReminder:
+            return "Time to Move!"
+        case .missedWorkoutFollowup:
+            return "Don't Give Up!"
+        case .planUpdate:
+            return "New Plan Available"
+        case .trainerMessage:
+            return "Message from Trainer"
+        case .trainerNote:
+            return "New Note from Trainer"
+            
+        // Trainer notifications
+        case .workoutCompletion:
+            return "Workout Completed!"
+        case .missedWorkout:
+            return "Missed Workout"
+        case .clientInactivity:
+            return "Client Needs Attention"
+        case .clientMessage:
+            return "New Client Message"
+        case .newClientInvitation:
+            return "New Client Invitation"
+        case .planAssignmentReminder:
+            return "Plan Assignment Due"
+        }
+    }
+    
+    var defaultBody: String {
+        switch self {
+        // Client notifications
+        case .workoutReminder:
+            return "Your workout is ready and waiting for you!"
+        case .missedWorkoutFollowup:
+            return "Yesterday's workout is still available. Let's get moving!"
+        case .planUpdate:
+            return "Your trainer has updated your workout plan"
+        case .trainerMessage:
+            return "You have a new message from your trainer"
+        case .trainerNote:
+            return "Your trainer left you a note"
+            
+        // Trainer notifications
+        case .workoutCompletion:
+            return "completed their workout"
+        case .missedWorkout:
+            return "missed their scheduled workout"
+        case .clientInactivity:
+            return "hasn't been active recently"
+        case .clientMessage:
+            return "sent you a message"
+        case .newClientInvitation:
+            return "A new client has accepted your invitation"
+        case .planAssignmentReminder:
+            return "Remember to assign a plan to your new client"
+        }
     }
 }

@@ -4,29 +4,40 @@ import SwiftUI
 
 struct ClientManagementView: View {
     @StateObject private var viewModel = ClientManagementViewModel()
+    @ObservedObject private var themeManager = ThemeManager.shared
     @State private var searchText = ""
     
     var body: some View {
-        MovefullyTrainerNavigation(
-            title: "Clients",
-            showProfileButton: false,
-            trailingButton: MovefullyStandardNavigation.ToolbarButton(
-                icon: "plus",
-                action: { viewModel.showInviteClientSheet = true },
-                accessibilityLabel: "Invite Client"
-            )
-        ) {
-            VStack(spacing: MovefullyTheme.Layout.paddingL) {
-                // Search field - only show when there are clients to search
-                if !viewModel.clients.isEmpty {
-                    MovefullySearchField(
-                        placeholder: "Search clients...",
-                        text: $searchText
-                    )
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: MovefullyTheme.Layout.paddingL) {
+                    // Search field - only show when there are clients to search
+                    if !viewModel.clients.isEmpty {
+                        MovefullySearchField(
+                            placeholder: "Search clients...",
+                            text: $searchText
+                        )
+                    }
+                    
+                    // Clients content
+                    clientsContent
                 }
-                
-                // Clients content
-                clientsContent
+                .padding(.horizontal, MovefullyTheme.Layout.paddingL)
+                .padding(.top, MovefullyTheme.Layout.paddingL)
+                .padding(.bottom, MovefullyTheme.Layout.paddingXXL)
+            }
+            .background(MovefullyTheme.Colors.backgroundPrimary)
+            .navigationTitle("Clients")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: { viewModel.showInviteClientSheet = true }) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 18, weight: .medium))
+                            .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+                    }
+                    .accessibilityLabel("Invite Client")
+                }
             }
         }
         .sheet(isPresented: $viewModel.showInviteClientSheet) {
@@ -152,6 +163,7 @@ struct ClientListView: View {
 // MARK: - Simple Client Card - Built from scratch
 struct SimpleClientCard: View {
     let client: Client
+    @ObservedObject private var themeManager = ThemeManager.shared
     
     var body: some View {
         HStack(spacing: MovefullyTheme.Layout.paddingL) {
@@ -230,6 +242,7 @@ struct SimpleClientCard: View {
 // MARK: - Simple Status Indicator
 struct StatusIndicator: View {
     let status: ClientStatus
+    @ObservedObject private var themeManager = ThemeManager.shared
     
     var body: some View {
         HStack(spacing: MovefullyTheme.Layout.paddingXS) {

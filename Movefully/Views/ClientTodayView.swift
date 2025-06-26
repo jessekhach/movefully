@@ -36,8 +36,10 @@ struct ClientTodayView: View {
             // Header section
             headerSection
             
-            // Main content based on workout availability
-            if let todayWorkout = viewModel.todayWorkout {
+            // Main content based on loading state and workout availability
+            if viewModel.isLoading {
+                LoadingStateView()
+            } else if let todayWorkout = viewModel.todayWorkout {
                 workoutSection(todayWorkout)
             } else {
                 NoPlanAssignedCard()
@@ -177,7 +179,7 @@ struct ClientTodayView: View {
                 VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingM) {
                     HStack {
                         VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingS) {
-                            Text("Good \(timeOfDayGreeting), \(viewModel.currentClient?.name.components(separatedBy: " ").first ?? "there")!")
+                            Text("Good \(timeOfDayGreeting), \(viewModel.isLoading ? "" : (viewModel.currentClient?.name.components(separatedBy: " ").first ?? "there"))!")
                                 .font(MovefullyTheme.Typography.title2)
                                 .foregroundColor(MovefullyTheme.Colors.textPrimary)
                             
@@ -1725,21 +1727,25 @@ struct NoPlanAssignedCard: View {
                         }
                     }
                 }
-                
-                // Contact trainer button
-                Button("Message Your Trainer") {
-                    // This would open the messaging interface
-                    // For now, just print
-                    print("Opening trainer message interface")
-                }
-                .font(MovefullyTheme.Typography.buttonMedium)
-                .foregroundColor(.white)
-                .padding(.horizontal, MovefullyTheme.Layout.paddingL)
-                .padding(.vertical, MovefullyTheme.Layout.paddingM)
-                .background(MovefullyTheme.Colors.primaryTeal)
-                .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
-                .shadow(color: MovefullyTheme.Colors.primaryTeal.opacity(0.3), radius: 6, x: 0, y: 3)
             }
+        }
+    }
+}
+
+// MARK: - Loading State View
+struct LoadingStateView: View {
+    var body: some View {
+        MovefullyCard {
+            VStack(spacing: MovefullyTheme.Layout.paddingL) {
+                ProgressView()
+                    .scaleEffect(1.2)
+                    .tint(MovefullyTheme.Colors.primaryTeal)
+                
+                Text("Loading your workout...")
+                    .font(MovefullyTheme.Typography.body)
+                    .foregroundColor(MovefullyTheme.Colors.textSecondary)
+            }
+            .padding(.vertical, MovefullyTheme.Layout.paddingXL)
         }
     }
 }

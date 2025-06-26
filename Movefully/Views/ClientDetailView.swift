@@ -35,6 +35,9 @@ struct ClientDetailView: View {
     @StateObject private var deletionService = ClientDeletionService()
     @Environment(\.dismiss) private var dismiss
     
+    // Copy link feedback
+    @State private var showingCopyConfirmation = false
+    
     // Initialize currentClient with the passed client
     init(client: Client) {
         self.client = client
@@ -232,6 +235,11 @@ struct ClientDetailView: View {
                 }
             )
         }
+        .alert("Link Copied!", isPresented: $showingCopyConfirmation) {
+            Button("OK") { }
+        } message: {
+            Text("The invitation link has been copied to your clipboard.")
+        }
     }
     
     // MARK: - Navigation Functions
@@ -270,12 +278,7 @@ struct ClientDetailView: View {
                         if !viewModel.invitationLink.isEmpty {
                             Button("Copy Link") {
                                 UIPasteboard.general.string = viewModel.invitationLink
-                                viewModel.successMessage = "Link copied to clipboard!"
-                                
-                                // Clear message after 2 seconds
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                                    viewModel.successMessage = ""
-                                }
+                                showingCopyConfirmation = true
                             }
                             .font(MovefullyTheme.Typography.buttonSmall)
                             .foregroundColor(.white)

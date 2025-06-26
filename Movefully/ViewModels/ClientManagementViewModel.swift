@@ -186,11 +186,24 @@ class ClientManagementViewModel: ObservableObject {
                 personalNote: personalNote.isEmpty ? nil : personalNote
             )
             
-            successMessage = result.message
+            successMessage = "Invite link created successfully! Link copied to clipboard."
             generatedInviteLink = result.inviteLink
             
+            // Create a ClientInvitation object for display
+            let invitation = ClientInvitation(
+                id: result.invitationId,
+                trainerId: Auth.auth().currentUser?.uid ?? "",
+                trainerName: Auth.auth().currentUser?.displayName ?? "Your Trainer",
+                clientEmail: result.clientEmail,
+                clientName: result.clientName,
+                personalNote: personalNote.isEmpty ? nil : personalNote,
+                status: .pending,
+                createdAt: Date(),
+                expiresAt: Calendar.current.date(byAdding: .day, value: 7, to: Date()) ?? Date()
+            )
+            
             // Add to invited clients list
-            invitedClients.append(result.invitation)
+            invitedClients.append(invitation)
             
             // Copy link to clipboard automatically
             UIPasteboard.general.string = result.inviteLink

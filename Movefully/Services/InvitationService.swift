@@ -20,14 +20,8 @@ class InvitationService: ObservableObject {
             throw InvitationError.notAuthenticated
         }
         
-        // Email is optional, so only validate if provided
-        if !clientEmail.isEmpty && !isValidEmail(clientEmail) {
-            throw InvitationError.invalidEmail
-        }
-        
-        // Generate unique invitation
+        // Generate unique invitation ID
         let invitationId = UUID().uuidString
-        let expirationDate = Calendar.current.date(byAdding: .day, value: 7, to: Date()) ?? Date()
         
         // Create invitation document
         let invitation = ClientInvitation(
@@ -39,145 +33,180 @@ class InvitationService: ObservableObject {
             personalNote: personalNote,
             status: .pending,
             createdAt: Date(),
-            expiresAt: expirationDate
+            expiresAt: Calendar.current.date(byAdding: .day, value: 7, to: Date()) ?? Date()
         )
         
         // Save to Firestore
         try await saveInvitation(invitation)
         
-        // Generate invitation link
-        let inviteLink = generateInviteLink(invitationId: invitationId)
+        // Create shareable link
+        let inviteLink = "https://movefully.app/invite/\(invitationId)"
+        
+        print("📧 InvitationService: Created invite link: \(inviteLink)")
         
         return InvitationResult(
-            invitation: invitation,
+            invitationId: invitationId,
             inviteLink: inviteLink,
-            success: true,
-            message: "Invite link created successfully! Share this link with your client."
+            clientEmail: clientEmail,
+            clientName: clientName
         )
     }
     
-    /// Accepts an invitation using the invitation ID
-    func acceptInvitation(invitationId: String) async throws -> Client {
-        let invitation = try await getInvitation(invitationId: invitationId)
+    /// Validates and retrieves invitation details (for unauthenticated users)
+    func validateInvitation(invitationId: String) async throws -> ClientInvitation {
+        print("🔍 InvitationService: Validating invitation: \(invitationId)")
         
-        // Check if invitation is still valid
-        guard invitation.status == .pending else {
+        // Fetch invitation document
+        let document = try await db.collection("invitations").document(invitationId).getDocument()
+        
+        guard document.exists else {
+            print("❌ InvitationService: Invitation not found: \(invitationId)")
+            throw InvitationError.invalidInvitation
+        }
+        
+        guard let invitation = try? document.data(as: ClientInvitation.self) else {
+            print("❌ InvitationService: Failed to decode invitation: \(invitationId)")
+            throw InvitationError.invalidInvitation
+        }
+        
+        // Check if invitation is expired
+        if invitation.expiresAt < Date() {
+            print("❌ InvitationService: Invitation expired: \(invitationId)")
+            throw InvitationError.expiredInvitation
+        }
+        
+        // Check if invitation is already used
+        if invitation.status != .pending {
+            print("❌ InvitationService: Invitation already used: \(invitationId)")
             throw InvitationError.invitationAlreadyProcessed
         }
         
-        guard invitation.expiresAt > Date() else {
-            throw InvitationError.invitationExpired
+        print("✅ InvitationService: Invitation validated: \(invitationId)")
+        return invitation
+    }
+    
+    /// Accepts an invitation and creates client account
+    func acceptInvitation(
+        invitationId: String,
+        clientEmail: String,
+        clientPassword: String,
+        clientName: String,
+        clientPhone: String?
+    ) async throws -> InvitationAcceptanceResult {
+        print("🎯 InvitationService: Accepting invitation: \(invitationId)")
+        
+        // First validate the invitation
+        let invitation = try await validateInvitation(invitationId: invitationId)
+        
+        // Verify email matches
+        guard invitation.clientEmail.lowercased() == clientEmail.lowercased() else {
+            throw InvitationError.emailMismatch
         }
         
-        guard let currentUser = Auth.auth().currentUser else {
-            throw InvitationError.notAuthenticated
-        }
+        // Create Firebase Auth account
+        let authResult = try await Auth.auth().createUser(withEmail: clientEmail, password: clientPassword)
+        let userId = authResult.user.uid
         
-        // Create client record
+        print("✅ InvitationService: Created Firebase Auth user: \(userId)")
+        
+        // Create client document
         let client = Client(
-            id: currentUser.uid,
-            name: invitation.clientName ?? currentUser.displayName ?? "Client",
-            email: invitation.clientEmail,
+            id: userId,
+            name: clientName,
+            email: clientEmail,
             trainerId: invitation.trainerId,
-            status: .active,
-            joinedDate: Date(),
-            goal: invitation.goal,
-            injuries: invitation.injuries,
-            preferredCoachingStyle: invitation.preferredCoachingStyle
+            status: .active
         )
         
-        // Save client to Firestore
-        try await saveClient(client)
-        
-        // Update user role in users collection so AuthenticationViewModel recognizes the client role
-        try await updateUserRole(userId: currentUser.uid, role: "client", name: client.name, email: client.email)
-        
-        // Update invitation status
-        try await updateInvitationStatus(invitationId: invitationId, status: .accepted)
-        
-        return client
-    }
-    
-    /// Gets pending invitations for a trainer
-    func getPendingInvitations(trainerId: String) async throws -> [ClientInvitation] {
-        let snapshot = try await db.collection("invitations")
-            .whereField("trainerId", isEqualTo: trainerId)
-            .whereField("status", isEqualTo: InvitationStatus.pending.rawValue)
-            .getDocuments()
-        
-        return try snapshot.documents.compactMap { document in
-            try document.data(as: ClientInvitation.self)
+        // Save client and update invitation
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            // Save client
+            group.addTask {
+                try await self.saveClient(client)
+            }
+            
+            // Mark invitation as accepted
+            group.addTask {
+                try await self.markInvitationAsAccepted(invitationId: invitationId, clientId: userId)
+            }
+            
+            // Wait for all tasks to complete
+            try await group.waitForAll()
         }
+        
+        print("✅ InvitationService: Successfully accepted invitation: \(invitationId)")
+        
+        return InvitationAcceptanceResult(
+            clientId: userId,
+            trainerId: invitation.trainerId,
+            invitationId: invitationId
+        )
     }
     
-    /// Gets invitation details by ID for invitation acceptance
-    func getInvitationDetails(invitationId: String) async throws -> ClientInvitation {
-        return try await getInvitation(invitationId: invitationId)
+    /// Saves a client document directly (for already authenticated users)
+    func saveClientDirectly(_ client: Client) async throws {
+        try await saveClient(client)
+    }
+    
+    /// Marks an invitation as accepted directly (for already authenticated users)
+    func markInvitationAsAcceptedDirectly(invitationId: String, clientId: String) async throws {
+        try await markInvitationAsAccepted(invitationId: invitationId, clientId: clientId)
     }
     
     // MARK: - Private Methods
     
     private func saveInvitation(_ invitation: ClientInvitation) async throws {
-        try db.collection("invitations").document(invitation.id).setData(from: invitation)
+        print("💾 InvitationService: Saving invitation: \(invitation.id)")
+        
+        // Convert to dictionary and ensure id is included
+        var invitationData = try Firestore.Encoder().encode(invitation)
+        invitationData["id"] = invitation.id
+        
+        try await db.collection("invitations").document(invitation.id).setData(invitationData)
+        print("✅ InvitationService: Successfully saved invitation")
     }
     
     private func saveClient(_ client: Client) async throws {
         print("🔧 InvitationService: Saving client to main collection - ID: \(client.id), TrainerID: \(client.trainerId)")
+        
+        // Convert client to dictionary and ensure id is included
+        var clientData = try Firestore.Encoder().encode(client)
+        clientData["id"] = client.id // Explicitly include the id field
+        
         // Save to main clients collection
-        try db.collection("clients").document(client.id).setData(from: client)
+        try await db.collection("clients").document(client.id).setData(clientData)
         print("✅ InvitationService: Successfully saved to main clients collection")
         
-        print("🔧 InvitationService: Saving client to trainer's subcollection - TrainerID: \(client.trainerId)")
-        // Also save to trainer's clients subcollection so trainer dashboard can find it
+        print("🔧 InvitationService: Saving client to trainer's subcollection")
+        // Save to trainer's client subcollection
         try await db.collection("trainers")
             .document(client.trainerId)
             .collection("clients")
             .document(client.id)
-            .setData(from: client)
+            .setData(clientData)
         print("✅ InvitationService: Successfully saved to trainer's clients subcollection")
     }
     
-    private func getInvitation(invitationId: String) async throws -> ClientInvitation {
-        let document = try await db.collection("invitations").document(invitationId).getDocument()
-        guard let invitation = try? document.data(as: ClientInvitation.self) else {
-            throw InvitationError.invitationNotFound
-        }
-        return invitation
-    }
-    
-    private func updateInvitationStatus(invitationId: String, status: InvitationStatus) async throws {
+    private func markInvitationAsAccepted(invitationId: String, clientId: String) async throws {
+        print("✅ InvitationService: Marking invitation as accepted: \(invitationId)")
+        
         try await db.collection("invitations").document(invitationId).updateData([
-            "status": status.rawValue,
-            "updatedAt": Timestamp()
+            "status": "accepted",
+            "acceptedAt": Timestamp(date: Date()),
+            "clientId": clientId
         ])
-    }
-    
-    private func generateInviteLink(invitationId: String) -> String {
-        // In production, this would be your app's deep link or web URL
-        return "https://movefully.app/invite/\(invitationId)"
-    }
-    
-    private func updateUserRole(userId: String, role: String, name: String, email: String) async throws {
-        try await db.collection("users").document(userId).setData([
-            "role": role,
-            "name": name,
-            "email": email
-        ], merge: true)
-    }
-    
-    private func isValidEmail(_ email: String) -> Bool {
-        let emailRegex = #"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"#
-        return email.range(of: emailRegex, options: .regularExpression) != nil
+        
+        print("✅ InvitationService: Successfully marked invitation as accepted")
     }
 }
 
 // MARK: - Supporting Types
 
 struct InvitationResult {
-    let invitation: ClientInvitation
+    let invitationId: String
     let inviteLink: String
-    let success: Bool
-    let message: String
+    let clientEmail: String
+    let clientName: String
 }
 
 enum InvitationError: LocalizedError {
@@ -187,6 +216,10 @@ enum InvitationError: LocalizedError {
     case invitationExpired
     case invitationAlreadyProcessed
     case networkError(String)
+    case invalidResponse
+    case invalidInvitation
+    case expiredInvitation
+    case emailMismatch
     
     var errorDescription: String? {
         switch self {
@@ -202,8 +235,22 @@ enum InvitationError: LocalizedError {
             return "This invitation has already been accepted or declined"
         case .networkError(let message):
             return "Network error: \(message)"
+        case .invalidResponse:
+            return "Invalid response from server"
+        case .invalidInvitation:
+            return "Invalid invitation"
+        case .expiredInvitation:
+            return "Invitation has expired"
+        case .emailMismatch:
+            return "Email mismatch"
         }
     }
+}
+
+struct InvitationAcceptanceResult {
+    let clientId: String
+    let trainerId: String
+    let invitationId: String
 }
 
  

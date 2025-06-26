@@ -3,6 +3,7 @@ import Foundation
 
 struct LibraryManagementView: View {
     @StateObject private var programsViewModel = ProgramsViewModel()
+    @ObservedObject private var themeManager = ThemeManager.shared
     @State private var searchText = ""
     @State private var showingCreateTemplate = false
     @State private var showingExerciseLibrary = false
@@ -892,6 +893,7 @@ struct ExerciseSelectionRowWithType: View {
 struct WorkoutTemplateCardContent: View {
     let template: WorkoutTemplate
     let programsViewModel: ProgramsViewModel
+    @ObservedObject private var themeManager = ThemeManager.shared
     
     var body: some View {
         VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingM) {
@@ -1033,6 +1035,7 @@ struct TemplateStatView: View {
     let icon: String
     let value: String
     let label: String
+    @ObservedObject private var themeManager = ThemeManager.shared
     
     var body: some View {
         HStack(spacing: MovefullyTheme.Layout.paddingXS) {

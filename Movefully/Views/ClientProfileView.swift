@@ -221,6 +221,7 @@ struct ClientProfileView: View {
         }
         .sheet(isPresented: $showNotificationSettings) {
             ClientNotificationSettingsView()
+                .environmentObject(viewModel)
         }
         .sheet(isPresented: $showingSettings) {
             ClientSettingsView()
@@ -644,13 +645,7 @@ struct ClientEditSection<Content: View>: View {
 
 struct ClientNotificationSettingsView: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var notificationsEnabled = true
-    @State private var workoutReminders = true
-    @State private var trainerMessages = true
-    @State private var planUpdates = true
-    @State private var emailNotifications = false
-    @State private var soundEnabled = true
-    @State private var vibrationEnabled = true
+    @EnvironmentObject var clientViewModel: ClientViewModel
     
     var body: some View {
         NavigationStack {
@@ -658,88 +653,31 @@ struct ClientNotificationSettingsView: View {
                 VStack(spacing: MovefullyTheme.Layout.paddingL) {
                     // Header
                     VStack(spacing: MovefullyTheme.Layout.paddingM) {
-                        Text("Notifications")
+                        Text("Push Notifications")
                             .font(MovefullyTheme.Typography.title2)
                             .foregroundColor(MovefullyTheme.Colors.textPrimary)
                         
-                        Text("Customize how and when you receive notifications from Movefully")
+                        Text("Choose which notifications you'd like to receive")
                             .font(MovefullyTheme.Typography.body)
                             .foregroundColor(MovefullyTheme.Colors.textSecondary)
                             .multilineTextAlignment(.center)
                     }
                     .padding(.top, MovefullyTheme.Layout.paddingL)
                     
-                    // Notification Sections
+                    // Notification Section
                     VStack(spacing: MovefullyTheme.Layout.paddingL) {
-                        // Main notifications toggle
                         ClientSettingsSection(title: "Push Notifications", icon: "bell") {
                             VStack(spacing: MovefullyTheme.Layout.paddingM) {
                                 ClientSettingsToggle(
-                                    title: "Enable Notifications", 
-                                    subtitle: "Allow Movefully to send you notifications", 
-                                    isOn: $notificationsEnabled
+                                    title: "Push Notifications", 
+                                    subtitle: "", 
+                                    isOn: $clientViewModel.notificationsEnabled
                                 )
-                            }
-                        }
-                        
-                        // Workout & Training
-                        ClientSettingsSection(title: "Workouts & Training", icon: "figure.run") {
-                            VStack(spacing: MovefullyTheme.Layout.paddingM) {
-                                ClientSettingsToggle(
-                                    title: "Workout Reminders", 
-                                    subtitle: "Get reminders for scheduled workouts", 
-                                    isOn: $workoutReminders
-                                )
-                                .disabled(!notificationsEnabled)
-                                .opacity(notificationsEnabled ? 1.0 : 0.6)
-                                
-                                ClientSettingsToggle(
-                                    title: "Plan Updates", 
-                                    subtitle: "When your trainer updates your plan", 
-                                    isOn: $planUpdates
-                                )
-                                .disabled(!notificationsEnabled)
-                                .opacity(notificationsEnabled ? 1.0 : 0.6)
-                            }
-                        }
-                        
-                        // Communication
-                        ClientSettingsSection(title: "Communication", icon: "message") {
-                            VStack(spacing: MovefullyTheme.Layout.paddingM) {
-                                ClientSettingsToggle(
-                                    title: "Trainer Messages", 
-                                    subtitle: "New messages from your trainer", 
-                                    isOn: $trainerMessages
-                                )
-                                .disabled(!notificationsEnabled)
-                                .opacity(notificationsEnabled ? 1.0 : 0.6)
-                                
-                                ClientSettingsToggle(
-                                    title: "Email Notifications", 
-                                    subtitle: "Receive important updates via email", 
-                                    isOn: $emailNotifications
-                                )
-                            }
-                        }
-                        
-                        // Notification Style
-                        ClientSettingsSection(title: "Notification Style", icon: "speaker.wave.2") {
-                            VStack(spacing: MovefullyTheme.Layout.paddingM) {
-                                ClientSettingsToggle(
-                                    title: "Sound", 
-                                    subtitle: "Play sound for notifications", 
-                                    isOn: $soundEnabled
-                                )
-                                .disabled(!notificationsEnabled)
-                                .opacity(notificationsEnabled ? 1.0 : 0.6)
-                                
-                                ClientSettingsToggle(
-                                    title: "Vibration", 
-                                    subtitle: "Vibrate for notifications", 
-                                    isOn: $vibrationEnabled
-                                )
-                                .disabled(!notificationsEnabled)
-                                .opacity(notificationsEnabled ? 1.0 : 0.6)
+                                .onChange(of: clientViewModel.notificationsEnabled) { _ in
+                                    Task {
+                                        await clientViewModel.saveNotificationSettings()
+                                    }
+                                }
                             }
                         }
                     }
@@ -747,16 +685,16 @@ struct ClientNotificationSettingsView: View {
                     // Info card
                     MovefullyCard {
                         HStack(spacing: MovefullyTheme.Layout.paddingM) {
-                            Image(systemName: "info.circle.fill")
+                            Image(systemName: "moon.circle.fill")
                                 .font(MovefullyTheme.Typography.buttonSmall)
                                 .foregroundColor(MovefullyTheme.Colors.gentleBlue)
                             
                             VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingXS) {
-                                Text("Notification Permissions")
+                                Text("Quiet Hours")
                                     .font(MovefullyTheme.Typography.bodyMedium)
                                     .foregroundColor(MovefullyTheme.Colors.textPrimary)
                                 
-                                Text("You can also manage notifications in your device Settings app under Movefully.")
+                                Text("Notifications are automatically paused from 10:00 PM to 7:00 AM to respect your rest time.")
                                     .font(MovefullyTheme.Typography.callout)
                                     .foregroundColor(MovefullyTheme.Colors.textSecondary)
                                     .lineLimit(nil)
@@ -786,8 +724,6 @@ struct ClientNotificationSettingsView: View {
 struct ClientSettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject private var themeManager = ThemeManager.shared
-    @State private var biometricAuth = true
-    @State private var dataSharing = false
     
     var body: some View {
         NavigationStack {
@@ -808,18 +744,23 @@ struct ClientSettingsView: View {
                     
                     // Settings Sections
                     VStack(spacing: MovefullyTheme.Layout.paddingL) {
-                        // Privacy & Security
-                        ClientSettingsSection(title: "Privacy & Security", icon: "lock.shield") {
-                            VStack(spacing: MovefullyTheme.Layout.paddingM) {
-                                ClientSettingsToggle(title: "Biometric Authentication", subtitle: "Use Face ID or Touch ID to unlock the app", isOn: $biometricAuth)
-                                ClientSettingsToggle(title: "Share Anonymous Data", subtitle: "Help improve the app experience", isOn: $dataSharing)
-                            }
-                        }
-                        
                         // App Preferences
-                        ClientSettingsSection(title: "App Preferences", icon: "slider.horizontal.3") {
+                        ClientSettingsSection(title: "Appearance", icon: "paintbrush") {
                             MovefullyThemePicker()
                                 .environmentObject(themeManager)
+                        }
+                        
+                        // Privacy
+                        ClientSettingsSection(title: "Privacy", icon: "hand.raised") {
+                            VStack(spacing: MovefullyTheme.Layout.paddingM) {
+                                ClientSettingsActionRow(title: "Privacy Policy", icon: "doc.text", isDanger: false, action: {
+                                    // Handle privacy policy
+                                })
+                                
+                                ClientSettingsActionRow(title: "Terms of Service", icon: "doc.plaintext", isDanger: false, action: {
+                                    // Handle terms of service
+                                })
+                            }
                         }
                     }
                 }
@@ -1101,36 +1042,11 @@ struct ClientHelpSupportView: View {
                         }
                     }
                     
-                    // Legal section
-                    ClientProfileSectionCard(title: "Legal", icon: "doc.text") {
-                        VStack(spacing: MovefullyTheme.Layout.paddingM) {
-                            MovefullyActionRow(
-                                title: "Privacy Policy",
-                                icon: "hand.raised",
-                                action: {
-                                    showingPrivacyPolicy = true
-                                }
-                            )
-                            
-                            MovefullyActionRow(
-                                title: "Terms of Service",
-                                icon: "doc.plaintext",
-                                action: {
-                                    showingTermsOfService = true
-                                }
-                            )
-                        }
-                    }
-                    
                     // App info
                     VStack(spacing: MovefullyTheme.Layout.paddingS) {
                         Text("Movefully v1.0.0")
                             .font(MovefullyTheme.Typography.callout)
                             .foregroundColor(MovefullyTheme.Colors.textSecondary)
-                        
-                        Text("Made with ❤️ for mindful movement")
-                            .font(MovefullyTheme.Typography.caption)
-                            .foregroundColor(MovefullyTheme.Colors.textTertiary)
                     }
                     .padding(.top, MovefullyTheme.Layout.paddingL)
                 }
@@ -1767,6 +1683,48 @@ struct ClientPrivacyPolicyView: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - Client Settings Action Row
+
+struct ClientSettingsActionRow: View {
+    let title: String
+    let icon: String
+    let isDanger: Bool
+    let action: () -> Void
+    
+    init(title: String, icon: String, isDanger: Bool = false, action: @escaping () -> Void) {
+        self.title = title
+        self.icon = icon
+        self.isDanger = isDanger
+        self.action = action
+    }
+    
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: MovefullyTheme.Layout.paddingM) {
+                Image(systemName: icon)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(isDanger ? MovefullyTheme.Colors.warmOrange : MovefullyTheme.Colors.textSecondary)
+                    .frame(width: 24)
+                
+                Text(title)
+                    .font(MovefullyTheme.Typography.body)
+                    .foregroundColor(isDanger ? MovefullyTheme.Colors.warmOrange : MovefullyTheme.Colors.textPrimary)
+                
+                Spacer()
+                
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(MovefullyTheme.Colors.textTertiary)
+            }
+            .padding(.horizontal, MovefullyTheme.Layout.paddingM)
+            .padding(.vertical, MovefullyTheme.Layout.paddingM)
+            .background(MovefullyTheme.Colors.backgroundSecondary)
+            .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
+        }
+        .buttonStyle(PlainButtonStyle())
     }
 }
 

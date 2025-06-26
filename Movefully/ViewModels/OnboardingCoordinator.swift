@@ -8,6 +8,9 @@ class OnboardingCoordinator: ObservableObject {
     @Published var hasCompletedOnboarding: Bool = false
     @Published var showAuthentication: Bool = false
     @Published var profileSetupCurrentPage: Int = 0
+    @Published var isSignInFlow: Bool = false
+    @Published var showEmailSignIn: Bool = false
+    @Published var showEmailSignUp: Bool = false
     
     // Profile data storage
     @Published var trainerProfileData: TrainerProfileData?
@@ -176,7 +179,18 @@ class OnboardingCoordinator: ObservableObject {
                 }
                 profileSetupCurrentPage = 0 // Reset to first page when returning
             case .authentication:
-                currentStep = .profileSetup
+                // If this is a sign-in flow, go back to welcome page
+                // If this is a sign-up flow, go back to profile setup or account creation
+                if isSignInFlow {
+                    currentStep = .welcome
+                    isSignInFlow = false
+                    showEmailSignIn = false
+                } else if showEmailSignUp {
+                    // Going back from EmailSignUpView to AccountCreationView
+                    showEmailSignUp = false
+                } else {
+                    currentStep = .profileSetup
+                }
             case .complete:
                 currentStep = .authentication
             }
@@ -186,6 +200,29 @@ class OnboardingCoordinator: ObservableObject {
     func skipToAuthentication() {
         currentStep = .authentication
         showAuthentication = true
+    }
+    
+    func goToSignUp() {
+        isSignInFlow = false
+        currentStep = .authentication
+    }
+    
+    func goToSignIn() {
+        // Skip the authentication choice page and go directly to sign in
+        isSignInFlow = true
+        currentStep = .authentication
+    }
+    
+    func goToEmailSignIn() {
+        // Navigate to email sign-in view
+        isSignInFlow = true
+        showEmailSignIn = true
+    }
+    
+    func goToEmailSignUp() {
+        // Navigate to email sign-up view
+        isSignInFlow = false
+        showEmailSignUp = true
     }
     
     func completeOnboarding() {

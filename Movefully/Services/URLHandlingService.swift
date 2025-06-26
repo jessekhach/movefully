@@ -17,8 +17,9 @@ class URLHandlingService: ObservableObject {
         // Parse the URL to extract invitation information
         if let invitationId = extractInvitationId(from: url) {
             print("🔗 Extracted invitation ID: \(invitationId)")
+            print("🔗 Storing invitation ID for use during onboarding")
             pendingInvitationId = invitationId
-            showInvitationAcceptance = true
+            // Don't automatically show invitation acceptance - let onboarding handle it
         } else {
             print("❌ Failed to extract invitation ID from URL")
         }

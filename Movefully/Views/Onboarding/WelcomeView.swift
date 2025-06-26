@@ -4,6 +4,7 @@ struct WelcomeView: View {
     @EnvironmentObject var coordinator: OnboardingCoordinator
     @EnvironmentObject var urlHandler: URLHandlingService
     @State private var animateContent = false
+    @State private var showInvitationEntry = false
     
     var body: some View {
         ScrollView {
@@ -75,7 +76,7 @@ struct WelcomeView: View {
                         icon: "envelope.circle",
                         color: MovefullyTheme.Colors.gentleBlue
                     ) {
-                        coordinator.selectClientPath()
+                        showInvitationEntry = true
                     }
                 }
                 .padding(.horizontal, MovefullyTheme.Layout.paddingL)
@@ -89,7 +90,7 @@ struct WelcomeView: View {
             // Toolbar group for the bottom bar
             ToolbarItemGroup(placement: .bottomBar) {
                 Button(action: {
-                    coordinator.skipToAuthentication()
+                    coordinator.goToSignIn()
                 }) {
                     Text("Already have an account? **Sign In**")
                         .font(MovefullyTheme.Typography.callout)
@@ -102,6 +103,29 @@ struct WelcomeView: View {
         .navigationBarHidden(true)
         .onAppear {
             animateContent = true
+            
+            // If user opened the app via invitation link, auto-open the invitation entry sheet
+            if let _ = urlHandler.pendingInvitationId {
+                print("🎯 WelcomeView: Detected invitation from URL - opening invitation entry sheet")
+                showInvitationEntry = true
+            }
+        }
+        .sheet(isPresented: $showInvitationEntry) {
+            InvitationEntrySheet(
+                initialURL: urlHandler.pendingInvitationId != nil ? "https://movefully.app/invite/\(urlHandler.pendingInvitationId!)" : "",
+                onInvitationProcessed: { invitationId in
+                    print("🎯 WelcomeView: Processing invitation with ID: \(invitationId)")
+                    showInvitationEntry = false
+                    urlHandler.pendingInvitationId = invitationId
+                    // Don't automatically show invitation acceptance - let onboarding handle it
+                    coordinator.selectClientPath()
+                },
+                onCancel: {
+                    showInvitationEntry = false
+                    // Clear any pending invitation if user cancels
+                    urlHandler.clearPendingInvitation()
+                }
+            )
         }
     }
 
@@ -143,5 +167,140 @@ struct WelcomeView: View {
             .shadow(color: MovefullyTheme.Effects.cardShadow, radius: 8, x: 0, y: 4)
         }
         .buttonStyle(PlainButtonStyle())
+    }
+}
+
+// MARK: - Invitation Entry Sheet
+struct InvitationEntrySheet: View {
+    let initialURL: String
+    let onInvitationProcessed: (String) -> Void
+    let onCancel: () -> Void
+    
+    @State private var invitationURL = ""
+    @State private var isProcessing = false
+    @State private var errorMessage = ""
+    
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: MovefullyTheme.Layout.paddingL) {
+                    // Header
+                    VStack(spacing: MovefullyTheme.Layout.paddingM) {
+                        Image(systemName: "envelope.open.fill")
+                            .font(.system(size: 48))
+                            .foregroundColor(MovefullyTheme.Colors.gentleBlue)
+                        
+                        Text("Enter Your Invitation")
+                            .font(MovefullyTheme.Typography.title2)
+                            .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                        
+                        Text("Paste the invitation link your wellness coach sent you")
+                            .font(MovefullyTheme.Typography.body)
+                            .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding(.top, MovefullyTheme.Layout.paddingXL)
+                    
+                    // URL Input Field
+                    VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingS) {
+                        Text("Invitation Link")
+                            .font(MovefullyTheme.Typography.bodyMedium)
+                            .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                        
+                        MovefullyTextField(
+                            placeholder: "https://movefully.app/invite/...",
+                            text: $invitationURL
+                        )
+                    }
+                    .padding(.horizontal, MovefullyTheme.Layout.paddingL)
+                    
+                    // Error message
+                    if !errorMessage.isEmpty {
+                        Text(errorMessage)
+                            .font(MovefullyTheme.Typography.caption)
+                            .foregroundColor(MovefullyTheme.Colors.warning)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, MovefullyTheme.Layout.paddingL)
+                    }
+                    
+                    // Action buttons
+                    VStack(spacing: MovefullyTheme.Layout.paddingM) {
+                        Button(action: processInvitation) {
+                            HStack {
+                                if isProcessing {
+                                    ProgressView()
+                                        .scaleEffect(0.8)
+                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                } else {
+                                    Text("Continue")
+                                }
+                            }
+                        }
+                        .buttonStyle(MovefullyButtonStyle(type: .primary))
+                        .disabled(invitationURL.isEmpty || isProcessing)
+                        .opacity(invitationURL.isEmpty || isProcessing ? 0.6 : 1.0)
+                        
+                        Button("Cancel", action: onCancel)
+                            .buttonStyle(MovefullyButtonStyle(type: .tertiary))
+                    }
+                    .padding(.horizontal, MovefullyTheme.Layout.paddingL)
+                    
+                    Spacer(minLength: MovefullyTheme.Layout.paddingXL)
+                }
+            }
+            .movefullyBackground()
+            .navigationTitle("Join Your Coach")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Cancel", action: onCancel)
+                        .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                }
+            }
+            .onAppear {
+                // Pre-populate with the initial URL if provided
+                if !initialURL.isEmpty {
+                    invitationURL = initialURL
+                }
+            }
+        }
+    }
+    
+    private func processInvitation() {
+        guard !invitationURL.isEmpty else { return }
+        
+        print("🎯 InvitationEntrySheet: Processing invitation URL: \(invitationURL)")
+        
+        isProcessing = true
+        errorMessage = ""
+        
+        // Extract invitation ID from URL
+        if let invitationId = extractInvitationId(from: invitationURL) {
+            print("🎯 InvitationEntrySheet: Successfully extracted invitationId: \(invitationId)")
+            onInvitationProcessed(invitationId)
+        } else {
+            print("🎯 InvitationEntrySheet: Failed to extract invitation ID from URL")
+            errorMessage = "Invalid invitation link. Please check the URL and try again."
+            isProcessing = false
+        }
+    }
+    
+    private func extractInvitationId(from urlString: String) -> String? {
+        guard let url = URL(string: urlString) else { return nil }
+        
+        // Handle different URL formats:
+        // 1. https://movefully.app/invite/{id}
+        // 2. movefully://invite/{id}
+        
+        let pathComponents = url.pathComponents
+        
+        // Check for /invite/ path
+        if let inviteIndex = pathComponents.firstIndex(of: "invite"),
+           inviteIndex + 1 < pathComponents.count {
+            let invitationId = pathComponents[inviteIndex + 1]
+            return invitationId.isEmpty ? nil : invitationId
+        }
+        
+        return nil
     }
 } 

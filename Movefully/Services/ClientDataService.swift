@@ -144,17 +144,21 @@ class ClientDataService: ObservableObject {
     
     /// Updates client profile information (trainer-side update)
     func updateClientProfile(_ client: Client, trainerId: String) async throws {
+        // Convert client to dictionary and ensure id is included
+        var clientData = try Firestore.Encoder().encode(client)
+        clientData["id"] = client.id
+        
         // Update in trainer's client subcollection
         try await db.collection("trainers")
             .document(trainerId)
             .collection("clients")
             .document(client.id)
-            .setData(from: client, merge: true)
+            .setData(clientData, merge: true)
         
         // Also update in main clients collection to ensure data persistence
         try await db.collection("clients")
             .document(client.id)
-            .setData(from: client, merge: true)
+            .setData(clientData, merge: true)
     }
     
     /// Updates client profile information (client self-update)
@@ -162,10 +166,14 @@ class ClientDataService: ObservableObject {
     func updateClientSelfProfile(_ client: Client) async throws {
         print("🔄 ClientDataService: Updating client self-profile for ID: \(client.id)")
         
+        // Convert client to dictionary and ensure id is included
+        var clientData = try Firestore.Encoder().encode(client)
+        clientData["id"] = client.id
+        
         // Update in main clients collection
         try await db.collection("clients")
             .document(client.id)
-            .setData(from: client, merge: true)
+            .setData(clientData, merge: true)
         
         // Also update in trainer's client subcollection if trainerId is available
         if !client.trainerId.isEmpty {
@@ -173,7 +181,7 @@ class ClientDataService: ObservableObject {
                 .document(client.trainerId)
                 .collection("clients")
                 .document(client.id)
-                .setData(from: client, merge: true)
+                .setData(clientData, merge: true)
         }
         
         print("✅ ClientDataService: Client self-profile updated successfully")
@@ -243,16 +251,20 @@ class ClientDataService: ObservableObject {
         clientData.createdAt = Date()
         clientData.updatedAt = Date()
         
+        // Convert client to dictionary and ensure id is included
+        var encodedClientData = try Firestore.Encoder().encode(clientData)
+        encodedClientData["id"] = client.id
+        
         try await db.collection("trainers")
             .document(trainerId)
             .collection("clients")
             .document(client.id)
-            .setData(from: clientData)
+            .setData(encodedClientData)
         
         // Also update the main clients collection
         try await db.collection("clients")
             .document(client.id)
-            .setData(from: clientData, merge: true)
+            .setData(encodedClientData, merge: true)
     }
     
     // MARK: - Real-time Listeners
@@ -365,6 +377,27 @@ class ClientDataService: ObservableObject {
             completionRate: completionRate,
             lastWorkoutDate: lastWorkoutDate
         )
+    }
+    
+    // MARK: - Notification Settings
+    
+    /// Updates client notification settings
+    func updateNotificationSettings(clientId: String, enabled: Bool, fcmToken: String?) async throws {
+        print("✅ ClientDataService: Updating notification settings for client: \(clientId) - enabled: \(enabled)")
+        
+        let updateData: [String: Any] = [
+            "notificationsEnabled": enabled,
+            "fcmToken": fcmToken as Any,
+            "updatedAt": Timestamp()
+        ]
+        
+        // Update in main clients collection
+        try await db.collection("clients").document(clientId).updateData(updateData)
+        
+        // Also update in users collection for consistency (if client has user account)
+        try? await db.collection("users").document(clientId).updateData(updateData)
+        
+        print("✅ ClientDataService: Notification settings updated successfully")
     }
     
     deinit {

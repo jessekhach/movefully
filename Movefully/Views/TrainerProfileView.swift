@@ -1,10 +1,12 @@
 import SwiftUI
 import FirebaseAuth
 import MessageUI
+import PhotosUI
 
 struct TrainerProfileView: View {
     @EnvironmentObject var authViewModel: AuthenticationViewModel
     @StateObject private var viewModel = TrainerProfileViewModel()
+    @ObservedObject private var themeManager = ThemeManager.shared
     @State private var showSignOutAlert = false
     @State private var showingMailComposer = false
     
@@ -28,12 +30,39 @@ struct TrainerProfileView: View {
                                     )
                                     .frame(width: 120, height: 120)
                                 
-                                Text("JK")
-                                    .font(.system(size: 36, weight: .semibold, design: .rounded))
-                                    .foregroundColor(.white)
+                                // Show profile image or initials
+                                if let profileImageUrl = viewModel.trainerProfile?.profileImageUrl, !profileImageUrl.isEmpty {
+                                    AsyncImage(url: URL(string: profileImageUrl)) { image in
+                                        image
+                                            .resizable()
+                                            .aspectRatio(contentMode: .fill)
+                                            .frame(width: 120, height: 120)
+                                            .clipShape(Circle())
+                                    } placeholder: {
+                                        if viewModel.isUploadingPhoto {
+                                            ProgressView()
+                                                .scaleEffect(0.8)
+                                                .tint(.white)
+                                        } else {
+                                            Text(trainerInitials)
+                                                .font(.system(size: 36, weight: .semibold, design: .rounded))
+                                                .foregroundColor(.white)
+                                        }
+                                    }
+                                } else {
+                                    if viewModel.isUploadingPhoto {
+                                        ProgressView()
+                                            .scaleEffect(0.8)
+                                            .tint(.white)
+                                    } else {
+                                        Text(trainerInitials)
+                                            .font(.system(size: 36, weight: .semibold, design: .rounded))
+                                            .foregroundColor(.white)
+                                    }
+                                }
                                 
-                                // Edit button overlay
-                                Button(action: { viewModel.startEditingProfile() }) {
+                                // Camera button overlay with PhotosPicker
+                                PhotosPicker(selection: $viewModel.selectedPhoto, matching: .images) {
                                     Image(systemName: "camera.fill")
                                         .font(.system(size: 16, weight: .medium))
                                         .foregroundColor(.white)
@@ -43,6 +72,7 @@ struct TrainerProfileView: View {
                                         .shadow(color: MovefullyTheme.Effects.cardShadow, radius: 4, x: 0, y: 2)
                                 }
                                 .offset(x: 35, y: 35)
+                                .disabled(viewModel.isUploadingPhoto)
                             }
                             
                             // Name and title
@@ -179,7 +209,7 @@ struct TrainerProfileView: View {
             EditProfileView(viewModel: viewModel)
         }
         .sheet(isPresented: $viewModel.showingSettings) {
-            SettingsView()
+            SettingsView(viewModel: viewModel)
         }
         .sheet(isPresented: $showingMailComposer) {
             SupportContactView()
@@ -191,6 +221,9 @@ struct TrainerProfileView: View {
             }
         } message: {
             Text("Are you sure you want to sign out?")
+        }
+        .onAppear {
+            viewModel.refreshProfileData()
         }
     }
     
@@ -213,12 +246,26 @@ struct TrainerProfileView: View {
         let hasPhone = !(viewModel.trainerProfile?.phoneNumber?.isEmpty ?? true)
         return hasEmail || hasPhone
     }
+    
+    private var trainerInitials: String {
+        guard let name = viewModel.trainerProfile?.name else { return "T" }
+        let components = name.split(separator: " ")
+        if components.count >= 2 {
+            let first = String(components[0].prefix(1)).uppercased()
+            let last = String(components[1].prefix(1)).uppercased()
+            return "\(first)\(last)"
+        } else if let firstComponent = components.first {
+            return String(firstComponent.prefix(2)).uppercased()
+        }
+        return "T"
+    }
 }
 
 struct TrainerProfileStatView: View {
     let title: String
     let value: String
     let icon: String
+    @ObservedObject private var themeManager = ThemeManager.shared
     
     var body: some View {
         VStack(spacing: MovefullyTheme.Layout.paddingS) {
@@ -349,8 +396,6 @@ struct ContactInfoRow: View {
 struct EditProfileView: View {
     @ObservedObject var viewModel: TrainerProfileViewModel
     @Environment(\.dismiss) private var dismiss
-    @State private var newSpecialty = ""
-    @State private var showingAddSpecialtyAlert = false
     
     var body: some View {
         NavigationStack {
@@ -441,13 +486,17 @@ struct EditProfileView: View {
                                         
                                         Spacer()
                                         
+                                        let canRemove = viewModel.profileSpecialties.count > viewModel.minSpecialties
                                         Button(action: {
-                                            viewModel.removeSpecialty(specialty)
+                                            if canRemove {
+                                                viewModel.removeSpecialty(specialty)
+                                            }
                                         }) {
                                             Image(systemName: "xmark.circle.fill")
                                                 .font(.system(size: 16))
-                                                .foregroundColor(MovefullyTheme.Colors.textTertiary)
+                                                .foregroundColor(canRemove ? MovefullyTheme.Colors.textTertiary : MovefullyTheme.Colors.textTertiary.opacity(0.3))
                                         }
+                                        .disabled(!canRemove)
                                     }
                                     .padding(.horizontal, MovefullyTheme.Layout.paddingM)
                                     .padding(.vertical, MovefullyTheme.Layout.paddingS)
@@ -456,11 +505,16 @@ struct EditProfileView: View {
                                 }
                             }
                             
-                            AddSpecialtyButton(
-                                canAddMore: viewModel.profileSpecialties.count < viewModel.maxSpecialties,
-                                maxSpecialties: viewModel.maxSpecialties,
-                                onTap: { showingAddSpecialtyAlert = true }
+                            ChangeSpecialtiesButton(
+                                onTap: { viewModel.showingSpecialtySelection = true }
                             )
+                            
+                            if viewModel.profileSpecialties.count == viewModel.minSpecialties {
+                                Text("Minimum \(viewModel.minSpecialties) specialties required")
+                                    .font(MovefullyTheme.Typography.caption)
+                                    .foregroundColor(MovefullyTheme.Colors.textTertiary)
+                                    .italic()
+                            }
                         }
                     }
                     
@@ -492,19 +546,8 @@ struct EditProfileView: View {
                         .foregroundColor(MovefullyTheme.Colors.primaryTeal)
                 }
             }
-            .alert("Add Specialty", isPresented: $showingAddSpecialtyAlert) {
-                TextField("Enter specialty", text: $newSpecialty)
-                Button("Add") {
-                    if !newSpecialty.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        viewModel.addSpecialty(newSpecialty.trimmingCharacters(in: .whitespacesAndNewlines))
-                        newSpecialty = ""
-                    }
-                }
-                Button("Cancel", role: .cancel) {
-                    newSpecialty = ""
-                }
-            } message: {
-                Text("Enter a specialty to add to your profile")
+            .sheet(isPresented: $viewModel.showingSpecialtySelection) {
+                SpecialtySelectionView(viewModel: viewModel)
             }
         }
     }
@@ -540,32 +583,23 @@ struct ProfileEditField: View {
     }
 }
 
-struct AddSpecialtyButton: View {
-    let canAddMore: Bool
-    let maxSpecialties: Int
+struct ChangeSpecialtiesButton: View {
     let onTap: () -> Void
     
     var body: some View {
-        if canAddMore {
-            Button("Add Specialty") {
-                onTap()
-            }
-            .font(MovefullyTheme.Typography.caption)
-            .foregroundColor(MovefullyTheme.Colors.primaryTeal)
-            .padding(.horizontal, MovefullyTheme.Layout.paddingM)
-            .padding(.vertical, MovefullyTheme.Layout.paddingS)
-            .background(MovefullyTheme.Colors.primaryTeal.opacity(0.1))
-            .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
-            .overlay(
-                RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM)
-                    .stroke(MovefullyTheme.Colors.primaryTeal.opacity(0.3), lineWidth: 1)
-            )
-        } else {
-            Text("Maximum \(maxSpecialties) specialties reached")
-                .font(MovefullyTheme.Typography.caption)
-                .foregroundColor(MovefullyTheme.Colors.textTertiary)
-                .italic()
+        Button("Change Specialties") {
+            onTap()
         }
+        .font(MovefullyTheme.Typography.caption)
+        .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+        .padding(.horizontal, MovefullyTheme.Layout.paddingM)
+        .padding(.vertical, MovefullyTheme.Layout.paddingS)
+        .background(MovefullyTheme.Colors.primaryTeal.opacity(0.1))
+        .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
+        .overlay(
+            RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM)
+                .stroke(MovefullyTheme.Colors.primaryTeal.opacity(0.3), lineWidth: 1)
+        )
     }
 }
 
@@ -619,10 +653,11 @@ struct ProfileEditFieldWithLimit: View {
 
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var notificationsEnabled = true
-    @State private var emailUpdates = true
-    @State private var biometricAuth = true
-    @State private var dataSharing = false
+    @ObservedObject var viewModel: TrainerProfileViewModel
+    
+    init(viewModel: TrainerProfileViewModel) {
+        self.viewModel = viewModel
+    }
     
     var body: some View {
         NavigationStack {
@@ -643,18 +678,18 @@ struct SettingsView: View {
                     
                     // Settings Sections
                     VStack(spacing: MovefullyTheme.Layout.paddingL) {
-                        SettingsSection(title: "Notifications", icon: "bell") {
+                        SettingsSection(title: "Push Notifications", icon: "bell") {
                             VStack(spacing: MovefullyTheme.Layout.paddingM) {
                                 MovefullyToggleField(
                                     title: "Push Notifications",
-                                    subtitle: "Get notified about client activity and messages",
-                                    isOn: $notificationsEnabled
+                                    subtitle: "",
+                                    isOn: $viewModel.notificationsEnabled
                                 )
-                                MovefullyToggleField(
-                                    title: "Email Updates",
-                                    subtitle: "Receive weekly summaries and updates",
-                                    isOn: $emailUpdates
-                                )
+                                .onChange(of: viewModel.notificationsEnabled) { _ in
+                                    Task {
+                                        await viewModel.saveSettings()
+                                    }
+                                }
                             }
                         }
                         
@@ -662,34 +697,10 @@ struct SettingsView: View {
                             MovefullyThemePicker()
                         }
                         
-                        SettingsSection(title: "Security", icon: "lock.shield") {
-                            VStack(spacing: MovefullyTheme.Layout.paddingM) {
-                                MovefullyToggleField(
-                                    title: "Biometric Authentication",
-                                    subtitle: "Use Touch ID or Face ID to unlock",
-                                    isOn: $biometricAuth
-                                )
-                                
-                                MovefullyActionRow(
-                                    title: "Change Password",
-                                    icon: "key"
-                                ) {
-                                    // Handle password change
-                                }
-                                
-                                MovefullyActionRow(
-                                    title: "Two-Factor Authentication",
-                                    icon: "shield.checkered"
-                                ) {
-                                    // Handle 2FA setup
-                                }
-                            }
-                        }
+
                         
                         SettingsSection(title: "Privacy", icon: "hand.raised") {
                             VStack(spacing: MovefullyTheme.Layout.paddingM) {
-                                SettingsToggle(title: "Anonymous Usage Data", subtitle: "Help improve Movefully by sharing anonymous data", isOn: $dataSharing)
-                                
                                 SettingsActionRow(title: "Privacy Policy", icon: "doc.text", isDanger: false, action: {
                                     // Handle privacy policy
                                 })
@@ -703,10 +714,6 @@ struct SettingsView: View {
                         // Danger Zone
                         SettingsSection(title: "Account", icon: "person.circle", isDanger: true) {
                             VStack(spacing: MovefullyTheme.Layout.paddingM) {
-                                SettingsActionRow(title: "Export Data", icon: "square.and.arrow.up", isDanger: true, action: {
-                                    // Handle data export
-                                })
-                                
                                 SettingsActionRow(title: "Delete Account", icon: "trash", isDanger: true, action: {
                                     // Handle account deletion
                                 })
@@ -1280,6 +1287,166 @@ struct QRCodeView: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - Specialty Selection View
+
+struct SpecialtySelectionView: View {
+    @ObservedObject var viewModel: TrainerProfileViewModel
+    @Environment(\.dismiss) private var dismiss
+    @State private var tempSelectedSpecialties: Set<String> = []
+    
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: MovefullyTheme.Layout.paddingL) {
+                    // Header
+                    VStack(spacing: MovefullyTheme.Layout.paddingM) {
+                        Text("Select Specialties")
+                            .font(MovefullyTheme.Typography.title2)
+                            .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                        
+                        Text("Choose your areas of expertise")
+                            .font(MovefullyTheme.Typography.body)
+                            .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding(.top, MovefullyTheme.Layout.paddingL)
+                    
+                    // All specialties list
+                    VStack(spacing: MovefullyTheme.Layout.paddingS) {
+                        ForEach(MovefullyConstants.availableSpecialties, id: \.self) { specialty in
+                            SpecialtyToggleRow(
+                                specialty: specialty,
+                                isSelected: tempSelectedSpecialties.contains(specialty),
+                                canSelect: tempSelectedSpecialties.count < viewModel.maxSpecialties,
+                                canDeselect: tempSelectedSpecialties.count > viewModel.minSpecialties,
+                                onToggle: {
+                                    toggleSpecialty(specialty)
+                                }
+                            )
+                        }
+                    }
+                    
+                    // Selection info
+                    VStack(spacing: MovefullyTheme.Layout.paddingS) {
+                        Text("Selected: \(tempSelectedSpecialties.count)/\(viewModel.maxSpecialties)")
+                            .font(MovefullyTheme.Typography.caption)
+                            .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                        
+                        if tempSelectedSpecialties.count == viewModel.minSpecialties {
+                            Text("Minimum \(viewModel.minSpecialties) specialties required")
+                                .font(MovefullyTheme.Typography.caption)
+                                .foregroundColor(MovefullyTheme.Colors.textTertiary)
+                                .italic()
+                        } else if tempSelectedSpecialties.count >= viewModel.maxSpecialties {
+                            Text("Maximum specialties reached")
+                                .font(MovefullyTheme.Typography.caption)
+                                .foregroundColor(MovefullyTheme.Colors.warmOrange)
+                                .italic()
+                        }
+                    }
+                    .padding(.top, MovefullyTheme.Layout.paddingM)
+                }
+                .padding(.horizontal, MovefullyTheme.Layout.paddingXL)
+                .padding(.bottom, MovefullyTheme.Layout.paddingXL)
+            }
+            .movefullyBackground()
+            .navigationTitle("Specialties")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") { 
+                        dismiss() 
+                    }
+                    .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Save") { 
+                        // Update the profile with selected specialties
+                        viewModel.profileSpecialties = Array(tempSelectedSpecialties)
+                        dismiss() 
+                    }
+                    .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+                }
+            }
+        }
+        .onAppear {
+            // Initialize with current profile specialties
+            tempSelectedSpecialties = Set(viewModel.profileSpecialties)
+        }
+    }
+    
+    private func toggleSpecialty(_ specialty: String) {
+        if tempSelectedSpecialties.contains(specialty) {
+            // Only allow deselection if we have more than the minimum
+            if tempSelectedSpecialties.count > viewModel.minSpecialties {
+                tempSelectedSpecialties.remove(specialty)
+            }
+        } else if tempSelectedSpecialties.count < viewModel.maxSpecialties {
+            tempSelectedSpecialties.insert(specialty)
+        }
+    }
+}
+
+struct SpecialtyToggleRow: View {
+    let specialty: String
+    let isSelected: Bool
+    let canSelect: Bool
+    let canDeselect: Bool
+    let onToggle: () -> Void
+    
+    var body: some View {
+        Button(action: {
+            if (isSelected && canDeselect) || (!isSelected && canSelect) {
+                onToggle()
+            }
+        }) {
+            HStack(spacing: MovefullyTheme.Layout.paddingM) {
+                // Selection indicator
+                ZStack {
+                    Circle()
+                        .stroke(
+                            isSelected ? MovefullyTheme.Colors.primaryTeal : MovefullyTheme.Colors.textTertiary.opacity(0.3),
+                            lineWidth: 2
+                        )
+                        .frame(width: 24, height: 24)
+                    
+                    if isSelected {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+                    }
+                }
+                
+                Text(specialty)
+                    .font(MovefullyTheme.Typography.body)
+                    .foregroundColor(
+                        isSelected ? MovefullyTheme.Colors.primaryTeal : 
+                        canSelect ? MovefullyTheme.Colors.textPrimary : MovefullyTheme.Colors.textTertiary
+                    )
+                    .multilineTextAlignment(.leading)
+                
+                Spacer()
+            }
+            .padding(MovefullyTheme.Layout.paddingL)
+            .background(
+                isSelected ? MovefullyTheme.Colors.primaryTeal.opacity(0.1) : MovefullyTheme.Colors.cardBackground
+            )
+            .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
+            .overlay(
+                RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM)
+                    .stroke(
+                        isSelected ? MovefullyTheme.Colors.primaryTeal : Color.clear,
+                        lineWidth: isSelected ? 1 : 0
+                    )
+            )
+            .shadow(color: MovefullyTheme.Effects.cardShadow, radius: 2, x: 0, y: 1)
+        }
+        .buttonStyle(PlainButtonStyle())
+        .disabled((!canSelect && !isSelected) || (isSelected && !canDeselect))
     }
 }
 

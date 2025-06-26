@@ -327,7 +327,7 @@ class ClientDetailViewModel: ObservableObject {
         Task {
             do {
                 // For pending clients, the client.id is actually the invitation ID
-                let invitation = try await invitationService.getInvitationDetails(invitationId: client.id)
+                let invitation = try await invitationService.validateInvitation(invitationId: client.id)
                 
                 await MainActor.run {
                     self.invitationDetails = invitation

@@ -491,6 +491,7 @@ struct MovefullyEmptyState: View {
     let title: String
     let description: String
     let actionButton: ActionButton?
+    @ObservedObject private var themeManager = ThemeManager.shared
     
     struct ActionButton {
         let title: String
@@ -547,6 +548,7 @@ struct MovefullyEmptyState: View {
 // MARK: - Loading State Component
 struct MovefullyLoadingState: View {
     let message: String
+    @ObservedObject private var themeManager = ThemeManager.shared
     
     var body: some View {
         VStack(spacing: MovefullyTheme.Layout.paddingL) {
@@ -1425,4 +1427,322 @@ struct SmartAlertCard: View {
                 }
         )
     }
+}
+
+// MARK: - Bootstrap Loading Component
+struct MovefullyBootstrapLoadingView: View {
+    let bootstrapService: UserBootstrapService
+    
+    @State private var pulseAnimation = false
+    @State private var rotationAnimation = false
+    @State private var scaleAnimation = false
+    
+    var body: some View {
+        VStack(spacing: MovefullyTheme.Layout.paddingL) {
+            // Adaptive animation based on user context
+            ZStack {
+                // Background circle with context-aware pulsing
+                Circle()
+                    .fill(backgroundGradient)
+                    .frame(width: circleSize.large, height: circleSize.large)
+                    .scaleEffect(pulseAnimation ? 1.1 : 1.0)
+                    .animation(pulseAnimationStyle, value: pulseAnimation)
+                
+                // Rotating ring (intensity varies by context)
+                if shouldShowRotatingRing {
+                    Circle()
+                        .stroke(ringGradient, style: ringStyle)
+                        .frame(width: circleSize.medium, height: circleSize.medium)
+                        .rotationEffect(.degrees(rotationAnimation ? 360 : 0))
+                        .animation(rotationAnimationStyle, value: rotationAnimation)
+                }
+                
+                // Central icon with context-aware scaling
+                Image(systemName: centralIcon)
+                    .font(.system(size: iconSize, weight: .medium))
+                    .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+                    .scaleEffect(scaleAnimation ? 1.05 : 1.0)
+                    .animation(scaleAnimationStyle, value: scaleAnimation)
+            }
+            
+            // Context-aware messaging
+            if shouldShowMessage {
+                VStack(spacing: MovefullyTheme.Layout.paddingS) {
+                    Text(bootstrapService.progressText)
+                        .font(titleFont)
+                        .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                        .multilineTextAlignment(.center)
+                        .animation(.easeInOut(duration: 0.3), value: bootstrapService.progressText)
+                    
+                    if let secondaryText = secondaryMessage {
+                        Text(secondaryText)
+                            .font(MovefullyTheme.Typography.body)
+                            .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, MovefullyTheme.Layout.paddingL)
+                            .opacity(0.8)
+                    }
+                }
+            }
+        }
+        .padding(containerPadding)
+        .background(
+            RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusL)
+                .fill(MovefullyTheme.Colors.cardBackground)
+                .shadow(
+                    color: shadowColor,
+                    radius: shadowRadius,
+                    x: 0,
+                    y: shadowOffset
+                )
+                .opacity(containerOpacity)
+        )
+        .padding(.horizontal, MovefullyTheme.Layout.paddingL)
+        .onAppear {
+            startAnimations()
+        }
+        .onChange(of: bootstrapService.bootstrapPhase) { _ in
+            updateAnimationsForPhase()
+        }
+    }
+}
+
+// MARK: - Bootstrap Loading Computed Properties
+
+private extension MovefullyBootstrapLoadingView {
+    var animationIntensity: AnimationIntensity {
+        switch bootstrapService.userContext {
+        case .firstTimeSignUp: return .full
+        case .firstTimeSignIn: return .medium
+        case .returningUser: return .light
+        case .quickRelaunch: return .minimal
+        }
+    }
+    
+    var shouldShowMessage: Bool {
+        switch animationIntensity {
+        case .minimal: return false
+        default: return true
+        }
+    }
+    
+    var shouldShowRotatingRing: Bool {
+        switch animationIntensity {
+        case .minimal: return false
+        default: return true
+        }
+    }
+    
+    var circleSize: (large: CGFloat, medium: CGFloat) {
+        switch animationIntensity {
+        case .full: return (120, 100)
+        case .medium: return (100, 80)
+        case .light: return (80, 60)
+        case .minimal: return (60, 40)
+        }
+    }
+    
+    var iconSize: CGFloat {
+        switch animationIntensity {
+        case .full: return 32
+        case .medium: return 28
+        case .light: return 24
+        case .minimal: return 20
+        }
+    }
+    
+    var titleFont: Font {
+        switch animationIntensity {
+        case .full: return MovefullyTheme.Typography.title3
+        case .medium: return MovefullyTheme.Typography.title2
+        case .light: return MovefullyTheme.Typography.bodyMedium
+        case .minimal: return MovefullyTheme.Typography.body
+        }
+    }
+    
+    var containerPadding: CGFloat {
+        switch animationIntensity {
+        case .full: return MovefullyTheme.Layout.paddingXL
+        case .medium: return MovefullyTheme.Layout.paddingL
+        case .light: return MovefullyTheme.Layout.paddingM
+        case .minimal: return MovefullyTheme.Layout.paddingS
+        }
+    }
+    
+    var containerOpacity: Double {
+        switch animationIntensity {
+        case .minimal: return 0.0  // No background for minimal
+        default: return 1.0
+        }
+    }
+    
+    var shadowRadius: CGFloat {
+        switch animationIntensity {
+        case .full: return 20
+        case .medium: return 15
+        case .light: return 10
+        case .minimal: return 0
+        }
+    }
+    
+    var shadowOffset: CGFloat {
+        switch animationIntensity {
+        case .full: return 10
+        case .medium: return 8
+        case .light: return 6
+        case .minimal: return 0
+        }
+    }
+    
+    var shadowColor: Color {
+        animationIntensity == .minimal ? .clear : MovefullyTheme.Effects.cardShadow
+    }
+    
+    var backgroundGradient: LinearGradient {
+        switch bootstrapService.bootstrapPhase {
+        case .authenticating:
+            return LinearGradient(
+                colors: [
+                    MovefullyTheme.Colors.primaryTeal.opacity(0.15),
+                    MovefullyTheme.Colors.warmOrange.opacity(0.08)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        case .settingUpWorkspace:
+            return LinearGradient(
+                colors: [
+                    MovefullyTheme.Colors.gentleBlue.opacity(0.12),
+                    MovefullyTheme.Colors.primaryTeal.opacity(0.08)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        default:
+            return LinearGradient(
+                colors: [
+                    MovefullyTheme.Colors.primaryTeal.opacity(0.1),
+                    MovefullyTheme.Colors.gentleBlue.opacity(0.05)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        }
+    }
+    
+    var ringGradient: LinearGradient {
+        LinearGradient(
+            colors: [
+                MovefullyTheme.Colors.primaryTeal,
+                MovefullyTheme.Colors.gentleBlue,
+                MovefullyTheme.Colors.primaryTeal.opacity(0.3)
+            ],
+            startPoint: .leading,
+            endPoint: .trailing
+        )
+    }
+    
+    var ringStyle: StrokeStyle {
+        let lineWidth: CGFloat = animationIntensity == .full ? 3 : 2
+        return StrokeStyle(lineWidth: lineWidth, lineCap: .round, dash: [8, 4])
+    }
+    
+    var centralIcon: String {
+        switch bootstrapService.bootstrapPhase {
+        case .authenticating:
+            return "figure.mind.and.body"
+        case .settingUpWorkspace:
+            return "gearshape.2"
+        case .loadingWellnessData:
+            return "heart.text.square"
+        default:
+            return "figure.mind.and.body"
+        }
+    }
+    
+    var secondaryMessage: String? {
+        switch (bootstrapService.userContext, bootstrapService.bootstrapPhase) {
+        case (.firstTimeSignUp, .authenticating):
+            return "Taking a mindful moment to set up your wellness journey..."
+        case (.firstTimeSignUp, .settingUpWorkspace):
+            return "Creating your personalized coaching environment..."
+        case (.firstTimeSignUp, .loadingWellnessData):
+            return "Preparing everything for your wellness goals..."
+        case (.firstTimeSignIn, .settingUpWorkspace):
+            return "Restoring your wellness profile..."
+        case (.firstTimeSignIn, .loadingWellnessData):
+            return "Syncing your latest progress..."
+        case (.returningUser, .loadingWellnessData):
+            return "Refreshing your wellness data..."
+        default:
+            return nil
+        }
+    }
+    
+    // Animation styles based on intensity
+    var pulseAnimationStyle: Animation {
+        switch animationIntensity {
+        case .full: return .easeInOut(duration: 2.0).repeatForever(autoreverses: true)
+        case .medium: return .easeInOut(duration: 1.8).repeatForever(autoreverses: true)
+        case .light: return .easeInOut(duration: 1.5).repeatForever(autoreverses: true)
+        case .minimal: return .easeInOut(duration: 1.2).repeatForever(autoreverses: true)
+        }
+    }
+    
+    var rotationAnimationStyle: Animation {
+        switch animationIntensity {
+        case .full: return .linear(duration: 3.0).repeatForever(autoreverses: false)
+        case .medium: return .linear(duration: 2.5).repeatForever(autoreverses: false)
+        case .light: return .linear(duration: 2.0).repeatForever(autoreverses: false)
+        case .minimal: return .linear(duration: 1.5).repeatForever(autoreverses: false)
+        }
+    }
+    
+    var scaleAnimationStyle: Animation {
+        switch animationIntensity {
+        case .full: return .easeInOut(duration: 1.0).repeatForever(autoreverses: true)
+        case .medium: return .easeInOut(duration: 0.8).repeatForever(autoreverses: true)
+        case .light: return .easeInOut(duration: 0.6).repeatForever(autoreverses: true)
+        case .minimal: return .easeInOut(duration: 0.4).repeatForever(autoreverses: true)
+        }
+    }
+}
+
+// MARK: - Bootstrap Loading Animation Control
+
+private extension MovefullyBootstrapLoadingView {
+    func startAnimations() {
+        pulseAnimation = true
+        
+        if shouldShowRotatingRing {
+            rotationAnimation = true
+        }
+        
+        // Delay scale animation slightly for better visual flow
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            scaleAnimation = true
+        }
+    }
+    
+    func updateAnimationsForPhase() {
+        // Restart animations with phase-specific timing
+        withAnimation(.easeInOut(duration: 0.3)) {
+            pulseAnimation = false
+            rotationAnimation = false
+            scaleAnimation = false
+        }
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            startAnimations()
+        }
+    }
+}
+
+// MARK: - Animation Intensity Enum
+
+enum AnimationIntensity {
+    case full       // First-time sign up - full experience
+    case medium     // First-time sign in - welcoming but efficient
+    case light      // Returning user - friendly but quick
+    case minimal    // Quick relaunch - just enough to feel intentional
 }

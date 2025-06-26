@@ -33,6 +33,12 @@
 		2748D6CA2E065C9A00C01F1C /* OnboardingFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2748D6C22E065C9A00C01F1C /* OnboardingFlowView.swift */; };
 		2748D6CC2E065EC100C01F1C /* AccountCreationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2748D6CB2E065EC100C01F1C /* AccountCreationView.swift */; };
 		2748D6CE2E06E7D600C01F1C /* EmailSignUpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2748D6CD2E06E7D600C01F1C /* EmailSignUpView.swift */; };
+		2748D6D02E06FF0700C01F1C /* SignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2748D6CF2E06FF0700C01F1C /* SignInView.swift */; };
+		2748D6D42E06FFA200C01F1C /* EmailSignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2748D6D22E06FFA200C01F1C /* EmailSignInView.swift */; };
+		276A570C2E0CE65300FE89C8 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = 81A1B3062B8F239000D2C4A1 /* FirebaseMessaging */; };
+		276A570E2E0CE65B00FE89C8 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 276A570D2E0CE65B00FE89C8 /* NotificationService.swift */; };
+		276A57102E0CE78900FE89C8 /* NotificationPermissionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 276A570F2E0CE78900FE89C8 /* NotificationPermissionView.swift */; };
+		276A57122E0CFD9D00FE89C8 /* TrainerDeletionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 276A57112E0CFD9D00FE89C8 /* TrainerDeletionService.swift */; };
 		277995032DEB94BC002C32C6 /* MovefullyComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 277995012DEB94BB002C32C6 /* MovefullyComponents.swift */; };
 		277995042DEB94BC002C32C6 /* MovefullyLayouts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 277995022DEB94BB002C32C6 /* MovefullyLayouts.swift */; };
 		278308402DF2555A00AC3717 /* ReadOnlyClientProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2783083F2DF2555A00AC3717 /* ReadOnlyClientProfileView.swift */; };
@@ -62,6 +68,7 @@
 		27E3E5432DF2014000054DD4 /* ClientManagementViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27E3E5402DF2014000054DD4 /* ClientManagementViewModel.swift */; };
 		27E3E5442DF2014000054DD4 /* TrainerOnboardingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27E3E5412DF2014000054DD4 /* TrainerOnboardingViewModel.swift */; };
 		27E3E5452DF2014000054DD4 /* WorkoutPlansViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27E3E5422DF2014000054DD4 /* WorkoutPlansViewModel.swift */; };
+		27EC7D462E0C88C5001EB161 /* UserBootstrapService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27EC7D452E0C88C5001EB161 /* UserBootstrapService.swift */; };
 		81A1B2E52B8F234500D2C4A1 /* MovefullyApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81A1B2E42B8F234500D2C4A1 /* MovefullyApp.swift */; };
 		81A1B2E72B8F234500D2C4A1 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81A1B2E62B8F234500D2C4A1 /* ContentView.swift */; };
 		81A1B2E92B8F234700D2C4A1 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 81A1B2E82B8F234700D2C4A1 /* Assets.xcassets */; };
@@ -118,6 +125,11 @@
 		2748D6C42E065C9A00C01F1C /* WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
 		2748D6CB2E065EC100C01F1C /* AccountCreationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountCreationView.swift; sourceTree = "<group>"; };
 		2748D6CD2E06E7D600C01F1C /* EmailSignUpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmailSignUpView.swift; sourceTree = "<group>"; };
+		2748D6CF2E06FF0700C01F1C /* SignInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInView.swift; sourceTree = "<group>"; };
+		2748D6D22E06FFA200C01F1C /* EmailSignInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmailSignInView.swift; sourceTree = "<group>"; };
+		276A570D2E0CE65B00FE89C8 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
+		276A570F2E0CE78900FE89C8 /* NotificationPermissionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationPermissionView.swift; sourceTree = "<group>"; };
+		276A57112E0CFD9D00FE89C8 /* TrainerDeletionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainerDeletionService.swift; sourceTree = "<group>"; };
 		277995012DEB94BB002C32C6 /* MovefullyComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovefullyComponents.swift; sourceTree = "<group>"; };
 		277995022DEB94BB002C32C6 /* MovefullyLayouts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovefullyLayouts.swift; sourceTree = "<group>"; };
 		2783083F2DF2555A00AC3717 /* ReadOnlyClientProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadOnlyClientProfileView.swift; sourceTree = "<group>"; };
@@ -147,6 +159,7 @@
 		27E3E5402DF2014000054DD4 /* ClientManagementViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClientManagementViewModel.swift; sourceTree = "<group>"; };
 		27E3E5412DF2014000054DD4 /* TrainerOnboardingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainerOnboardingViewModel.swift; sourceTree = "<group>"; };
 		27E3E5422DF2014000054DD4 /* WorkoutPlansViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutPlansViewModel.swift; sourceTree = "<group>"; };
+		27EC7D452E0C88C5001EB161 /* UserBootstrapService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserBootstrapService.swift; sourceTree = "<group>"; };
 		31C7DF84D2C71F4A2907639C /* ExerciseLibraryViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ExerciseLibraryViewModel.swift; sourceTree = "<group>"; };
 		3B9F6A32024867A9616E293B /* MovefullyTheme.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MovefullyTheme.swift; sourceTree = "<group>"; };
 		62ECB63FEBBF37A30E7086E5 /* MessagesViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MessagesViewModel.swift; sourceTree = "<group>"; };
@@ -179,6 +192,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				276A570C2E0CE65300FE89C8 /* FirebaseMessaging in Frameworks */,
 				81A1B3012B8F239000D2C4A1 /* FirebaseAuth in Frameworks */,
 				81A1B3032B8F239000D2C4A1 /* FirebaseFirestore in Frameworks */,
 				81A1B3052B8F239000D2C4A1 /* FirebaseStorage in Frameworks */,
@@ -199,6 +213,8 @@
 		2748D6C52E065C9A00C01F1C /* Onboarding */ = {
 			isa = PBXGroup;
 			children = (
+				2748D6D22E06FFA200C01F1C /* EmailSignInView.swift */,
+				2748D6CF2E06FF0700C01F1C /* SignInView.swift */,
 				2748D6CD2E06E7D600C01F1C /* EmailSignUpView.swift */,
 				2748D6CB2E065EC100C01F1C /* AccountCreationView.swift */,
 				2748D6C02E065C9A00C01F1C /* FeatureHighlightsView.swift */,
@@ -277,6 +293,7 @@
 		81A1B3062B8F239700D2C4A1 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				276A570F2E0CE78900FE89C8 /* NotificationPermissionView.swift */,
 				2748D6C52E065C9A00C01F1C /* Onboarding */,
 				2706F7462DFDA2A9005B80A6 /* WorkoutReviewView.swift */,
 				27B8AFA02DFA484E003DF5AC /* SupportContactView.swift */,
@@ -312,6 +329,9 @@
 		BFED21CB2DF5E5EC00D7D2A9 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				276A57112E0CFD9D00FE89C8 /* TrainerDeletionService.swift */,
+				276A570D2E0CE65B00FE89C8 /* NotificationService.swift */,
+				27EC7D452E0C88C5001EB161 /* UserBootstrapService.swift */,
 				2790A3422DFF61390042F63D /* ClientDeletionService.swift */,
 				2790A3402DFDF1890042F63D /* ProgressDataCacheService.swift */,
 				2706F74E2DFDCF20005B80A6 /* ClientProgressService.swift */,
@@ -369,6 +389,7 @@
 				81A1B3002B8F239000D2C4A1 /* FirebaseAuth */,
 				81A1B3022B8F239000D2C4A1 /* FirebaseFirestore */,
 				81A1B3042B8F239000D2C4A1 /* FirebaseStorage */,
+				81A1B3062B8F239000D2C4A1 /* FirebaseMessaging */,
 			);
 			productName = Movefully;
 			productReference = 81A1B2E12B8F234500D2C4A1 /* Movefully.app */;
@@ -471,12 +492,14 @@
 				277995042DEB94BC002C32C6 /* MovefullyLayouts.swift in Sources */,
 				2706F7472DFDA2A9005B80A6 /* WorkoutReviewView.swift in Sources */,
 				81A1B2FC2B8F237900D2C4A1 /* ClientDashboardView.swift in Sources */,
+				2748D6D02E06FF0700C01F1C /* SignInView.swift in Sources */,
 				27E3E5432DF2014000054DD4 /* ClientManagementViewModel.swift in Sources */,
 				BF3E77122DF609F700675D2E /* ProgramDataService.swift in Sources */,
 				27E3E5442DF2014000054DD4 /* TrainerOnboardingViewModel.swift in Sources */,
 				27E3E5452DF2014000054DD4 /* WorkoutPlansViewModel.swift in Sources */,
 				273B79172DEB9C1100F755A6 /* ClientViewModel.swift in Sources */,
 				2742EEAC2DFB82C400908B9D /* WorkoutDataCacheService.swift in Sources */,
+				276A570E2E0CE65B00FE89C8 /* NotificationService.swift in Sources */,
 				278308402DF2555A00AC3717 /* ReadOnlyClientProfileView.swift in Sources */,
 				2789D1152DED367A004A1D27 /* ClientViewTrainerProfileView.swift in Sources */,
 				273B79192DEB9C1100F755A6 /* ClientDetailViewModel.swift in Sources */,
@@ -485,6 +508,7 @@
 				270D43752DF7CBDC008ACE70 /* URLHandlingService.swift in Sources */,
 				2700D2C62DF938DD00D51463 /* ProgressHistoryService.swift in Sources */,
 				27E3E5382DF2013800054DD4 /* TrainerProfileView.swift in Sources */,
+				27EC7D462E0C88C5001EB161 /* UserBootstrapService.swift in Sources */,
 				27B8AF932DFA1592003DF5AC /* MessagesService.swift in Sources */,
 				27B8AFA32DFB2C2A003DF5AC /* ClientWorkoutAssignmentService.swift in Sources */,
 				27E3E5392DF2013800054DD4 /* ClientDetailView.swift in Sources */,
@@ -493,7 +517,9 @@
 				27E3E53B2DF2013800054DD4 /* PlansManagementView.swift in Sources */,
 				27B8AF9B2DFA4465003DF5AC /* TrainerDataService.swift in Sources */,
 				27E3E53C2DF2013800054DD4 /* TrainerOnboardingView.swift in Sources */,
+				2748D6D42E06FFA200C01F1C /* EmailSignInView.swift in Sources */,
 				27E3E53D2DF2013800054DD4 /* ClientManagementView.swift in Sources */,
+				276A57122E0CFD9D00FE89C8 /* TrainerDeletionService.swift in Sources */,
 				27E3E53E2DF2013800054DD4 /* TrainerMessagesView.swift in Sources */,
 				2790A3432DFF61390042F63D /* ClientDeletionService.swift in Sources */,
 				27E3E53F2DF2013800054DD4 /* WorkoutPlansView.swift in Sources */,
@@ -513,6 +539,7 @@
 				BFED21CC2DF5E5EC00D7D2A9 /* InvitationService.swift in Sources */,
 				2706F7452DFD2CE7005B80A6 /* WorkoutSessionPersistenceService.swift in Sources */,
 				271E191A2DEC9A5E00995368 /* DataModels.swift in Sources */,
+				276A57102E0CE78900FE89C8 /* NotificationPermissionView.swift in Sources */,
 				27B8AF912DF9E86D003DF5AC /* SmartAlertService.swift in Sources */,
 				2798A8FF2DECAF51006EE195 /* ClientProfileView.swift in Sources */,
 				2706F7492DFDB641005B80A6 /* ClientMessagesService.swift in Sources */,
@@ -658,6 +685,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION = YES;
 				CODE_SIGN_ENTITLEMENTS = Movefully/Movefully.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -666,6 +694,8 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Movefully/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Movefully;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -676,11 +706,13 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 0.5;
 				PRODUCT_BUNDLE_IDENTIFIER = com.movefully.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
@@ -692,6 +724,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION = YES;
 				CODE_SIGN_ENTITLEMENTS = Movefully/Movefully.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -700,6 +733,8 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Movefully/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Movefully;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -710,11 +745,13 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 0.5;
 				PRODUCT_BUNDLE_IDENTIFIER = com.movefully.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
@@ -770,6 +807,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 81A1B2FF2B8F239000D2C4A1 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseStorage;
+		};
+		81A1B3062B8F239000D2C4A1 /* FirebaseMessaging */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 81A1B2FF2B8F239000D2C4A1 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseMessaging;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

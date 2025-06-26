@@ -5,12 +5,8 @@ struct ProfileSetupView: View {
     @State private var animateContent = false
     
     
-    // Available specialties for trainers - optimized for single-line display
-    private let availableSpecialties = [
-        "Strength", "Cardio", "Yoga", "Pilates", "CrossFit",
-        "Groups", "Nutrition", "Weight Loss", "Hypertrophy", 
-        "Flexibility", "Recovery"
-    ]
+    // Use shared specialty list from constants
+    private let availableSpecialties = MovefullyConstants.availableSpecialties
     
     // Fitness levels for clients
     private let fitnessLevels = ["Beginner", "Intermediate", "Advanced"]
@@ -279,22 +275,44 @@ struct ProfileSetupView: View {
                         text: $coordinator.tempClientName
                     )
                     
+                    Divider()
+                    
                     // Fitness level section
                     VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingS) {
                         Text("Current Fitness Level")
                             .font(MovefullyTheme.Typography.bodyMedium)
                             .foregroundColor(MovefullyTheme.Colors.textPrimary)
                         
-                        Picker("Fitness Level", selection: $coordinator.tempFitnessLevel) {
+                        VStack(spacing: 0) {
                             ForEach(fitnessLevels, id: \.self) { level in
-                                Text(level).tag(level)
+                                Button(action: {
+                                    withAnimation(.easeInOut(duration: 0.3)) {
+                                        coordinator.tempFitnessLevel = level
+                                    }
+                                }) {
+                                    HStack {
+                                        Text(level)
+                                            .font(MovefullyTheme.Typography.body)
+                                            .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                                        Spacer()
+                                        if coordinator.tempFitnessLevel == level {
+                                            Image(systemName: "checkmark")
+                                                .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+                                                .transition(.opacity.combined(with: .scale))
+                                        }
+                                    }
+                                    .padding(.vertical, MovefullyTheme.Layout.paddingM)
+                                }
+                                if level != fitnessLevels.last {
+                                    Divider()
+                                }
                             }
                         }
-                        .pickerStyle(SegmentedPickerStyle())
                     }
                 }
                 .padding(MovefullyTheme.Layout.paddingL)
             }
+            .movefullyShadow()
         }
     }
     

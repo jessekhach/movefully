@@ -281,6 +281,9 @@ class ClientViewModel: ObservableObject {
     @Published var errorMessage: String? = nil
     @Published var assignmentsByWeek: [Int: [WorkoutAssignment]] = [:]
     
+    // Notification Settings
+    @Published var notificationsEnabled = true
+    
     // Services
     private let clientDataService = ClientDataService()
     let clientMessagesService = ClientMessagesService()
@@ -294,11 +297,11 @@ class ClientViewModel: ObservableObject {
     private let maxWeekOffset = 4
     
     init() {
-        // Initialize with sample data immediately to prevent empty state flash
-        currentClient = Client.sampleClients.first
+        // Set loading state instead of showing sample data
+        isLoading = true
         loadExerciseLibrary()
         
-        // Then load real data asynchronously
+        // Load real data asynchronously
         loadRealData()
     }
     
@@ -340,12 +343,14 @@ class ClientViewModel: ObservableObject {
             // Fetch the real client data using the authenticated user's ID
             let fetchedClient = try await clientDataService.fetchClient(clientId: currentUserId)
             currentClient = fetchedClient
+            loadNotificationSettings() // Load notification settings after client data is loaded
             print("✅ ClientViewModel: Successfully loaded client: \(fetchedClient.name)")
         } catch {
             print("❌ ClientViewModel: Failed to load client data: \(error)")
-            // Fallback to sample data for development
-            currentClient = Client.sampleClients.first
-            print("🔄 ClientViewModel: Using sample data as fallback")
+            await MainActor.run {
+                errorMessage = "Failed to load profile data"
+                isLoading = false
+            }
         }
     }
     
@@ -778,6 +783,37 @@ class ClientViewModel: ObservableObject {
         print("📸 ClientViewModel: Image compressed from \(originalSizeKB)KB to \(compressedSizeKB)KB")
         
         return compressedData
+    }
+    
+    // MARK: - Notification Settings
+    
+    func loadNotificationSettings() {
+        // Load notification setting from current client profile or default to true
+        notificationsEnabled = currentClient?.notificationsEnabled ?? true
+    }
+    
+    func saveNotificationSettings() async {
+        guard let clientId = currentClient?.id else {
+            print("❌ ClientViewModel: No client ID available for saving notification settings")
+            return
+        }
+        
+        do {
+            let fcmToken = currentClient?.fcmToken
+            try await clientDataService.updateNotificationSettings(
+                clientId: clientId,
+                enabled: notificationsEnabled,
+                fcmToken: fcmToken
+            )
+            
+            // Update local client data
+            currentClient?.notificationsEnabled = notificationsEnabled
+            
+            print("✅ ClientViewModel: Notification settings saved successfully")
+        } catch {
+            print("❌ ClientViewModel: Error saving notification settings: \(error.localizedDescription)")
+            errorMessage = error.localizedDescription
+        }
     }
 }
 

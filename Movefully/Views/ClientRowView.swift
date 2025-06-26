@@ -3,6 +3,7 @@ import SwiftUI
 struct ClientRowView: View {
     let client: Client
     @ObservedObject private var smartAlertService = SmartAlertService.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
     
     var body: some View {
         HStack(spacing: MovefullyTheme.Layout.paddingM) {

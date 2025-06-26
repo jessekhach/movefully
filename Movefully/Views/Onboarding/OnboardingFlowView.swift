@@ -14,9 +14,26 @@ struct OnboardingFlowView: View {
             case .profileSetup:
                 ProfileSetupView()
             case .authentication:
-                // Use the new, dedicated view for account creation in the onboarding flow
-                AccountCreationView()
-                    .environmentObject(authViewModel)
+                // Check if this is for sign-in or sign-up
+                if coordinator.isSignInFlow {
+                    if coordinator.showEmailSignIn {
+                        EmailSignInView()
+                            .environmentObject(authViewModel)
+                    } else {
+                        SignInView()
+                            .environmentObject(authViewModel)
+                    }
+                } else {
+                    // Check if we should show email sign up or account creation
+                    if coordinator.showEmailSignUp {
+                        EmailSignUpView()
+                            .environmentObject(authViewModel)
+                    } else {
+                        // Use the new, dedicated view for account creation in the onboarding flow
+                        AccountCreationView()
+                            .environmentObject(authViewModel)
+                    }
+                }
             case .complete:
                 OnboardingCompleteView()
             }

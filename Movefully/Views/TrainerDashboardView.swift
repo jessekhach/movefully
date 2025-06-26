@@ -3,6 +3,7 @@ import FirebaseAuth
 
 struct TrainerDashboardView: View {
     @EnvironmentObject var authViewModel: AuthenticationViewModel
+    @ObservedObject private var themeManager = ThemeManager.shared
     @State private var selectedTab = 0
     
     var body: some View {
@@ -49,29 +50,53 @@ struct TrainerDashboardView: View {
         }
         .accentColor(MovefullyTheme.Colors.primaryTeal)
         .onAppear {
-            // Customize tab bar appearance with soft theme
+            updateTabBarAppearance()
+        }
+        .onChange(of: themeManager.isDarkMode) { _ in
+            updateTabBarAppearance()
+        }
+        .onChange(of: themeManager.currentTheme) { _ in
+            updateTabBarAppearance()
+        }
+        .movefullyBackground()
+    }
+    
+    private func updateTabBarAppearance() {
+        DispatchQueue.main.async {
             let appearance = UITabBarAppearance()
             appearance.configureWithOpaqueBackground()
-            appearance.backgroundColor = UIColor(red: 0.98, green: 0.98, blue: 0.98, alpha: 1.0) // #FAFAFA
+            
+            // Use theme-aware colors that adapt to light/dark mode
+            let backgroundColor = themeManager.isDarkMode 
+                ? UIColor(red: 0.110, green: 0.110, blue: 0.118, alpha: 1.0) // Dark mode background
+                : UIColor(red: 0.980, green: 0.980, blue: 0.980, alpha: 1.0) // Light mode background
+            
+            let unselectedColor = themeManager.isDarkMode
+                ? UIColor(red: 0.557, green: 0.557, blue: 0.576, alpha: 1.0) // iOS tertiary text dark
+                : UIColor(red: 0.620, green: 0.620, blue: 0.620, alpha: 1.0) // Medium gray for light mode
+            
+            let selectedColor = UIColor(red: 0.337, green: 0.761, blue: 0.776, alpha: 1.0) // Primary teal - same in both modes
+            
+            appearance.backgroundColor = backgroundColor
             
             // Unselected item appearance
-            appearance.stackedLayoutAppearance.normal.iconColor = UIColor(red: 0.62, green: 0.62, blue: 0.62, alpha: 1.0)
+            appearance.stackedLayoutAppearance.normal.iconColor = unselectedColor
             appearance.stackedLayoutAppearance.normal.titleTextAttributes = [
-                .foregroundColor: UIColor(red: 0.62, green: 0.62, blue: 0.62, alpha: 1.0),
+                .foregroundColor: unselectedColor,
                 .font: UIFont.systemFont(ofSize: 10, weight: .medium)
             ]
             
-            // Selected item appearance - soft teal
-            appearance.stackedLayoutAppearance.selected.iconColor = UIColor(red: 0.34, green: 0.76, blue: 0.78, alpha: 1.0)
+            // Selected item appearance
+            appearance.stackedLayoutAppearance.selected.iconColor = selectedColor
             appearance.stackedLayoutAppearance.selected.titleTextAttributes = [
-                .foregroundColor: UIColor(red: 0.34, green: 0.76, blue: 0.78, alpha: 1.0),
+                .foregroundColor: selectedColor,
                 .font: UIFont.systemFont(ofSize: 10, weight: .semibold)
             ]
             
+            // Apply globally - this will affect all tab bars but ensures consistent theming
             UITabBar.appearance().standardAppearance = appearance
             UITabBar.appearance().scrollEdgeAppearance = appearance
         }
-        .movefullyBackground()
     }
 }
 

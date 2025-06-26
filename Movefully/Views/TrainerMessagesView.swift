@@ -3,22 +3,30 @@ import Foundation
 
 struct TrainerMessagesView: View {
     @StateObject private var viewModel = MessagesViewModel()
+    @ObservedObject private var themeManager = ThemeManager.shared
     
     var body: some View {
-        MovefullyTrainerNavigation(
-            title: "Conversations",
-            showProfileButton: false
-        ) {
-            // Search field - only show when there are conversations to search
-            if !viewModel.conversations.isEmpty {
-                MovefullySearchField(
-                    placeholder: "Search conversations...",
-                    text: $viewModel.searchText
-                )
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: MovefullyTheme.Layout.paddingL) {
+                    // Search field - only show when there are conversations to search
+                    if !viewModel.conversations.isEmpty {
+                        MovefullySearchField(
+                            placeholder: "Search conversations...",
+                            text: $viewModel.searchText
+                        )
+                    }
+                    
+                    // Messages content
+                    messagesContent
+                }
+                .padding(.horizontal, MovefullyTheme.Layout.paddingL)
+                .padding(.top, MovefullyTheme.Layout.paddingL)
+                .padding(.bottom, MovefullyTheme.Layout.paddingXXL)
             }
-            
-            // Messages content
-            messagesContent
+            .background(MovefullyTheme.Colors.backgroundPrimary)
+            .navigationTitle("Conversations")
+            .navigationBarTitleDisplayMode(.large)
         }
     }
     
