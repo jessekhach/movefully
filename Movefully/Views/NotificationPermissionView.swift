@@ -98,21 +98,13 @@ struct NotificationPermissionView: View {
             }
             .padding(.horizontal, MovefullyTheme.Layout.paddingL)
             
-            // Action buttons
-            VStack(spacing: MovefullyTheme.Layout.paddingM) {
-                Button("Enable Notifications") {
-                    NotificationService.shared.requestNotificationPermission()
-                    onPermissionGranted()
-                    dismiss()
-                }
-                .movefullyButtonStyle(.primary)
-                
-                Button("Not Now") {
-                    onPermissionDenied()
-                    dismiss()
-                }
-                .movefullyButtonStyle(.tertiary)
+            // Action button
+            Button("Sounds Good") {
+                NotificationService.shared.requestNotificationPermission()
+                onPermissionGranted()
+                dismiss()
             }
+            .movefullyButtonStyle(.primary)
         }
         .padding(.horizontal, MovefullyTheme.Layout.paddingXL)
         .padding(.vertical, MovefullyTheme.Layout.paddingXL)

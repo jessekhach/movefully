@@ -646,6 +646,7 @@ struct ClientEditSection<Content: View>: View {
 struct ClientNotificationSettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var clientViewModel: ClientViewModel
+    @State private var iosPermissionGranted = true
     
     var body: some View {
         NavigationStack {
@@ -673,10 +674,22 @@ struct ClientNotificationSettingsView: View {
                                     subtitle: "", 
                                     isOn: $clientViewModel.notificationsEnabled
                                 )
+                                .disabled(!iosPermissionGranted)
                                 .onChange(of: clientViewModel.notificationsEnabled) { _ in
                                     Task {
                                         await clientViewModel.saveNotificationSettings()
                                     }
+                                }
+                                
+                                if !iosPermissionGranted {
+                                    Button("Enable in iPhone Settings") {
+                                        if let settingsUrl = URL(string: UIApplication.openSettingsURLString) {
+                                            UIApplication.shared.open(settingsUrl)
+                                        }
+                                    }
+                                    .font(MovefullyTheme.Typography.callout)
+                                    .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
                                 }
                             }
                         }

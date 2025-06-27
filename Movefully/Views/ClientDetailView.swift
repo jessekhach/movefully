@@ -175,6 +175,7 @@ struct ClientDetailView: View {
                     refreshClientData()
                 }
         }
+
         .sheet(isPresented: $showingPlanOptionsSheet) {
             PlanOptionsSheet(client: currentClient) { option in
                 switch option {
@@ -338,24 +339,39 @@ struct ClientDetailView: View {
         MovefullyCard {
             VStack(spacing: MovefullyTheme.Layout.paddingM) {
                 HStack(spacing: MovefullyTheme.Layout.paddingM) {
-                    // Profile Picture
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    MovefullyTheme.Colors.primaryTeal,
-                                    MovefullyTheme.Colors.secondaryPeach
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
+                    // Profile Picture with AsyncImage support
+                    ZStack {
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        MovefullyTheme.Colors.primaryTeal,
+                                        MovefullyTheme.Colors.secondaryPeach
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
                             )
-                        )
-                        .frame(width: 80, height: 80)
-                        .overlay(
+                            .frame(width: 80, height: 80)
+                        
+                        if let profileImageUrl = client.profileImageUrl, !profileImageUrl.isEmpty {
+                            AsyncImage(url: URL(string: profileImageUrl)) { image in
+                                image
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                                    .frame(width: 80, height: 80)
+                                    .clipShape(Circle())
+                            } placeholder: {
+                                Text(initials)
+                                    .font(MovefullyTheme.Typography.title1)
+                                    .foregroundColor(.white)
+                            }
+                        } else {
                             Text(initials)
                                 .font(MovefullyTheme.Typography.title1)
                                 .foregroundColor(.white)
-                        )
+                        }
+                    }
                     
                     VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingS) {
                         Text(client.name)
@@ -1115,9 +1131,24 @@ struct ClientDetailView: View {
             return "Invited"
         }
         
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        return formatter.string(from: joinedDate)
+        let now = Date()
+        let timeInterval = now.timeIntervalSince(joinedDate)
+        let days = Int(timeInterval / 86400)
+        
+        if days < 1 {
+            return "Today"
+        } else if days < 7 {
+            return "\(days)d ago"
+        } else if days < 30 {
+            let weeks = days / 7
+            return "\(weeks)w ago"
+        } else if days < 365 {
+            let months = days / 30
+            return "\(months)mo ago"
+        } else {
+            let years = days / 365
+            return "\(years)y ago"
+        }
     }
     
     private var dateFormatter: DateFormatter {
@@ -1607,6 +1638,7 @@ struct AssignCurrentPlanSheet: View {
     
     @State private var selectedProgram: Program?
     @State private var selectedStartDate: Date = Date()
+    @State private var selectedStartOption: MovefullyPlanStartSelector.PlanStartOption = .nextSunday
     @State private var availableSundays: [Date] = []
     @State private var isLoading = false
     @State private var errorMessage: String?
@@ -1624,7 +1656,7 @@ struct AssignCurrentPlanSheet: View {
                     if isLoading {
                         MovefullyLoadingState(message: "Loading plans...")
                     } else {
-                        startDateSelectionCard
+                        planStartSelectionSection
                         availablePlansSection
                     }
                 }
@@ -1660,37 +1692,17 @@ struct AssignCurrentPlanSheet: View {
     
 
     
-    private var startDateSelectionCard: some View {
+    private var planStartSelectionSection: some View {
         MovefullyCard {
-            VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingM) {
-                Text("Start Date")
-                    .font(MovefullyTheme.Typography.bodyMedium)
-                    .foregroundColor(MovefullyTheme.Colors.textPrimary)
-                
-                Button {
-                    selectedStartDate = assignmentService.nextSunday()
-                } label: {
-                    HStack(spacing: MovefullyTheme.Layout.paddingS) {
-                        Image(systemName: "calendar")
-                            .foregroundColor(MovefullyTheme.Colors.primaryTeal)
-                        
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("This Sunday (\(selectedStartDate, formatter: shortDateFormatter))")
-                                .font(MovefullyTheme.Typography.body)
-                                .foregroundColor(MovefullyTheme.Colors.textPrimary)
-                            
-                            Text("Plan will start this Sunday")
-                                .font(MovefullyTheme.Typography.caption)
-                                .foregroundColor(MovefullyTheme.Colors.textSecondary)
-                        }
-                        
-                        Spacer()
+            MovefullyPlanStartSelector(selectedOption: $selectedStartOption)
+                .onChange(of: selectedStartOption) { newOption in
+                    switch newOption {
+                    case .nextSunday:
+                        selectedStartDate = assignmentService.nextSunday()
+                    case .startToday:
+                        selectedStartDate = Date()
                     }
-                    .padding(MovefullyTheme.Layout.paddingM)
-                    .background(MovefullyTheme.Colors.primaryTeal.opacity(0.08))
-                    .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
                 }
-            }
         }
     }
     
@@ -1726,7 +1738,8 @@ struct AssignCurrentPlanSheet: View {
                         ForEach(filteredPrograms) { program in
                             ProgramSelectionCard(
                                 program: program,
-                                isSelected: selectedProgram?.id == program.id
+                                isSelected: selectedProgram?.id == program.id,
+                                programsViewModel: programsViewModel
                             ) {
                                 selectedProgram = program
                             }
@@ -1753,6 +1766,7 @@ struct AssignCurrentPlanSheet: View {
     
     private func loadData() {
         selectedStartDate = assignmentService.nextSunday()
+        selectedStartOption = .nextSunday // Default to traditional Sunday start
     }
     
     private func assignCurrentPlan() {
@@ -1762,9 +1776,15 @@ struct AssignCurrentPlanSheet: View {
         
         Task {
             do {
+                let startOnProgramDay = selectedStartOption == .startToday 
+                    ? assignmentService.calculateProgramDayForToday(date: selectedStartDate)
+                    : 1
+                
                 let options = PlanAssignmentOptions(
                     replaceCurrentPlan: false,
-                    startDate: selectedStartDate
+                    startDate: selectedStartDate,
+                    autoCalculateEndDate: true,
+                    startOnProgramDay: startOnProgramDay
                 )
                 
                 try await assignmentService.assignPlan(
@@ -1772,6 +1792,9 @@ struct AssignCurrentPlanSheet: View {
                     to: client.id,
                     options: options
                 )
+                
+                // Refresh live counts after successful assignment
+                programsViewModel.refreshProgramAssignedCounts()
                 
                 await MainActor.run {
                     onCompletion?()
@@ -1940,7 +1963,8 @@ struct AssignUpcomingPlanSheet: View {
                         ForEach(filteredPrograms) { program in
                             ProgramSelectionCard(
                                 program: program,
-                                isSelected: selectedProgram?.id == program.id
+                                isSelected: selectedProgram?.id == program.id,
+                                programsViewModel: programsViewModel
                             ) {
                                 selectedProgram = program
                             }
@@ -2007,6 +2031,9 @@ struct AssignUpcomingPlanSheet: View {
                     to: client.id,
                     options: options
                 )
+                
+                // Refresh live counts after successful assignment
+                programsViewModel.refreshProgramAssignedCounts()
                 
                 await MainActor.run {
                     onCompletion?()
@@ -2148,7 +2175,8 @@ struct ReplaceCurrentPlanSheet: View {
                 ForEach(filteredPrograms) { program in
                     ProgramSelectionCard(
                         program: program,
-                        isSelected: selectedProgram?.id == program.id
+                        isSelected: selectedProgram?.id == program.id,
+                        programsViewModel: programsViewModel
                     ) {
                         selectedProgram = program
                     }
@@ -2175,7 +2203,8 @@ struct ReplaceCurrentPlanSheet: View {
             do {
                 let options = PlanAssignmentOptions(
                     replaceCurrentPlan: true,
-                    startDate: assignmentService.nextSunday()
+                    startDate: assignmentService.nextSunday(),
+                    startOnProgramDay: 1  // Plan replacements always start at Day 1 (traditional)
                 )
                 
                 try await assignmentService.assignPlan(
@@ -2183,6 +2212,9 @@ struct ReplaceCurrentPlanSheet: View {
                     to: client.id,
                     options: options
                 )
+                
+                // Refresh live counts after successful assignment
+                programsViewModel.refreshProgramAssignedCounts()
                 
                 await MainActor.run {
                     dismiss()
@@ -2347,7 +2379,8 @@ struct ReplaceUpcomingPlanSheet: View {
                 ForEach(filteredPrograms) { program in
                     ProgramSelectionCard(
                         program: program,
-                        isSelected: selectedProgram?.id == program.id
+                        isSelected: selectedProgram?.id == program.id,
+                        programsViewModel: programsViewModel
                     ) {
                         selectedProgram = program
                     }
@@ -2383,7 +2416,8 @@ struct ReplaceUpcomingPlanSheet: View {
                 // Assign new upcoming plan
                 let options = PlanAssignmentOptions(
                     replaceCurrentPlan: false,
-                    startDate: startDate
+                    startDate: startDate,
+                    startOnProgramDay: client.nextPlanStartOnProgramDay ?? 1  // Preserve original program day offset
                 )
                 
                 try await assignmentService.assignPlan(
@@ -2391,6 +2425,9 @@ struct ReplaceUpcomingPlanSheet: View {
                     to: client.id,
                     options: options
                 )
+                
+                // Refresh live counts after successful assignment
+                programsViewModel.refreshProgramAssignedCounts()
                 
                 await MainActor.run {
                     dismiss()
@@ -2418,80 +2455,106 @@ struct RemoveCurrentPlanConfirmation: View {
     
     @State private var isLoading = false
     @State private var errorMessage: String?
-
     
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: MovefullyTheme.Layout.paddingL) {
-                    Image(systemName: "exclamationmark.triangle")
-                        .font(.system(size: 50))
-                        .foregroundColor(MovefullyTheme.Colors.warmOrange)
+            VStack(spacing: MovefullyTheme.Layout.paddingXL) {
+                // Header icon
+                ZStack {
+                    Circle()
+                        .fill(MovefullyTheme.Colors.warmOrange.opacity(0.15))
+                        .frame(width: 80, height: 80)
                     
-                    VStack(spacing: MovefullyTheme.Layout.paddingM) {
-                        Text("Remove Current Plan?")
-                    .font(MovefullyTheme.Typography.title2)
-                            .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.system(size: 40, weight: .medium))
+                        .foregroundColor(MovefullyTheme.Colors.warmOrange)
+                }
+                .padding(.top, MovefullyTheme.Layout.paddingL)
                 
-                        Text("This will permanently delete the client's in-progress plan and all associated workout data.")
-                    .font(MovefullyTheme.Typography.body)
-                            .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                // Title and description
+                VStack(spacing: MovefullyTheme.Layout.paddingM) {
+                    Text("Remove Current Plan")
+                        .font(MovefullyTheme.Typography.title2)
+                        .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                    
+                    if client.hasNextPlan {
+                        Text("The current plan will be removed. What would you like to do with the upcoming plan?")
+                            .font(MovefullyTheme.Typography.body)
+                            .foregroundColor(MovefullyTheme.Colors.textSecondary)
                             .multilineTextAlignment(.center)
-                        
-                        // Show upcoming plan warning if it exists
-                        if client.hasNextPlan {
-                            VStack(spacing: MovefullyTheme.Layout.paddingS) {
-                                Text("⚠️ The upcoming plan will also be deleted")
-                                    .font(MovefullyTheme.Typography.bodyMedium)
-                                    .foregroundColor(MovefullyTheme.Colors.warmOrange)
-                                    .multilineTextAlignment(.center)
-                                
-                                Text("Both the current and upcoming plans will be permanently removed.")
-                                    .font(MovefullyTheme.Typography.caption)
-                    .foregroundColor(MovefullyTheme.Colors.textSecondary)
-                                    .multilineTextAlignment(.center)
-                            }
-                            .padding(MovefullyTheme.Layout.paddingM)
-                            .background(MovefullyTheme.Colors.warmOrange.opacity(0.1))
-                            .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
-                        }
-                        
-                        Text("This action cannot be undone.")
-                            .font(MovefullyTheme.Typography.bodyMedium)
+                    } else {
+                        Text("This will permanently delete the client's current plan and all associated workout data.")
+                            .font(MovefullyTheme.Typography.body)
                             .foregroundColor(MovefullyTheme.Colors.textSecondary)
                             .multilineTextAlignment(.center)
                     }
-                    
-                    VStack(spacing: MovefullyTheme.Layout.paddingM) {
-                        Button(isLoading ? "Removing..." : "Remove Plan") {
-                            removeCurrentPlan()
+                }
+                
+                // Options
+                VStack(spacing: MovefullyTheme.Layout.paddingM) {
+                    if client.hasNextPlan {
+                        // Option 1: Start upcoming plan today
+                        PlanDeletionOption(
+                            title: "Start Immediately",
+                            subtitle: assignmentService.getTodayProgramDayDescription(),
+                            icon: "play.circle.fill",
+                            color: MovefullyTheme.Colors.primaryTeal
+                        ) {
+                            handlePromoteUpcomingPlanToday()
                         }
-                        .font(MovefullyTheme.Typography.buttonMedium)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, MovefullyTheme.Layout.paddingM)
-                        .background(MovefullyTheme.Colors.warmOrange)
-                        .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
-                        .disabled(isLoading)
                         
-                        Button("Cancel") {
-                            dismiss()
+                        // Option 2: Start upcoming plan on Sunday
+                        PlanDeletionOption(
+                            title: "Start Next Sunday",
+                            subtitle: formatSundayDateOnly(),
+                            icon: "calendar",
+                            color: MovefullyTheme.Colors.gentleBlue
+                        ) {
+                            handlePromoteUpcomingPlanSunday()
                         }
-                        .font(MovefullyTheme.Typography.buttonMedium)
-                        .foregroundColor(MovefullyTheme.Colors.textSecondary)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, MovefullyTheme.Layout.paddingM)
-                        .background(MovefullyTheme.Colors.backgroundSecondary)
-                        .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
+                        
+                        // Option 3: Delete both plans
+                        PlanDeletionOption(
+                            title: "Delete Both Plans",
+                            subtitle: "",
+                            icon: "trash",
+                            color: MovefullyTheme.Colors.warmOrange
+                        ) {
+                            handleDeleteBothPlans()
+                        }
+                    } else {
+                        // No upcoming plan - just delete current
+                        PlanDeletionOption(
+                            title: "Delete Current Plan",
+                            subtitle: "This action cannot be undone",
+                            icon: "trash",
+                            color: MovefullyTheme.Colors.warmOrange
+                        ) {
+                            handleDeleteCurrentPlanOnly()
+                        }
+                    }
+                    
+                    // Option 4: Cancel
+                    PlanDeletionOption(
+                        title: "Cancel",
+                        subtitle: "",
+                        icon: "xmark.circle",
+                        color: MovefullyTheme.Colors.textSecondary
+                    ) {
+                        dismiss()
                     }
                 }
-                .padding(MovefullyTheme.Layout.paddingL)
+                
+                Spacer()
             }
+            .padding(.horizontal, MovefullyTheme.Layout.paddingXL)
             .movefullyBackground()
+            .navigationTitle("Remove Plan")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Cancel") { dismiss() }
+                        .foregroundColor(MovefullyTheme.Colors.textSecondary)
                 }
             }
         }
@@ -2504,18 +2567,40 @@ struct RemoveCurrentPlanConfirmation: View {
         }
     }
     
-    // MARK: - Actions
-    private func removeCurrentPlan() {
+    // MARK: - Helper Functions
+    private func formatSundayDateOnly() -> String {
+        // Always use the actual next Sunday date, not the stored upcoming plan date
+        // This ensures that if today is Sunday, we show next week's Sunday
+        let nextSundayDate = assignmentService.nextSunday()
+        
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMMM d"
+        return formatter.string(from: nextSundayDate)
+    }
+    
+    // MARK: - Action Handlers
+    private func handlePromoteUpcomingPlanToday() {
+        guard let upcomingPlanId = client.nextPlanId else { return }
+        
         isLoading = true
         Task {
             do {
-                // Remove current plan
+                // First remove current plan
                 try await assignmentService.removeCurrentPlan(for: client.id)
                 
-                // Also remove upcoming plan if it exists
-                if client.hasNextPlan {
-                    try await assignmentService.removeUpcomingPlan(for: client.id)
-                }
+                // Then promote upcoming plan to start today at appropriate program day
+                let startOnProgramDay = assignmentService.calculateProgramDayForToday()
+                let options = PlanAssignmentOptions(
+                    replaceCurrentPlan: true,
+                    startDate: Date(),
+                    startOnProgramDay: startOnProgramDay
+                )
+                
+                try await assignmentService.assignPlan(
+                    programId: upcomingPlanId,
+                    to: client.id,
+                    options: options
+                )
                 
                 await MainActor.run {
                     dismiss()
@@ -2527,6 +2612,121 @@ struct RemoveCurrentPlanConfirmation: View {
                 }
             }
         }
+    }
+    
+    private func handlePromoteUpcomingPlanSunday() {
+        guard let upcomingPlanId = client.nextPlanId else { return }
+        
+        isLoading = true
+        Task {
+            do {
+                // Remove current plan - upcoming will auto-promote with original schedule
+                try await assignmentService.removeCurrentPlan(for: client.id)
+                
+                await MainActor.run {
+                    dismiss()
+                }
+            } catch {
+                await MainActor.run {
+                    errorMessage = error.localizedDescription
+                    isLoading = false
+                }
+            }
+        }
+    }
+    
+    private func handleDeleteBothPlans() {
+        isLoading = true
+        Task {
+            do {
+                // Remove upcoming plan first
+                try await assignmentService.removeUpcomingPlan(for: client.id)
+                
+                // Then remove current plan
+                try await assignmentService.removeCurrentPlan(for: client.id)
+                
+                await MainActor.run {
+                    dismiss()
+                }
+            } catch {
+                await MainActor.run {
+                    errorMessage = error.localizedDescription
+                    isLoading = false
+                }
+            }
+        }
+    }
+    
+    private func handleDeleteCurrentPlanOnly() {
+        isLoading = true
+        Task {
+            do {
+                try await assignmentService.removeCurrentPlan(for: client.id)
+                
+                await MainActor.run {
+                    dismiss()
+                }
+            } catch {
+                await MainActor.run {
+                    errorMessage = error.localizedDescription
+                    isLoading = false
+                }
+            }
+        }
+    }
+}
+
+struct PlanDeletionOption: View {
+    let title: String
+    let subtitle: String
+    let icon: String
+    let color: Color
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: MovefullyTheme.Layout.paddingL) {
+                // Icon
+                ZStack {
+                    Circle()
+                        .fill(color.opacity(0.15))
+                        .frame(width: 45, height: 45)
+                    
+                    Image(systemName: icon)
+                        .font(.system(size: 22, weight: .medium))
+                        .foregroundColor(color)
+                }
+                
+                // Content
+                VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingXS) {
+                    Text(title)
+                        .font(MovefullyTheme.Typography.bodyMedium)
+                        .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                        .lineLimit(nil)
+                        .multilineTextAlignment(.leading)
+                    
+                    if !subtitle.isEmpty {
+                        Text(subtitle)
+                            .font(MovefullyTheme.Typography.callout)
+                            .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                            .lineLimit(nil)
+                            .multilineTextAlignment(.leading)
+                    }
+                }
+                
+                Spacer()
+                
+                // Arrow
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(MovefullyTheme.Colors.textTertiary)
+            }
+            .padding(MovefullyTheme.Layout.paddingL)
+            .background(MovefullyTheme.Colors.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusL))
+            .shadow(color: MovefullyTheme.Effects.cardShadow, radius: 4, x: 0, y: 2)
+        }
+        .buttonStyle(PlainButtonStyle())
     }
 }
 
@@ -2648,6 +2848,7 @@ struct RemoveUpcomingPlanConfirmation: View {
 struct ProgramSelectionCard: View {
     let program: Program
     let isSelected: Bool
+    let programsViewModel: ProgramsViewModel
     let onTap: () -> Void
     
     var body: some View {
@@ -2693,7 +2894,7 @@ struct ProgramSelectionCard: View {
                             .font(.system(size: 12))
                             .foregroundColor(MovefullyTheme.Colors.textTertiary)
                         
-                        Text("\(program.usageCount) assigned")
+                        Text("\(programsViewModel.getAssignedCount(for: program.id)) assigned")
                             .font(MovefullyTheme.Typography.caption)
                             .foregroundColor(MovefullyTheme.Colors.textSecondary)
                     }
@@ -4994,3 +5195,153 @@ struct TrainerDeleteConsequenceRow: View {
         }
     }
 } 
+
+// MARK: - Plan Promotion Timing Modal
+struct PlanPromotionTimingModal: View {
+    let client: Client
+    let onStartNow: () -> Void
+    let onKeepSchedule: () -> Void
+    @Environment(\.dismiss) private var dismiss
+    @StateObject private var assignmentService = ClientPlanAssignmentService()
+    
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: MovefullyTheme.Layout.paddingXL) {
+                // Header icon
+                ZStack {
+                    Circle()
+                        .fill(MovefullyTheme.Colors.primaryTeal.opacity(0.15))
+                        .frame(width: 80, height: 80)
+                    
+                    Image(systemName: "calendar.badge.plus")
+                        .font(.system(size: 40, weight: .medium))
+                        .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+                }
+                .padding(.top, MovefullyTheme.Layout.paddingL)
+                
+                // Title and description
+                VStack(spacing: MovefullyTheme.Layout.paddingM) {
+                    Text("Plan Promoted!")
+                        .font(MovefullyTheme.Typography.title2)
+                        .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                    
+                    Text("The upcoming plan has been promoted to current. When would you like it to start?")
+                        .font(MovefullyTheme.Typography.body)
+                        .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                        .multilineTextAlignment(.center)
+                }
+                
+                // Options
+                VStack(spacing: MovefullyTheme.Layout.paddingM) {
+                    // Start Now option
+                    PromotionTimingOption(
+                        title: "Start Today",
+                        subtitle: assignmentService.getTodayProgramDayDescription(),
+                        icon: "play.circle.fill",
+                        color: MovefullyTheme.Colors.primaryTeal,
+                        isRecommended: true
+                    ) {
+                        onStartNow()
+                        dismiss()
+                    }
+                    
+                    // Keep schedule option  
+                    PromotionTimingOption(
+                        title: "Keep Original Schedule",
+                        subtitle: formatScheduleDescription(),
+                        icon: "calendar",
+                        color: MovefullyTheme.Colors.gentleBlue,
+                        isRecommended: false
+                    ) {
+                        onKeepSchedule()
+                        dismiss()
+                    }
+                }
+                
+                Spacer()
+            }
+            .padding(.horizontal, MovefullyTheme.Layout.paddingXL)
+            .movefullyBackground()
+            .navigationTitle("Plan Timing")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Cancel") { dismiss() }
+                        .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                }
+            }
+        }
+    }
+    
+    private func formatScheduleDescription() -> String {
+        guard let startDate = client.nextPlanStartDate else {
+            return "Will start as originally scheduled"
+        }
+        
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        return "Will start \(formatter.string(from: startDate)) at Day 1"
+    }
+}
+
+struct PromotionTimingOption: View {
+    let title: String
+    let subtitle: String
+    let icon: String
+    let color: Color
+    let isRecommended: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: MovefullyTheme.Layout.paddingL) {
+                // Icon
+                ZStack {
+                    Circle()
+                        .fill(color.opacity(0.15))
+                        .frame(width: 50, height: 50)
+                    
+                    Image(systemName: icon)
+                        .font(.system(size: 24, weight: .medium))
+                        .foregroundColor(color)
+                }
+                
+                // Content
+                VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingXS) {
+                    HStack {
+                        Text(title)
+                            .font(MovefullyTheme.Typography.bodyMedium)
+                            .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                        
+                        if isRecommended {
+                            Text("RECOMMENDED")
+                                .font(MovefullyTheme.Typography.caption)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, MovefullyTheme.Layout.paddingS)
+                                .padding(.vertical, 2)
+                                .background(MovefullyTheme.Colors.primaryTeal)
+                                .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusS))
+                        }
+                        
+                        Spacer()
+                    }
+                    
+                    Text(subtitle)
+                        .font(MovefullyTheme.Typography.callout)
+                        .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                        .multilineTextAlignment(.leading)
+                }
+                
+                // Arrow
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(MovefullyTheme.Colors.textTertiary)
+            }
+            .padding(MovefullyTheme.Layout.paddingL)
+            .background(MovefullyTheme.Colors.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusL))
+            .shadow(color: MovefullyTheme.Effects.cardShadow, radius: 4, x: 0, y: 2)
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}

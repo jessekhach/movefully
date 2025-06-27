@@ -193,7 +193,8 @@ struct AccountCreationView: View {
                 name: currentUser.displayName ?? invitation.clientName ?? "Client",
                 email: currentUser.email ?? invitation.clientEmail,
                 trainerId: invitation.trainerId,
-                status: .active
+                status: .active,
+                joinedDate: Date()
             )
             
             // Save client and mark invitation as accepted

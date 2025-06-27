@@ -55,6 +55,8 @@ class ProgramsViewModel: ObservableObject {
                 self?.programs = programs
                 // Update assigned counts when programs change
                 self?.refreshProgramAssignedCounts()
+                // Update template usage counts when programs change (since program changes affect template usage)
+                self?.refreshTemplateUsageCounts()
             }
             .store(in: &cancellables)
         

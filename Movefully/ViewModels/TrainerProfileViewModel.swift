@@ -43,6 +43,7 @@ class TrainerProfileViewModel: ObservableObject {
     
     // Settings
     @Published var notificationsEnabled = true
+    @Published var showClientProfilePictures = true
     @Published var selectedTheme: ThemeOption = .system
     
     private var cancellables = Set<AnyCancellable>()
@@ -184,6 +185,7 @@ class TrainerProfileViewModel: ObservableObject {
     func loadSettings() {
         // Load notification setting from profile or default to true
         notificationsEnabled = trainerProfile?.notificationsEnabled ?? true
+        showClientProfilePictures = trainerProfile?.showClientProfilePictures ?? true
         
         // Load other local settings
         if let themeRaw = UserDefaults.standard.object(forKey: "selectedTheme") as? String,
@@ -193,10 +195,15 @@ class TrainerProfileViewModel: ObservableObject {
     }
     
     func saveSettings() async {
-        // Save notification settings to Firebase
+        // Save all settings to Firebase
+        guard var profile = trainerProfile else { return }
+        
         do {
-            let fcmToken = trainerProfile?.fcmToken
-            try await trainerDataService.updateNotificationSettings(enabled: notificationsEnabled, fcmToken: fcmToken)
+            // Update profile with new settings
+            profile.notificationsEnabled = notificationsEnabled
+            profile.showClientProfilePictures = showClientProfilePictures
+            
+            try await trainerDataService.updateTrainerProfile(profile)
         } catch {
             print("❌ TrainerProfileViewModel: Error saving notification settings: \(error.localizedDescription)")
             errorMessage = error.localizedDescription

@@ -88,6 +88,7 @@ struct ConversationRowView: View {
                     Text(conversation.clientName)
                         .font(MovefullyTheme.Typography.bodyMedium)
                         .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                        .lineLimit(1)
                     
                     Spacer()
                     
@@ -97,9 +98,9 @@ struct ConversationRowView: View {
                 }
                 
                 HStack {
-                    Text(conversation.lastMessage)
+                    Text(conversation.lastMessage.isEmpty ? "Start a conversation..." : conversation.lastMessage)
                         .font(MovefullyTheme.Typography.body)
-                        .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                        .foregroundColor(conversation.lastMessage.isEmpty ? MovefullyTheme.Colors.textTertiary : MovefullyTheme.Colors.textSecondary)
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
                     
@@ -339,19 +340,53 @@ struct TrainerConversationDetailView: View {
                 
                 Spacer()
                 
-                // Profile button
+                // Profile button with client profile picture
                 if let client = clientData {
                     NavigationLink(destination: ReadOnlyClientProfileView(client: client)) {
-                        Image(systemName: "person.circle")
-                            .font(.system(size: 24, weight: .medium))
-                            .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+                        ZStack {
+                            Circle()
+                                .fill(
+                                    LinearGradient(
+                                        colors: [
+                                            MovefullyTheme.Colors.primaryTeal,
+                                            MovefullyTheme.Colors.secondaryPeach
+                                        ],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                                .frame(width: 32, height: 32)
+                            
+                            if let profileImageUrl = client.profileImageUrl, !profileImageUrl.isEmpty {
+                                AsyncImage(url: URL(string: profileImageUrl)) { image in
+                                    image
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fill)
+                                        .frame(width: 32, height: 32)
+                                        .clipShape(Circle())
+                                } placeholder: {
+                                    Text(clientInitials(for: client.name))
+                                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                                        .foregroundColor(.white)
+                                }
+                            } else {
+                                Text(clientInitials(for: client.name))
+                                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                                    .foregroundColor(.white)
+                            }
+                        }
                     }
                 } else {
                     // Loading or error state - disabled button
                     Button(action: { }) {
-                        Image(systemName: isLoadingClient ? "person.circle" : "person.circle.fill.badge.exclamationmark")
-                            .font(.system(size: 24, weight: .medium))
-                            .foregroundColor(isLoadingClient ? MovefullyTheme.Colors.textSecondary : MovefullyTheme.Colors.warmOrange)
+                        Circle()
+                            .fill(MovefullyTheme.Colors.textSecondary.opacity(0.3))
+                            .frame(width: 32, height: 32)
+                            .overlay(
+                                Image(systemName: isLoadingClient ? "person.circle" : "person.circle.fill.badge.exclamationmark")
+                                    .font(.system(size: 16, weight: .medium))
+                                    .foregroundColor(isLoadingClient ? MovefullyTheme.Colors.textSecondary : MovefullyTheme.Colors.warmOrange)
+                            )
                     }
                     .disabled(true)
                 }
@@ -368,6 +403,14 @@ struct TrainerConversationDetailView: View {
     // Helper to get first name
     private var clientFirstName: String {
         conversation.clientName.components(separatedBy: " ").first ?? conversation.clientName
+    }
+    
+    // Helper to get client initials
+    private func clientInitials(for name: String) -> String {
+        let components = name.components(separatedBy: " ")
+        let firstInitial = components.first?.first?.uppercased() ?? ""
+        let lastInitial = components.count > 1 ? (components.last?.first?.uppercased() ?? "") : ""
+        return firstInitial + lastInitial
     }
     
     // MARK: - Client Data Loading

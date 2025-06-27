@@ -7,25 +7,41 @@ struct ClientRowView: View {
     
     var body: some View {
         HStack(spacing: MovefullyTheme.Layout.paddingM) {
-            // Profile initials circle
-            Circle()
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            MovefullyTheme.Colors.primaryTeal,
-                            MovefullyTheme.Colors.secondaryPeach
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
+            // Profile picture with AsyncImage support
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                MovefullyTheme.Colors.primaryTeal,
+                                MovefullyTheme.Colors.secondaryPeach
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
                     )
-                )
-                .frame(width: 48, height: 48)
-                .overlay(
+                    .frame(width: 48, height: 48)
+                
+                if let profileImageUrl = client.profileImageUrl, !profileImageUrl.isEmpty {
+                    AsyncImage(url: URL(string: profileImageUrl)) { image in
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: 48, height: 48)
+                            .clipShape(Circle())
+                    } placeholder: {
+                        Text(initials)
+                            .font(MovefullyTheme.Typography.bodyMedium)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.white)
+                    }
+                } else {
                     Text(initials)
                         .font(MovefullyTheme.Typography.bodyMedium)
                         .fontWeight(.semibold)
                         .foregroundColor(.white)
-                )
+                }
+            }
             
             // Client info
             VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingXS) {

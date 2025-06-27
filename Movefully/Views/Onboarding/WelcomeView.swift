@@ -3,6 +3,7 @@ import SwiftUI
 struct WelcomeView: View {
     @EnvironmentObject var coordinator: OnboardingCoordinator
     @EnvironmentObject var urlHandler: URLHandlingService
+    @ObservedObject private var themeManager = ThemeManager.shared
     @State private var animateContent = false
     @State private var showInvitationEntry = false
     

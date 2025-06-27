@@ -20,6 +20,11 @@ class TrainerDataService: ObservableObject {
     @Published var activeClientCount = 0
     @Published var totalProgramCount = 0
     
+    // Computed property for easy access to showClientProfilePictures setting
+    var shouldShowClientProfilePictures: Bool {
+        trainerProfile?.showClientProfilePictures ?? true
+    }
+    
     private var currentTrainerId: String? {
         Auth.auth().currentUser?.uid
     }

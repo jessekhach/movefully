@@ -1746,3 +1746,152 @@ enum AnimationIntensity {
     case light      // Returning user - friendly but quick
     case minimal    // Quick relaunch - just enough to feel intentional
 }
+
+// MARK: - Plan Start Selector Component
+struct MovefullyPlanStartSelector: View {
+    @Binding var selectedOption: PlanStartOption
+    @StateObject private var assignmentService = ClientPlanAssignmentService()
+    
+    enum PlanStartOption {
+        case nextSunday
+        case startToday
+        
+        var title: String {
+            switch self {
+            case .nextSunday: return "Next Sunday"
+            case .startToday: return "Start Today"
+            }
+        }
+        
+        var subtitle: String {
+            switch self {
+            case .nextSunday: return "Traditional weekly start"
+            case .startToday: return "Begin immediately"
+            }
+        }
+        
+        var icon: String {
+            switch self {
+            case .nextSunday: return "calendar.badge.plus"
+            case .startToday: return "play.circle.fill"
+            }
+        }
+    }
+    
+    var body: some View {
+        VStack(spacing: MovefullyTheme.Layout.paddingM) {
+            // Header
+            HStack {
+                Text("When to Start")
+                    .font(MovefullyTheme.Typography.bodyMedium)
+                    .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                Spacer()
+            }
+            
+            // Options
+            VStack(spacing: MovefullyTheme.Layout.paddingS) {
+                PlanStartOptionCard(
+                    option: .nextSunday,
+                    isSelected: selectedOption == .nextSunday,
+                    detailText: "Will start on \(nextSundayFormatted())"
+                ) {
+                    selectedOption = .nextSunday
+                }
+                
+                PlanStartOptionCard(
+                    option: .startToday,
+                    isSelected: selectedOption == .startToday,
+                    detailText: assignmentService.getTodayProgramDayDescription()
+                ) {
+                    selectedOption = .startToday
+                }
+            }
+        }
+    }
+    
+    private func nextSundayFormatted() -> String {
+        let nextSunday = assignmentService.nextSunday()
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter.string(from: nextSunday)
+    }
+}
+
+// MARK: - Plan Start Option Card
+private struct PlanStartOptionCard: View {
+    let option: MovefullyPlanStartSelector.PlanStartOption
+    let isSelected: Bool
+    let detailText: String
+    let onSelect: () -> Void
+    
+    var body: some View {
+        Button(action: onSelect) {
+            HStack(spacing: MovefullyTheme.Layout.paddingM) {
+                // Icon
+                Image(systemName: option.icon)
+                    .font(.system(size: 20, weight: .medium))
+                    .foregroundColor(isSelected ? MovefullyTheme.Colors.primaryTeal : MovefullyTheme.Colors.textSecondary)
+                    .frame(width: 24)
+                
+                // Text content
+                VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingXS) {
+                    Text(option.title)
+                        .font(MovefullyTheme.Typography.bodyMedium)
+                        .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                        .multilineTextAlignment(.leading)
+                    
+                    Text(option.subtitle)
+                        .font(MovefullyTheme.Typography.caption)
+                        .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                        .multilineTextAlignment(.leading)
+                    
+                    Text(detailText)
+                        .font(MovefullyTheme.Typography.caption)
+                        .foregroundColor(isSelected ? MovefullyTheme.Colors.primaryTeal : MovefullyTheme.Colors.textTertiary)
+                        .multilineTextAlignment(.leading)
+                }
+                
+                Spacer()
+                
+                // Selection indicator
+                ZStack {
+                    Circle()
+                        .stroke(
+                            isSelected ? MovefullyTheme.Colors.primaryTeal : MovefullyTheme.Colors.textTertiary.opacity(0.3),
+                            lineWidth: 2
+                        )
+                        .frame(width: 20, height: 20)
+                    
+                    if isSelected {
+                        Circle()
+                            .fill(MovefullyTheme.Colors.primaryTeal)
+                            .frame(width: 12, height: 12)
+                    }
+                }
+            }
+            .padding(MovefullyTheme.Layout.paddingL)
+            .background(
+                isSelected 
+                    ? MovefullyTheme.Colors.primaryTeal.opacity(0.08)
+                    : MovefullyTheme.Colors.cardBackground
+            )
+            .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
+            .overlay(
+                RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM)
+                    .stroke(
+                        isSelected ? MovefullyTheme.Colors.primaryTeal.opacity(0.3) : MovefullyTheme.Colors.divider,
+                        lineWidth: isSelected ? 1.5 : 1
+                    )
+            )
+            .shadow(
+                color: MovefullyTheme.Effects.cardShadow,
+                radius: isSelected ? 6 : 2,
+                x: 0,
+                y: isSelected ? 3 : 1
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+        .animation(.easeInOut(duration: 0.2), value: isSelected)
+    }
+}

@@ -654,6 +654,7 @@ struct ProfileEditFieldWithLimit: View {
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var viewModel: TrainerProfileViewModel
+    @State private var iosPermissionGranted = true
     
     init(viewModel: TrainerProfileViewModel) {
         self.viewModel = viewModel
@@ -685,16 +686,41 @@ struct SettingsView: View {
                                     subtitle: "",
                                     isOn: $viewModel.notificationsEnabled
                                 )
+                                .disabled(!iosPermissionGranted)
                                 .onChange(of: viewModel.notificationsEnabled) { _ in
                                     Task {
                                         await viewModel.saveSettings()
                                     }
                                 }
+                                
+                                if !iosPermissionGranted {
+                                    Button("Enable in iPhone Settings") {
+                                        if let settingsUrl = URL(string: UIApplication.openSettingsURLString) {
+                                            UIApplication.shared.open(settingsUrl)
+                                        }
+                                    }
+                                    .font(MovefullyTheme.Typography.callout)
+                                    .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                }
                             }
                         }
                         
                         SettingsSection(title: "Appearance", icon: "paintbrush") {
-                            MovefullyThemePicker()
+                            VStack(spacing: MovefullyTheme.Layout.paddingM) {
+                                MovefullyThemePicker()
+                                
+                                MovefullyToggleField(
+                                    title: "Client Profile Pictures",
+                                    subtitle: "",
+                                    isOn: $viewModel.showClientProfilePictures
+                                )
+                                .onChange(of: viewModel.showClientProfilePictures) { _ in
+                                    Task {
+                                        await viewModel.saveSettings()
+                                    }
+                                }
+                            }
                         }
                         
 
@@ -737,7 +763,15 @@ struct SettingsView: View {
                         .foregroundColor(MovefullyTheme.Colors.primaryTeal)
                 }
             }
+            .task {
+                await checkIOSPermissionStatus()
+            }
         }
+    }
+    
+    private func checkIOSPermissionStatus() async {
+        let settings = await UNUserNotificationCenter.current().notificationSettings()
+        iosPermissionGranted = settings.authorizationStatus == .authorized
     }
 }
 

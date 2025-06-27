@@ -123,9 +123,11 @@ struct Client: Identifiable, Codable {
     // Plan Assignment Queue
     var currentPlanStartDate: Date?
     var currentPlanEndDate: Date?
+    var currentPlanStartOnProgramDay: Int? // Which day of the program the current plan started on
     var nextPlanId: String?
     var nextPlanStartDate: Date?
     var nextPlanEndDate: Date?
+    var nextPlanStartOnProgramDay: Int? // Which day of the program the next plan will start on
     
     // Timestamps
     var createdAt: Date
@@ -151,9 +153,11 @@ struct Client: Identifiable, Codable {
          fcmToken: String? = nil,
          currentPlanStartDate: Date? = nil,
          currentPlanEndDate: Date? = nil,
+         currentPlanStartOnProgramDay: Int? = nil,
          nextPlanId: String? = nil,
          nextPlanStartDate: Date? = nil,
-         nextPlanEndDate: Date? = nil) {
+         nextPlanEndDate: Date? = nil,
+         nextPlanStartOnProgramDay: Int? = nil) {
         
         self.id = id
         self.name = name
@@ -175,9 +179,11 @@ struct Client: Identifiable, Codable {
         self.fcmToken = fcmToken
         self.currentPlanStartDate = currentPlanStartDate
         self.currentPlanEndDate = currentPlanEndDate
+        self.currentPlanStartOnProgramDay = currentPlanStartOnProgramDay
         self.nextPlanId = nextPlanId
         self.nextPlanStartDate = nextPlanStartDate
         self.nextPlanEndDate = nextPlanEndDate
+        self.nextPlanStartOnProgramDay = nextPlanStartOnProgramDay
         self.createdAt = Date()
         self.updatedAt = Date()
     }
@@ -2094,8 +2100,11 @@ struct TrainerProfile: Identifiable, Codable {
     var notificationsEnabled: Bool
     var fcmToken: String?
     
+    // Display Preferences
+    var showClientProfilePictures: Bool
+    
     // Custom initializer to handle all cases
-    init(id: String, name: String, email: String, phoneNumber: String? = nil, title: String? = nil, bio: String? = nil, profileImageUrl: String? = nil, location: String? = nil, website: String? = nil, specialties: [String]? = nil, yearsOfExperience: Int? = nil, createdAt: Date? = nil, updatedAt: Date? = nil, notificationsEnabled: Bool = true, fcmToken: String? = nil) {
+    init(id: String, name: String, email: String, phoneNumber: String? = nil, title: String? = nil, bio: String? = nil, profileImageUrl: String? = nil, location: String? = nil, website: String? = nil, specialties: [String]? = nil, yearsOfExperience: Int? = nil, createdAt: Date? = nil, updatedAt: Date? = nil, notificationsEnabled: Bool = true, fcmToken: String? = nil, showClientProfilePictures: Bool = true) {
         self.id = id
         self.name = name
         self.email = email
@@ -2111,6 +2120,7 @@ struct TrainerProfile: Identifiable, Codable {
         self.updatedAt = updatedAt
         self.notificationsEnabled = notificationsEnabled
         self.fcmToken = fcmToken
+        self.showClientProfilePictures = showClientProfilePictures
     }
     
     // Custom decoding to handle field mismatches
@@ -2133,10 +2143,11 @@ struct TrainerProfile: Identifiable, Codable {
         updatedAt = try container.decodeIfPresent(Date.self, forKey: .updatedAt)
         notificationsEnabled = try container.decodeIfPresent(Bool.self, forKey: .notificationsEnabled) ?? true
         fcmToken = try container.decodeIfPresent(String.self, forKey: .fcmToken)
+        showClientProfilePictures = try container.decodeIfPresent(Bool.self, forKey: .showClientProfilePictures) ?? true
     }
     
     private enum CodingKeys: String, CodingKey {
-        case id, name, email, phoneNumber, title, bio, profileImageUrl, location, website, specialties, yearsOfExperience, createdAt, updatedAt, notificationsEnabled, fcmToken
+        case id, name, email, phoneNumber, title, bio, profileImageUrl, location, website, specialties, yearsOfExperience, createdAt, updatedAt, notificationsEnabled, fcmToken, showClientProfilePictures
     }
 }
 

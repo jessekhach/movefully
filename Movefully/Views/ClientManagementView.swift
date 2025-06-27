@@ -194,6 +194,7 @@ struct SimpleClientCard: View {
                 Text(client.email)
                     .font(MovefullyTheme.Typography.callout)
                     .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                    .lineLimit(1)
                 
                 if client.needsAttention {
                     HStack(spacing: MovefullyTheme.Layout.paddingXS) {

@@ -236,7 +236,8 @@ struct EmailSignUpView: View {
                 name: fullName.isEmpty ? (invitation.clientName ?? "Client") : fullName,
                 email: currentUser.email ?? invitation.clientEmail,
                 trainerId: invitation.trainerId,
-                status: .active
+                status: .active,
+                joinedDate: Date()
             )
             
             // Save client and mark invitation as accepted

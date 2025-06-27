@@ -45,24 +45,39 @@ struct ReadOnlyClientProfileView: View {
         MovefullyCard {
             VStack(spacing: MovefullyTheme.Layout.paddingM) {
                 HStack(spacing: MovefullyTheme.Layout.paddingM) {
-                    // Profile Picture
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    MovefullyTheme.Colors.primaryTeal,
-                                    MovefullyTheme.Colors.secondaryPeach
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
+                    // Profile Picture with AsyncImage support
+                    ZStack {
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        MovefullyTheme.Colors.primaryTeal,
+                                        MovefullyTheme.Colors.secondaryPeach
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
                             )
-                        )
-                        .frame(width: 80, height: 80)
-                        .overlay(
+                            .frame(width: 80, height: 80)
+                        
+                        if let profileImageUrl = client.profileImageUrl, !profileImageUrl.isEmpty {
+                            AsyncImage(url: URL(string: profileImageUrl)) { image in
+                                image
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                                    .frame(width: 80, height: 80)
+                                    .clipShape(Circle())
+                            } placeholder: {
+                                Text(initials)
+                                    .font(MovefullyTheme.Typography.title1)
+                                    .foregroundColor(.white)
+                            }
+                        } else {
                             Text(initials)
                                 .font(MovefullyTheme.Typography.title1)
                                 .foregroundColor(.white)
-                        )
+                        }
+                    }
                     
                     VStack(alignment: .leading, spacing: MovefullyTheme.Layout.paddingS) {
                         Text(client.name)
@@ -225,9 +240,24 @@ struct ReadOnlyClientProfileView: View {
     private var joinedDateText: String {
         guard let joinedDate = client.joinedDate else { return "Unknown" }
         
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        return formatter.string(from: joinedDate)
+        let now = Date()
+        let timeInterval = now.timeIntervalSince(joinedDate)
+        let days = Int(timeInterval / 86400)
+        
+        if days < 1 {
+            return "Today"
+        } else if days < 7 {
+            return "\(days)d ago"
+        } else if days < 30 {
+            let weeks = days / 7
+            return "\(weeks)w ago"
+        } else if days < 365 {
+            let months = days / 30
+            return "\(months)mo ago"
+        } else {
+            let years = days / 365
+            return "\(years)y ago"
+        }
     }
     
     private var lastActivityText: String {

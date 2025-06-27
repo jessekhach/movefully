@@ -489,6 +489,15 @@ class ClientViewModel: ObservableObject {
                         weeklyAssignments[index].status = .completed
                     }
                     
+                    // Also update assignmentsByWeek so Schedule page shows the updated status
+                    for weekOffset in assignmentsByWeek.keys {
+                        if let weekAssignments = assignmentsByWeek[weekOffset],
+                           let index = weekAssignments.firstIndex(where: { $0.id == assignment.id }) {
+                            assignmentsByWeek[weekOffset]![index].status = .completed
+                            break // Assignment will only be in one week
+                        }
+                    }
+                    
                     // Update today's workout if it's the same assignment
                     if let todayWorkout = todayWorkout, todayWorkout.id == assignment.id {
                         var updatedAssignment = todayWorkout
@@ -509,6 +518,9 @@ class ClientViewModel: ObservableObject {
                     }
                     
                     print("✅ Completed workout: \(assignment.title), Rating: \(rating)")
+                    
+                    // Invalidate progress cache so the Progress page shows the latest completion
+                    ProgressDataCacheService.shared.invalidateCache()
                 }
             } catch {
                 await MainActor.run {

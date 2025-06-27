@@ -110,7 +110,8 @@ class ClientWorkoutAssignmentService: ObservableObject {
                     clientId: clientId,
                     forDate: date,
                     planStartDate: planStartDate,
-                    planEndDate: planEndDate
+                    planEndDate: planEndDate,
+                    clientData: clientData
                 ) {
                     weeklyAssignments.append(workout)
                 }
@@ -336,7 +337,8 @@ class ClientWorkoutAssignmentService: ObservableObject {
         clientId: String,
         forDate: Date = Date(),
         planStartDate: Date? = nil,
-        planEndDate: Date? = nil
+        planEndDate: Date? = nil,
+        clientData: [String: Any]? = nil
     ) async throws -> WorkoutAssignment? {
         // Check if the requested date falls within the plan's active period
         if let startDate = planStartDate {
@@ -376,8 +378,10 @@ class ClientWorkoutAssignmentService: ObservableObject {
         let calendar = Calendar.current
         let daysSinceStart = calendar.dateComponents([.day], from: calendar.startOfDay(for: startDate), to: calendar.startOfDay(for: forDate)).day ?? 0
         
-        // Program days are 1-indexed (Day 1, Day 2, etc.), so add 1
-        let programDay = daysSinceStart + 1
+        // Get the program day offset if the plan started mid-program
+        // This allows plans to start on any day of the week at any point in the program
+        let startOnProgramDay = clientData?["currentPlanStartOnProgramDay"] as? Int ?? 1
+        let programDay = daysSinceStart + startOnProgramDay
         
         // Find if there's a scheduled workout for this program day
         let workoutForDay = scheduledWorkouts.first { workout in

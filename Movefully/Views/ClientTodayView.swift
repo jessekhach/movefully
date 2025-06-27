@@ -41,11 +41,14 @@ struct ClientTodayView: View {
                 LoadingStateView()
             } else if let todayWorkout = viewModel.todayWorkout {
                 workoutSection(todayWorkout)
+            } else if let client = viewModel.currentClient,
+                      client.hasCurrentPlan,
+                      let startDate = client.currentPlanStartDate,
+                      Calendar.current.compare(startDate, to: Date(), toGranularity: .day) == .orderedDescending {
+                PlanScheduledCard(startDate: startDate)
             } else {
                 NoPlanAssignedCard()
             }
-            
-
             
             // Quick stats
             quickStatsSection
@@ -343,8 +346,6 @@ struct ClientTodayView: View {
     private var restDaySection: some View {
         RestDayCard(date: Date())
     }
-    
-
     
     // MARK: - Quick Stats Section
     private var quickStatsSection: some View {
@@ -1726,6 +1727,84 @@ struct NoPlanAssignedCard: View {
                                 .multilineTextAlignment(.center)
                         }
                     }
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Plan Scheduled Card
+struct PlanScheduledCard: View {
+    let startDate: Date
+    @ObservedObject private var themeManager = ThemeManager.shared
+    
+    private var dateFormatter: DateFormatter {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        return formatter
+    }
+    
+    private var daysUntilStart: Int {
+        Calendar.current.dateComponents([.day], from: Date(), to: startDate).day ?? 0
+    }
+    
+    private var countdownText: String {
+        let days = daysUntilStart
+        if days <= 0 {
+            return "Starting soon"
+        } else if days == 1 {
+            return "Starts tomorrow"
+        } else if days <= 7 {
+            return "Starts in \(days) days"
+        } else {
+            return "Starts \(dateFormatter.string(from: startDate))"
+        }
+    }
+    
+    var body: some View {
+        MovefullyCard {
+            VStack(spacing: MovefullyTheme.Layout.paddingL) {
+                Image(systemName: "calendar.badge.checkmark")
+                    .font(MovefullyTheme.Typography.largeTitle)
+                    .foregroundColor(MovefullyTheme.Colors.gentleBlue)
+                
+                VStack(spacing: MovefullyTheme.Layout.paddingM) {
+                    Text("Plan Scheduled")
+                        .font(MovefullyTheme.Typography.title2)
+                        .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                    
+                    Text("Your trainer has scheduled your next workout plan!")
+                        .font(MovefullyTheme.Typography.body)
+                        .foregroundColor(MovefullyTheme.Colors.textSecondary)
+                        .multilineTextAlignment(.center)
+                    
+                    VStack(spacing: MovefullyTheme.Layout.paddingS) {
+                        Text(countdownText)
+                            .font(MovefullyTheme.Typography.bodyMedium)
+                            .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+                    }
+                }
+                
+                // Guidance section
+                VStack(spacing: MovefullyTheme.Layout.paddingM) {
+                    Text("Check your Schedule tab to see what's coming up!")
+                        .font(MovefullyTheme.Typography.bodyMedium)
+                        .foregroundColor(MovefullyTheme.Colors.textPrimary)
+                        .multilineTextAlignment(.center)
+                    
+                    HStack(spacing: MovefullyTheme.Layout.paddingS) {
+                        Image(systemName: "calendar")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+                        
+                        Text("Schedule Tab")
+                            .font(MovefullyTheme.Typography.callout)
+                            .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+                    }
+                    .padding(.horizontal, MovefullyTheme.Layout.paddingM)
+                    .padding(.vertical, MovefullyTheme.Layout.paddingS)
+                    .background(MovefullyTheme.Colors.primaryTeal.opacity(0.1))
+                    .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
                 }
             }
         }

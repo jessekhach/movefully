@@ -115,7 +115,8 @@ class InvitationService: ObservableObject {
             name: clientName,
             email: clientEmail,
             trainerId: invitation.trainerId,
-            status: .active
+            status: .active,
+            joinedDate: Date()
         )
         
         // Save client and update invitation

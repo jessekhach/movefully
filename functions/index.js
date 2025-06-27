@@ -52,11 +52,13 @@ exports.dailyPlanPromotion = onSchedule({
         currentPlanId: clientData.nextPlanId,
         currentPlanStartDate: clientData.nextPlanStartDate,
         currentPlanEndDate: clientData.nextPlanEndDate,
+        currentPlanStartOnProgramDay: clientData.nextPlanStartOnProgramDay || 1,
         
         // Clear next plan fields
         nextPlanId: null,
         nextPlanStartDate: null,
         nextPlanEndDate: null,
+        nextPlanStartOnProgramDay: null,
         
         // Add metadata
         lastPromotionDate: now,

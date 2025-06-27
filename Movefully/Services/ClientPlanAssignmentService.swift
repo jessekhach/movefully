@@ -34,11 +34,13 @@ struct PlanAssignmentOptions {
     let replaceCurrentPlan: Bool
     let startDate: Date
     let autoCalculateEndDate: Bool
+    let startOnProgramDay: Int
     
-    init(replaceCurrentPlan: Bool = false, startDate: Date, autoCalculateEndDate: Bool = true) {
+    init(replaceCurrentPlan: Bool = false, startDate: Date, autoCalculateEndDate: Bool = true, startOnProgramDay: Int = 1) {
         self.replaceCurrentPlan = replaceCurrentPlan
         self.startDate = startDate
         self.autoCalculateEndDate = autoCalculateEndDate
+        self.startOnProgramDay = startOnProgramDay
     }
 }
 
@@ -55,14 +57,14 @@ class ClientPlanAssignmentService: ObservableObject {
     
     // MARK: - Sunday Date Utilities
     
-    /// Returns the next Sunday from the given date (or the same date if it's already Sunday)
+    /// Returns the next Sunday from the given date (always the next upcoming Sunday, even if today is Sunday)
     func nextSunday(from date: Date = Date()) -> Date {
         let calendar = Calendar.current
         let weekday = calendar.component(.weekday, from: date)
         
-        // If it's already Sunday (weekday = 1), return the same date
+        // If it's already Sunday (weekday = 1), return next Sunday (7 days from now)
         if weekday == 1 {
-            return calendar.startOfDay(for: date)
+            return calendar.date(byAdding: .day, value: 7, to: calendar.startOfDay(for: date)) ?? date
         }
         
         // Calculate days to add to reach Sunday
@@ -86,6 +88,29 @@ class ClientPlanAssignmentService: ObservableObject {
         return calendar.component(.weekday, from: date) == 1
     }
     
+    /// Calculates what program day it would be if starting today
+    func calculateProgramDayForToday(date: Date = Date()) -> Int {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: date)
+        
+        // If today is Sunday, start at Day 1
+        if calendar.component(.weekday, from: today) == 1 {
+            return 1
+        }
+        
+        // Calculate how many days since the most recent Sunday
+        let lastSunday = calendar.date(byAdding: .day, value: -7, to: nextSunday(from: today))!
+        let daysSinceSunday = calendar.dateComponents([.day], from: lastSunday, to: today).day ?? 0
+        
+        return daysSinceSunday + 1
+    }
+    
+    /// Returns a description of what program day today would be
+    func getTodayProgramDayDescription() -> String {
+        let programDay = calculateProgramDayForToday()
+        return "Start at Day \(programDay) of the program"
+    }
+    
     // MARK: - Plan Assignment Logic
     
     /// Assigns a program to a client with the specified options
@@ -94,8 +119,11 @@ class ClientPlanAssignmentService: ObservableObject {
             throw PlanAssignmentError.notAuthenticated
         }
         
-        guard isSunday(options.startDate) else {
-            throw PlanAssignmentError.invalidStartDate
+        // Only validate Sunday requirement if starting at Day 1 of program
+        if options.startOnProgramDay == 1 {
+            guard isSunday(options.startDate) else {
+                throw PlanAssignmentError.invalidStartDate
+            }
         }
         
         isLoading = true
@@ -121,8 +149,7 @@ class ClientPlanAssignmentService: ObservableObject {
                 options: options
             )
             
-            // Update program usage count
-            try await incrementProgramUsage(programId)
+            // Note: Program usage counts are now calculated live from client assignments
             
         } catch {
             if let assignmentError = error as? PlanAssignmentError {
@@ -168,6 +195,7 @@ class ClientPlanAssignmentService: ObservableObject {
                 "currentPlanId": FieldValue.delete(),
                 "currentPlanStartDate": FieldValue.delete(),
                 "currentPlanEndDate": FieldValue.delete(),
+                "currentPlanStartOnProgramDay": FieldValue.delete(),
                 "updatedAt": Timestamp()
             ]
             
@@ -191,6 +219,7 @@ class ClientPlanAssignmentService: ObservableObject {
                 "nextPlanId": FieldValue.delete(),
                 "nextPlanStartDate": FieldValue.delete(),
                 "nextPlanEndDate": FieldValue.delete(),
+                "nextPlanStartOnProgramDay": FieldValue.delete(),
                 "updatedAt": Timestamp()
             ]
             
@@ -260,18 +289,21 @@ class ClientPlanAssignmentService: ObservableObject {
             updateData["currentPlanId"] = programId
             updateData["currentPlanStartDate"] = Timestamp(date: startDate)
             updateData["currentPlanEndDate"] = Timestamp(date: endDate)
+            updateData["currentPlanStartOnProgramDay"] = options.startOnProgramDay
             
             // Clear next plan if replacing current
             if options.replaceCurrentPlan {
                 updateData["nextPlanId"] = FieldValue.delete()
                 updateData["nextPlanStartDate"] = FieldValue.delete()
                 updateData["nextPlanEndDate"] = FieldValue.delete()
+                updateData["nextPlanStartOnProgramDay"] = FieldValue.delete()
             }
         } else {
             // Assign as next plan
             updateData["nextPlanId"] = programId
             updateData["nextPlanStartDate"] = Timestamp(date: startDate)
             updateData["nextPlanEndDate"] = Timestamp(date: endDate)
+            updateData["nextPlanStartOnProgramDay"] = options.startOnProgramDay
         }
         
         updateData["updatedAt"] = Timestamp()
@@ -279,11 +311,8 @@ class ClientPlanAssignmentService: ObservableObject {
         try await db.collection("clients").document(client.id).updateData(updateData)
     }
     
-    private func incrementProgramUsage(_ programId: String) async throws {
-        try await db.collection("programs").document(programId).updateData([
-            "usageCount": FieldValue.increment(Int64(1))
-        ])
-    }
+    // Note: Program usage counts are now calculated live from client assignments
+    // No need to increment static counters
     
     func promoteNextPlanToCurrent(_ client: Client) async throws -> Client {
         guard client.hasNextPlan else { return client }
@@ -292,9 +321,11 @@ class ClientPlanAssignmentService: ObservableObject {
             "currentPlanId": client.nextPlanId ?? "",
             "currentPlanStartDate": client.nextPlanStartDate.map { Timestamp(date: $0) } ?? FieldValue.delete(),
             "currentPlanEndDate": client.nextPlanEndDate.map { Timestamp(date: $0) } ?? FieldValue.delete(),
+            "currentPlanStartOnProgramDay": client.nextPlanStartOnProgramDay ?? 1,
             "nextPlanId": FieldValue.delete(),
             "nextPlanStartDate": FieldValue.delete(),
             "nextPlanEndDate": FieldValue.delete(),
+            "nextPlanStartOnProgramDay": FieldValue.delete(),
             "updatedAt": Timestamp()
         ]
         
@@ -305,9 +336,11 @@ class ClientPlanAssignmentService: ObservableObject {
         updatedClient.currentPlanId = client.nextPlanId
         updatedClient.currentPlanStartDate = client.nextPlanStartDate
         updatedClient.currentPlanEndDate = client.nextPlanEndDate
+        updatedClient.currentPlanStartOnProgramDay = client.nextPlanStartOnProgramDay
         updatedClient.nextPlanId = nil
         updatedClient.nextPlanStartDate = nil
         updatedClient.nextPlanEndDate = nil
+        updatedClient.nextPlanStartOnProgramDay = nil
         
         return updatedClient
     }
@@ -364,9 +397,11 @@ extension Client {
             totalWorkoutsCompleted: data["totalWorkoutsCompleted"] as? Int ?? 0,
             currentPlanStartDate: (data["currentPlanStartDate"] as? Timestamp)?.dateValue(),
             currentPlanEndDate: (data["currentPlanEndDate"] as? Timestamp)?.dateValue(),
+            currentPlanStartOnProgramDay: data["currentPlanStartOnProgramDay"] as? Int,
             nextPlanId: data["nextPlanId"] as? String,
             nextPlanStartDate: (data["nextPlanStartDate"] as? Timestamp)?.dateValue(),
-            nextPlanEndDate: (data["nextPlanEndDate"] as? Timestamp)?.dateValue()
+            nextPlanEndDate: (data["nextPlanEndDate"] as? Timestamp)?.dateValue(),
+            nextPlanStartOnProgramDay: data["nextPlanStartOnProgramDay"] as? Int
         )
     }
 }

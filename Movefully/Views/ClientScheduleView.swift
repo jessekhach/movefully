@@ -511,6 +511,7 @@ struct WorkoutAssignmentCard: View {
     let isToday: Bool
     let onViewDetails: () -> Void
     @ObservedObject private var themeManager = ThemeManager.shared
+    @State private var showAllExercises = false
     
     var body: some View {
         MovefullyCard {
@@ -576,7 +577,10 @@ struct WorkoutAssignmentCard: View {
                             .foregroundColor(MovefullyTheme.Colors.textPrimary)
                         
                         VStack(spacing: MovefullyTheme.Layout.paddingS) {
-                            ForEach(Array(assignment.exercises.prefix(3).enumerated()), id: \.element.id) { index, exercise in
+                            // Show exercises based on expanded state
+                            let exercisesToShow = showAllExercises ? assignment.exercises : Array(assignment.exercises.prefix(3))
+                            
+                            ForEach(Array(exercisesToShow.enumerated()), id: \.element.id) { index, exercise in
                                 HStack(spacing: MovefullyTheme.Layout.paddingM) {
                                     // Exercise number
                                     Text("\(index + 1)")
@@ -618,17 +622,36 @@ struct WorkoutAssignmentCard: View {
                                         }
                                     }
                                 }
+                                .transition(.asymmetric(
+                                    insertion: .opacity.combined(with: .move(edge: .top)),
+                                    removal: .opacity.combined(with: .move(edge: .top))
+                                ))
                             }
                             
-                            // Show "and X more" if there are more than 3 exercises
+                            // Show expand/collapse button if there are more than 3 exercises
                             if assignment.exercises.count > 3 {
-                                HStack {
-                                    Text("• +\(assignment.exercises.count - 3) more exercises")
+                                Button(action: {
+                                    withAnimation(.easeInOut(duration: 0.3)) {
+                                        showAllExercises.toggle()
+                                    }
+                                }) {
+                                    HStack {
+                                        Text(showAllExercises ? 
+                                             "Show less" : 
+                                             "+\(assignment.exercises.count - 3) more exercises"
+                                        )
                                         .font(MovefullyTheme.Typography.caption)
-                                        .foregroundColor(MovefullyTheme.Colors.textTertiary)
+                                        .foregroundColor(MovefullyTheme.Colors.primaryTeal)
                                         .italic()
-                                    Spacer()
+                                        
+                                        Image(systemName: showAllExercises ? "chevron.up" : "chevron.down")
+                                            .font(MovefullyTheme.Typography.caption)
+                                            .foregroundColor(MovefullyTheme.Colors.primaryTeal)
+                                        
+                                        Spacer()
+                                    }
                                 }
+                                .buttonStyle(PlainButtonStyle())
                                 .padding(.leading, MovefullyTheme.Layout.paddingXL)
                             }
                         }
@@ -654,6 +677,11 @@ struct WorkoutAssignmentCard: View {
                 .clipShape(RoundedRectangle(cornerRadius: MovefullyTheme.Layout.cornerRadiusM))
             }
         }
+        .onChange(of: assignment.id) { _, _ in
+            // Reset without animation when switching days
+            showAllExercises = false
+        }
+        .animation(nil, value: assignment.id) // Disable animation for day changes
     }
     
     private func formatDate(_ date: Date) -> String {

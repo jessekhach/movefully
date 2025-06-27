@@ -174,9 +174,9 @@
         </a>
         
         <div class="code-section">
-            <div class="code-label">Or enter this code in the app:</div>
-            <div class="invite-code" id="inviteCode">Loading...</div>
-            <button class="copy-button" onclick="copyCode()">Copy Code</button>
+            <div class="code-label">Or enter this link in the app:</div>
+            <div class="invite-code" id="inviteURL" style="font-size: 14px; word-break: break-all; line-height: 1.4;">Loading...</div>
+            <button class="copy-button" onclick="copyURL()">Copy Link</button>
         </div>
         
         <div id="status" class="status" style="display: none;"></div>
@@ -194,23 +194,13 @@
             return match ? match[1] : null;
         }
         
-        // Generate a readable code from invitation ID
-        function generateReadableCode(invitationId) {
-            if (!invitationId) return 'INVALID';
-            
-            // Take first 6 characters and make them uppercase
-            // Remove hyphens and take alphanumeric only
-            const cleaned = invitationId.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-            return cleaned.substring(0, 6) || 'INVITE';
-        }
-        
-        // Copy code to clipboard
-        function copyCode() {
-            const code = document.getElementById('inviteCode').textContent;
-            navigator.clipboard.writeText(code).then(() => {
-                showStatus('Code copied to clipboard!', 'success');
+        // Copy URL to clipboard
+        function copyURL() {
+            const url = document.getElementById('inviteURL').textContent;
+            navigator.clipboard.writeText(url).then(() => {
+                showStatus('Link copied to clipboard!', 'success');
             }).catch(() => {
-                showStatus('Failed to copy code', 'error');
+                showStatus('Failed to copy link', 'error');
             });
         }
         
@@ -229,10 +219,10 @@
         // Initialize page
         function init() {
             const invitationId = getInvitationId();
-            const code = generateReadableCode(invitationId);
+            const fullURL = invitationId ? `https://movefully.app/invite/${invitationId}` : 'Invalid invitation link';
             
-            // Update code display
-            document.getElementById('inviteCode').textContent = code;
+            // Update URL display
+            document.getElementById('inviteURL').textContent = fullURL;
             
             // Set up app button
             const appButton = document.getElementById('appButton');
